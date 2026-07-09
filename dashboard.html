@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Médicos — Animal Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#faf7ff;--bg2:#f3eeff;
+  --tx:#1a0a2e;--tm:#6b5c7e;--ts:#b0a4bf;
+  --wh:#ffffff;--bd:#e8dff5;
+  --p:#7c3aed;--pl:#f5f0ff;--pd:#5b21b6;
+  --ok:#16a34a;--okl:#f0fdf4;--er:#dc2626;
+  --pur:#7c3aed;--purl:#f5f0ff;
+}
+html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+
+/* ── Header ── */
+.hdr{background:var(--wh);border-bottom:1px solid var(--bd);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 0 var(--bd)}
+.hdr-brand{display:flex;align-items:center;gap:10px}
+.hdr-brand-icon{width:34px;height:34px;background:var(--p);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.hdr-brand-text{font-size:.95rem;font-weight:700;color:var(--tx)}
+.hdr-brand-sub{font-size:.72rem;color:var(--tm);margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.badge-pending{background:#7c3aed;color:#fff;border-radius:99px;padding:3px 10px;font-size:.72rem;font-weight:600;display:none}
+.badge-pending.show{display:inline}
+.btn-hdr{border:1.5px solid var(--bd);border-radius:8px;padding:6px 14px;color:var(--tm);font-size:.78rem;font-weight:600;cursor:pointer;background:var(--wh);font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-hdr:hover{border-color:var(--p);color:var(--p)}
+
+/* ── Search bar ── */
+.srch{background:var(--wh);border-bottom:1px solid var(--bd);padding:10px 24px;position:sticky;top:60px;z-index:99}
+.srch-inner{max-width:900px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.srch-wrap{flex:1;position:relative}
+.srch-wrap input{width:100%;border:1.5px solid var(--bd);border-radius:9px;padding:9px 14px 9px 36px;font-size:.87rem;outline:none;color:var(--tx);font-family:'DM Sans',sans-serif;background:var(--bg);transition:border .2s}
+.srch-wrap input:focus{border-color:var(--p);background:var(--wh)}
+.srch-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ts);font-size:.85rem;pointer-events:none}
+.filter-btns{display:flex;gap:6px}
+.fbtn{border:1.5px solid var(--bd);border-radius:99px;padding:6px 14px;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--tm);font-family:'DM Sans',sans-serif;transition:all .2s}
+.fbtn.active{border-color:var(--p);background:var(--pl);color:var(--p)}
+
+/* ── Main content ── */
+.cnt{max-width:900px;margin:0 auto;padding:20px 24px}
+.date-group{margin-bottom:24px}
+.date-lbl{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ts);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.date-lbl::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+/* ── Record card ── */
+.rec{background:var(--wh);border-radius:12px;border:1px solid var(--bd);margin-bottom:8px;overflow:hidden;transition:box-shadow .2s,border-color .2s}
+.rec:hover{box-shadow:0 2px 12px rgba(124,58,237,.08);border-color:#d8ccf0}
+.rec.reviewed{opacity:.5;background:var(--bg)}
+.rec-head{padding:14px 18px;cursor:pointer;display:flex;align-items:center;gap:12px}
+.rec-emoji{width:38px;height:38px;border-radius:10px;background:var(--pl);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.rec.reviewed .rec-emoji{background:var(--bg2)}
+.rec-info{flex:1;min-width:0}
+.rec-name{font-size:.93rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.rv-badge{font-size:.62rem;background:var(--bg2);color:var(--ts);border-radius:99px;padding:2px 8px;font-weight:600}
+.hc-badge{font-size:.62rem;background:var(--p);color:#fff;border-radius:99px;padding:2px 9px;font-weight:700;letter-spacing:.2px}
+.rec-meta{font-size:.74rem;color:var(--tm);margin-top:3px;display:flex;flex-wrap:wrap;gap:8px}
+.rec-service{background:var(--bg2);color:var(--p);border-radius:6px;padding:3px 9px;font-size:.68rem;font-weight:600;flex-shrink:0}
+.rec-time{font-size:.7rem;color:var(--ts);flex-shrink:0;text-align:right;line-height:1.4}
+.rec-arrow{color:var(--ts);font-size:.65rem;flex-shrink:0;transition:transform .25s;margin-left:4px}
+.rec.open .rec-arrow{transform:rotate(180deg)}
+
+/* ── Expanded body ── */
+.rec-body{display:none;padding:0 18px 18px;border-top:1px solid var(--bd)}
+.rec.open .rec-body{display:block}
+
+.section{margin-top:16px}
+.sec-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--p);margin-bottom:8px}
+
+.hc-block{background:var(--purl);border:1.5px solid #c4b5fd;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.hc-block-label{font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--p)}
+.hc-block-val{font-size:1rem;font-weight:700;color:var(--pd)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.field{background:var(--bg);border-radius:8px;padding:9px 11px}
+.field .fl{font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--ts);margin-bottom:3px}
+.field .fv{font-size:.82rem;color:var(--tx);font-weight:500;line-height:1.4}
+.full-field{background:var(--bg);border-radius:8px;padding:9px 11px;margin-top:6px}
+.sym-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.sym{background:var(--bg);border-radius:8px;padding:8px 10px}
+.sym .sl{font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--ts);margin-bottom:3px}
+.sym .sv{font-size:.8rem;font-weight:500;line-height:1.4}
+.sv.ok{color:#16a34a}.sv.warn{color:#d97706}.sv.bad{color:#dc2626}
+
+.rec-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.btn-copy{flex:1;padding:10px 14px;border:1.5px solid var(--p);border-radius:9px;background:var(--wh);color:var(--p);font-size:.8rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;min-width:130px}
+.btn-copy:hover{background:var(--pl)}
+.btn-copy.copied{border-color:var(--ok);color:var(--ok);background:var(--okl)}
+.btn-rev{flex:1;padding:10px 14px;border:none;border-radius:9px;background:var(--p);color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s;min-width:130px}
+.btn-rev:hover{background:var(--pd)}
+.btn-rev.done{background:var(--bg2);color:var(--ts);cursor:default}
+
+/* ── States ── */
+.empty{text-align:center;padding:64px 20px}
+.empty-icon{font-size:2.8rem;margin-bottom:12px}
+.empty-title{font-size:.95rem;font-weight:600;color:var(--tx);margin-bottom:4px}
+.empty-sub{font-size:.82rem;color:var(--tm)}
+.spinner{width:36px;height:36px;border:2.5px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:64px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--tx);color:#fff;border-radius:10px;padding:10px 20px;font-size:.82rem;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+@media(max-width:520px){.grid2,.grid3{grid-template-columns:1fr 1fr}.filter-btns{display:none}.hdr-brand-sub{display:none}}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-brand-icon">🐾</div>
+    <div>
+      <div class="hdr-brand-text">Animal Center</div>
+      <div class="hdr-brand-sub" id="lastUpdated">Cargando registros...</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span class="badge-pending" id="pendingCount"></span>
+    <button class="btn-hdr" onclick="loadRecords()">↻ Actualizar</button>
+  </div>
+</header>
+
+<div class="srch">
+  <div class="srch-inner">
+    <div class="srch-wrap">
+      <span class="srch-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Buscar por mascota o propietario..." oninput="renderAll()">
+    </div>
+    <div class="filter-btns">
+      <button class="fbtn active" id="f-all" onclick="setFilter('all')">Todos</button>
+      <button class="fbtn" id="f-pending" onclick="setFilter('pending')">Pendientes</button>
+      <button class="fbtn" id="f-reviewed" onclick="setFilter('reviewed')">Revisados</button>
+    </div>
+  </div>
+</div>
+
+<div class="cnt" id="mainCnt">
+  <div class="spinner"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let allRecords = [];
+let activeFilter = 'all';
+
+function loadRecords() {
+  document.getElementById('mainCnt').innerHTML = '<div class="spinner"></div>';
+  document.getElementById('lastUpdated').textContent = 'Actualizando...';
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.ok) {
+        allRecords = res.records || [];
+        renderAll();
+        updateCounts();
+        const now = new Date();
+        document.getElementById('lastUpdated').textContent =
+          'Última actualización: ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+      } else {
+        showError('Error al cargar los registros.');
+      }
+    })
+    .withFailureHandler(function(err) {
+      showError('Error de conexión: ' + err.message);
+    })
+    .getRecords();
+}
+
+function showError(msg) {
+  document.getElementById('mainCnt').innerHTML =
+    '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Algo salió mal</div><div class="empty-sub">' + msg + '</div></div>';
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  ['all','pending','reviewed'].forEach(id => {
+    document.getElementById('f-'+id).classList.toggle('active', id === f);
+  });
+  renderAll();
+}
+
+function renderAll() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let records = allRecords.filter(r => {
+    const matchQ = !q ||
+      (r.petName||'').toLowerCase().includes(q) ||
+      (r.ownerName||'').toLowerCase().includes(q);
+    const isReviewed = r.status === 'revisado';
+    const matchF = activeFilter === 'all' ||
+      (activeFilter === 'pending' && !isReviewed) ||
+      (activeFilter === 'reviewed' && isReviewed);
+    return matchQ && matchF;
+  });
+
+  if (!records.length) {
+    document.getElementById('mainCnt').innerHTML =
+      '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div><div class="empty-sub">No hay registros que coincidan con tu búsqueda</div></div>';
+    return;
+  }
+
+  const groups = {};
+  records.forEach(r => {
+    const dt = new Date(r.timestamp);
+    const key = isNaN(dt) ? 'Sin fecha' : formatDateKey(dt);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+
+  let html = '';
+  Object.keys(groups).forEach(dateKey => {
+    html += '<div class="date-group"><div class="date-lbl">' + dateKey + '</div>';
+    groups[dateKey].forEach(r => { html += buildCard(r); });
+    html += '</div>';
+  });
+
+  document.getElementById('mainCnt').innerHTML = html;
+}
+
+function formatDateKey(dt) {
+  const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const today = new Date();
+  const isToday = dt.toDateString() === today.toDateString();
+  const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
+  const isYest = dt.toDateString() === yesterday.toDateString();
+  if (isToday) return 'Hoy · ' + dt.getDate() + ' ' + months[dt.getMonth()];
+  if (isYest) return 'Ayer · ' + dt.getDate() + ' ' + months[dt.getMonth()];
+  return days[dt.getDay()] + ' · ' + dt.getDate() + ' ' + months[dt.getMonth()];
+}
+
+function fmtTime(ts) {
+  const dt = new Date(ts);
+  if (isNaN(dt)) return '';
+  return dt.getHours() + ':' + String(dt.getMinutes()).padStart(2,'0');
+}
+
+function buildCard(r) {
+  const reviewed = r.status === 'revisado';
+  const em = r.species === 'Felino' ? '🐈' : '🐕';
+  const rowIdx = r.rowIndex;
+  const svc = r.service || '';
+  const svcShort = svc.replace('Consulta ','').replace('Control de ','').replace('Control','Control');
+
+  return `
+<div class="rec${reviewed?' reviewed':''}" id="rec-${rowIdx}">
+  <div class="rec-head" onclick="toggleRec(${rowIdx})">
+    <div class="rec-emoji">${em}</div>
+    <div class="rec-info">
+      <div class="rec-name">
+        ${esc(r.petName||'Sin nombre')}
+        ${r.vetesoftHc ? '<span class="hc-badge">HC '+esc(r.vetesoftHc)+'</span>' : ''}
+        ${reviewed ? '<span class="rv-badge">✓ Revisado</span>' : ''}
+      </div>
+      <div class="rec-meta">
+        <span>👤 ${esc(r.ownerName||'—')}</span>
+        ${r.ownerPhone ? '<span>· '+esc(r.ownerPhone)+'</span>' : ''}
+        ${r.breed ? '<span>· '+esc(r.breed)+'</span>' : ''}
+      </div>
+    </div>
+    <span class="rec-service">${esc(svcShort)}</span>
+    <div class="rec-time">${fmtTime(r.timestamp)}</div>
+    <div class="rec-arrow">▼</div>
+  </div>
+  <div class="rec-body">
+    ${r.vetesoftHc ? `<div class="section"><div class="hc-block"><div><div class="hc-block-label">Historia Clínica · Vetesoft</div><div class="hc-block-val">${esc(r.vetesoftHc)}</div></div></div></div>` : ''}
+    <div class="section">
+      <div class="sec-title">Datos del paciente</div>
+      <div class="grid3">
+        <div class="field"><div class="fl">Especie</div><div class="fv">${esc(r.species||'—')}</div></div>
+        <div class="field"><div class="fl">Raza</div><div class="fv">${esc(r.breed||'—')}</div></div>
+        <div class="field"><div class="fl">Edad</div><div class="fv">${esc(r.age||'—')}</div></div>
+        <div class="field"><div class="fl">Sexo</div><div class="fv">${esc(r.sex||'—')}</div></div>
+        <div class="field"><div class="fl">Castrado/a</div><div class="fv">${esc(r.neutered||'—')}</div></div>
+        <div class="field"><div class="fl">Teléfono</div><div class="fv">${esc(r.ownerPhone||'—')}</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-title">Servicio y motivo</div>
+      <div class="grid2">
+        <div class="field"><div class="fl">Servicio</div><div class="fv">${esc(r.service||'—')}</div></div>
+        <div class="field"><div class="fl">Especialidad</div><div class="fv">${esc(r.specialty||'—')}</div></div>
+      </div>
+      <div class="full-field"><div class="fl">Motivo principal</div><div class="fv" style="white-space:pre-wrap">${esc(r.complaint||'—')}</div></div>
+      <div class="grid2" style="margin-top:6px">
+        <div class="field"><div class="fl">Inicio</div><div class="fv">${esc(r.duration||'—')}</div></div>
+        <div class="field"><div class="fl">Evolución</div><div class="fv">${esc(r.evolution||'—')}</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-title">Revisión de síntomas</div>
+      <div class="sym-row">
+        <div class="sym"><div class="sl">Apetito</div><div class="sv${sClass(r.appetite,'Normal','Sin apetito')}">${esc(r.appetite||'—')}</div></div>
+        <div class="sym"><div class="sl">Agua</div><div class="sv${sClass(r.water,'Normal','No toma')}">${esc(r.water||'—')}</div></div>
+        <div class="sym"><div class="sl">Vómito</div><div class="sv${r.vomit==='No'?' ok':r.vomit&&r.vomit!=='—'?' bad':''}">${esc(r.vomit||'—')}</div></div>
+        <div class="sym"><div class="sl">Diarrea</div><div class="sv${r.diarrhea==='No'?' ok':r.diarrhea&&r.diarrhea!=='—'?' bad':''}">${esc(r.diarrhea||'—')}</div></div>
+        <div class="sym"><div class="sl">Energía</div><div class="sv${sClass(r.energy,'Normal','Muy decaido')}">${esc(r.energy||'—')}</div></div>
+        <div class="sym"><div class="sl">Tos</div><div class="sv${r.cough==='No'?' ok':r.cough&&r.cough!=='—'?' warn':''}">${esc(r.cough||'—')}</div></div>
+        <div class="sym"><div class="sl">Respiración</div><div class="sv${r.breathing==='No'?' ok':r.breathing==='Si'?' bad':''}">${esc(r.breathing||'—')}</div></div>
+        <div class="sym"><div class="sl">Orina</div><div class="sv${sClass(r.urine,'Normal','Con sangre')}">${esc(r.urine||'—')}</div></div>
+        <div class="sym"><div class="sl">Piel/Pelo</div><div class="sv${r.skin==='Normal'?' ok':r.skin&&r.skin!=='—'?' warn':''}">${esc(r.skin||'—')}</div></div>
+        <div class="sym"><div class="sl">Dolor</div><div class="sv${r.pain==='No noto'?' ok':r.pain==='Intenso'?' bad':r.pain&&r.pain!=='—'?' warn':''}">${esc(r.pain||'—')}</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-title">Historial médico</div>
+      <div class="sym-row">
+        <div class="sym"><div class="sl">Vacunas</div><div class="sv${r.vaccines==='Si'?' ok':r.vaccines==='No'?' bad':' warn'}">${esc(r.vaccines||'—')}</div></div>
+        <div class="sym"><div class="sl">Desparasitación</div><div class="sv">${esc(r.deworming||'—')}</div></div>
+        <div class="sym"><div class="sl">Alimentación</div><div class="sv">${esc(r.diet||'—')}</div></div>
+      </div>
+      ${r.medications && r.medications !== 'Ninguno' ? `<div class="full-field"><div class="fl">Medicamentos actuales</div><div class="fv">${esc(r.medications)}</div></div>` : ''}
+      ${r.history ? `<div class="full-field"><div class="fl">Enfermedades / Cirugías</div><div class="fv">${esc(r.history)}</div></div>` : ''}
+      ${r.allergies && r.allergies !== 'No' ? `<div class="full-field"><div class="fl">Alergias</div><div class="fv">${esc(r.allergies)}</div></div>` : ''}
+      ${r.notes ? `<div class="full-field"><div class="fl">Notas adicionales</div><div class="fv">${esc(r.notes)}</div></div>` : ''}
+    </div>
+    <div class="rec-actions">
+      <button class="btn-copy" id="copy-${rowIdx}" onclick="copyRecord(${rowIdx})">📋 Copiar anamnesis</button>
+      <button class="btn-rev${reviewed?' done':''}" id="rev-${rowIdx}" onclick="${reviewed ? '' : 'markReviewed('+rowIdx+')'}">
+        ${reviewed ? '✓ Ya revisado' : '✅ Marcar como revisado'}
+      </button>
+    </div>
+  </div>
+</div>`;
+}
+
+function sClass(val, good, bad) {
+  if (!val || val === '—') return '';
+  const v = val.toLowerCase();
+  if (v.includes(good.toLowerCase())) return ' ok';
+  if (v.includes(bad.toLowerCase())) return ' bad';
+  return ' warn';
+}
+
+function toggleRec(rowIdx) {
+  document.getElementById('rec-' + rowIdx).classList.toggle('open');
+}
+
+function markReviewed(rowIdx) {
+  const btn = document.getElementById('rev-' + rowIdx);
+  btn.textContent = '⏳ Guardando...';
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.ok) {
+        const r = allRecords.find(x => x.rowIndex === rowIdx);
+        if (r) r.status = 'revisado';
+        updateCounts();
+        const cardEl = document.getElementById('rec-' + rowIdx);
+        const wasOpen = cardEl && cardEl.classList.contains('open');
+        renderAll();
+        if (wasOpen) {
+          const newCard = document.getElementById('rec-' + rowIdx);
+          if (newCard) newCard.classList.add('open');
+        }
+        showToast('✓ Paciente marcado como revisado');
+      } else {
+        btn.textContent = '✅ Marcar como revisado';
+        btn.disabled = false;
+        showToast('❌ Error al guardar');
+      }
+    })
+    .withFailureHandler(function() {
+      btn.textContent = '✅ Marcar como revisado';
+      btn.disabled = false;
+      showToast('❌ Error de conexión');
+    })
+    .markReviewed(rowIdx);
+}
+
+function copyRecord(rowIdx) {
+  const r = allRecords.find(x => x.rowIndex === rowIdx);
+  if (!r) return;
+  const line = (label, val) => val && val !== '—' && val !== '' ? label + ': ' + val + '\n' : '';
+
+  const text = [
+    '══════════════════════════════════',
+    '  ANAMNESIS PRE-CONSULTA',
+    '  Animal Center',
+    '══════════════════════════════════\n',
+    r.vetesoftHc ? '▸ HISTORIA CLÍNICA VETESOFT: ' + r.vetesoftHc + '\n\n' : '',
+    '▸ DATOS DEL PACIENTE\n',
+    line('Nombre', r.petName), line('Especie', r.species), line('Raza', r.breed),
+    line('Edad', r.age), line('Sexo', r.sex), line('Castrado/a', r.neutered), '\n',
+    '▸ PROPIETARIO\n',
+    line('Nombre', r.ownerName), line('Teléfono', r.ownerPhone), '\n',
+    '▸ SERVICIO\n',
+    line('Tipo', r.service), line('Especialidad', r.specialty), '\n',
+    '▸ MOTIVO DE CONSULTA\n',
+    (r.complaint||'—') + '\n\n',
+    line('Inicio de síntomas', r.duration), line('Evolución', r.evolution), '\n',
+    '▸ REVISIÓN DE SÍNTOMAS\n',
+    line('Apetito', r.appetite), line('Consumo de agua', r.water),
+    line('Vómito', r.vomit), line('Diarrea', r.diarrhea),
+    line('Energía / actitud', r.energy), line('Tos / Estornudos', r.cough),
+    line('Dificultad respiratoria', r.breathing), line('Orina', r.urine),
+    line('Piel / Pelo', r.skin), line('Dolor', r.pain), '\n',
+    '▸ HISTORIAL MÉDICO\n',
+    line('Vacunas al día', r.vaccines), line('Desparasitación', r.deworming),
+    line('Medicamentos actuales', r.medications),
+    line('Enfermedades / Cirugías anteriores', r.history),
+    line('Alergias conocidas', r.allergies), line('Alimentación', r.diet),
+    r.notes ? line('Notas adicionales', r.notes) : '', '\n',
+    '══════════════════════════════════\n',
+    'Registrado: ' + new Date(r.timestamp).toLocaleString('es-CO'),
+    '\n══════════════════════════════════',
+  ].join('');
+
+  navigator.clipboard.writeText(text).then(function() {
+    const btn = document.getElementById('copy-' + rowIdx);
+    btn.classList.add('copied');
+    btn.textContent = '✓ ¡Copiado!';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋 Copiar anamnesis'; }, 2500);
+    showToast('📋 Anamnesis copiada al portapapeles');
+  }).catch(function() {
+    showToast('❌ No se pudo copiar automáticamente');
+  });
+}
+
+function updateCounts() {
+  const pending = allRecords.filter(r => r.status !== 'revisado').length;
+  const el = document.getElementById('pendingCount');
+  if (pending > 0) {
+    el.textContent = pending + ' pendiente' + (pending === 1 ? '' : 's');
+    el.classList.add('show');
+  } else {
+    el.classList.remove('show');
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+setInterval(loadRecords, 60000);
+loadRecords();
+</script>
+</body>
+</html>
