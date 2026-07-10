@@ -21,7 +21,7 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 .back-btn{position:fixed;top:7px;left:14px;background:none;border:none;padding:6px;cursor:pointer;color:var(--tm);font-size:1.2rem;z-index:100;border-radius:8px}
 .back-btn:hover{background:rgba(0,0,0,.06)}
 
-.screen{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;padding:24px 24px 80px;opacity:0;transform:translateX(60px);transition:opacity .35s ease,transform .35s ease;pointer-events:none}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;padding:24px 24px 80px;opacity:0;transform:translateX(60px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
 .screen.active{opacity:1;transform:translateX(0);pointer-events:all}
 .screen.exit-left{opacity:0;transform:translateX(-60px)}
 
@@ -46,6 +46,12 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 .text-input:focus{border-color:var(--p)}
 textarea.text-input{resize:none;min-height:120px;line-height:1.6}
 
+.weight-hint{display:flex;align-items:center;gap:10px;background:var(--pl);border-radius:12px;padding:12px 14px;margin-top:16px;font-size:.82rem;color:var(--pd);font-weight:600;line-height:1.4}
+.weight-hint .em{font-size:1.4rem}
+.weight-input-row{display:flex;align-items:center;gap:10px;margin-top:14px}
+.weight-input-row input{flex:1}
+.weight-unit{font-size:1.1rem;font-weight:800;color:var(--tm)}
+
 .multi-inputs{display:flex;flex-direction:column;gap:12px;margin-top:18px}
 .input-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:4px}
 
@@ -54,8 +60,19 @@ textarea.text-input{resize:none;min-height:120px;line-height:1.6}
 .skip-link{position:fixed;bottom:0;left:0;right:0;text-align:center;padding:8px;font-size:.75rem;color:var(--ts);cursor:pointer;font-weight:600}
 .skip-link:hover{color:var(--tm)}
 
+/* Specialty picker */
+.spec-grid{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.spec-card{background:var(--wh);border:2px solid var(--bd);border-radius:14px;padding:10px 12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:12px}
+.spec-card:hover{border-color:var(--p);background:var(--pl)}
+.spec-info{flex:1;min-width:0}
+.spec-name{font-size:.98rem;font-weight:800;color:var(--tx);line-height:1.2}
+.spec-doc{font-size:.76rem;color:var(--tm);font-weight:600;line-height:1.2;margin-top:2px}
+.spec-avatar{width:52px;height:52px;border-radius:50%;position:relative;overflow:hidden;background:var(--p);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.spec-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.spec-initials{color:#fff;font-weight:800;font-size:1rem}
+
 /* Vetesoft lookup screen */
-.vs-wrap{padding:0}
+.vs-wrap{padding:24px 24px 40px}
 .vs-loading{text-align:center;padding:30px 0}
 .vs-loading .spinner{width:48px;height:48px;border:3px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -75,7 +92,6 @@ textarea.text-input{resize:none;min-height:120px;line-height:1.6}
 .vs-no-match .title{font-weight:800;color:#92400e;font-size:.95rem;margin-bottom:4px}
 .vs-no-match .sub{font-size:.78rem;color:#b45309;line-height:1.5}
 .vs-no-match-continue{width:100%;margin-top:12px;padding:13px;background:#f59e0b;color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif}
-.vs-change{font-size:.72rem;color:var(--tm);text-decoration:underline;cursor:pointer;display:block;margin-top:8px;text-align:center}
 .vs-title{font-size:1.2rem;font-weight:800;color:var(--tx);margin-bottom:5px}
 .vs-sub{font-size:.82rem;color:var(--tm);margin-bottom:14px;line-height:1.5}
 .vs-not-mine{font-size:.74rem;color:var(--ts);text-align:center;margin-top:8px;cursor:pointer;text-decoration:underline}
@@ -107,7 +123,6 @@ textarea.text-input{resize:none;min-height:120px;line-height:1.6}
 const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
 </script>
 
-<!-- START -->
 <div class="start-screen" id="startScreen">
   <div class="start-logo">🐾</div>
   <h1 class="start-h1">Bienvenido a<br><span>Animal Center</span></h1>
@@ -133,32 +148,48 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_N
 </div>
 
 <script>
+// ── Specialties (name → doctor + photo slug) ─────────────────
+var SPECIALTIES = [
+  {name:'Cardiología',      doctor:'Dr. Wilmer Páez',         slug:'wilmer-paez',        initials:'WP'},
+  {name:'Dermatología',     doctor:'Dra. Marisol Villamizar', slug:'marisol-villamizar', initials:'MV'},
+  {name:'Medicina Felina',  doctor:'Dra. Estefanía Tenorio',  slug:'estefania-tenorio',  initials:'ET'},
+  {name:'Gastroenterología',doctor:'Dra. Tatiana Rodríguez',  slug:'tatiana-rodriguez',  initials:'TR'},
+  {name:'Endocrinología',   doctor:'Dra. Catherine Hernández', slug:'catherine-hernandez', initials:'CH'},
+  {name:'Neonatología',     doctor:'Dra. Catherine Hernández', slug:'catherine-hernandez', initials:'CH'},
+  {name:'Nutrición',        doctor:'Dr. Freddy Vera',         slug:'freddy-vera',        initials:'FV'},
+  {name:'Oftalmología',     doctor:'Dr. Alberto Amaya',       slug:'alberto-amaya',      initials:'AA'},
+  {name:'Imagenología',     doctor:'Dra. Angie Valero',       slug:'angie-valero',       initials:'AV'},
+  {name:'Terapia Física',   doctor:'Dra. Milena Rodríguez',   slug:'milena-rodriguez',   initials:'MR'},
+  {name:'Nefrología',       doctor:'Dr. Wilmer Rodríguez',    slug:'wilmer-rodriguez',   initials:'WR'},
+  {name:'Ortopedia',        doctor:'Dr. Wilmer Páez',         slug:'wilmer-paez',        initials:'WP'},
+  {name:'Oncología',        doctor:'Dr. Jhoiner Barbosa',     slug:'jhoiner-barbosa',    initials:'JB'}
+];
+
 // ── Form state ───────────────────────────────────────────────
 var F = {
-  petName:'', species:'', breed:'', age:'', sex:'', neutered:'',
-  ownerName:'', ownerPhone:'', service:'', specialty:'',
+  petName:'', species:'', breed:'', age:'', sex:'', neutered:'', weight:'',
+  ownerName:'', ownerPhone:'', service:'', specialty:'', specialtyDoctor:'',
   complaint:'', duration:'', evolution:'', appetite:'', water:'',
   vomit:'', diarrhea:'', energy:'', cough:'', breathing:'',
   urine:'', skin:'', pain:'', vaccines:'', deworming:'',
-  medications:'', history:'', allergies:'', diet:'', notes:'',
+  medications:'', history:'', allergies:'', diet:'', notes:'', detail:'',
   vetesoftId:'', vetesoftHc:''
 };
 
-var vsFound = false; // true when patient identified in Vetesoft
+var vsFound = false;
+var GEN = ['Consulta general'];
+var GEN_ESP = ['Consulta general','Consulta especializada'];
 
-// ── Question definitions ─────────────────────────────────────
-// type: 'identification' | 'vetesoft' | 'single' | '2col' | 'text' | 'textarea' | 'multi'
 var QUESTIONS = [
-  // ── IDENTIFICATION (always shown) ──
   {id:'_ident', group:'IDENTIFIQUÉMONOS', type:'identification'},
-
-  // ── VETESOFT LOOKUP (always shown after identification) ──
   {id:'_vetesoft', group:'BUSCANDO TU HISTORIA CLÍNICA', type:'vetesoft'},
 
-  // ── PATIENT INFO (only if NOT found in Vetesoft) ──
+  // Peso — siempre
+  {id:'weight', group:'PESO', q:'¿Cuánto pesa tu mascota?', type:'weight', placeholder:'Ej: 8.5'},
+
+  // Datos del paciente — solo si NO tiene historia
   {id:'species', group:'TU MASCOTA', q:'¿Tu mascota es perro o gato?', type:'2col', onlyIfNotFound:true, options:[
-    {emoji:'🐕', label:'Perro', value:'Canino'},
-    {emoji:'🐈', label:'Gato', value:'Felino'}
+    {emoji:'🐕', label:'Perro', value:'Canino'}, {emoji:'🐈', label:'Gato', value:'Felino'}
   ]},
   {id:'breed', group:'TU MASCOTA', q:'¿Cuál es su raza?', type:'text', onlyIfNotFound:true, placeholder:'Ej: Golden Retriever, Mestizo', skippable:true},
   {id:'age', group:'TU MASCOTA', q:'¿Qué edad tiene?', type:'text', onlyIfNotFound:true, placeholder:'Ej: 3 años, 8 meses'},
@@ -169,98 +200,242 @@ var QUESTIONS = [
     {label:'Sí', value:'Si'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
   ]},
 
-  // ── SERVICE (always shown) ──
+  // Servicio — siempre
   {id:'service', group:'SERVICIO', q:'¿Qué los trae hoy a consulta?', type:'single', options:[
     {label:'🩺 Consulta general', value:'Consulta general'},
     {label:'⚕️ Consulta especializada', value:'Consulta especializada'},
     {label:'📋 Control / seguimiento', value:'Control'}
   ]},
-  {id:'specialty', group:'SERVICIO', q:'¿A qué especialidad?', type:'single', conditional:'service===Consulta especializada', options:[
-    {label:'Dermatología', value:'Dermatología'}, {label:'Cardiología', value:'Cardiología'},
-    {label:'Neurología', value:'Neurología'}, {label:'Oftalmología', value:'Oftalmología'},
-    {label:'Oncología', value:'Oncología'}, {label:'Ortopedia', value:'Ortopedia'}, {label:'Otra', value:'Otra'}
-  ]},
 
-  // ── COMPLAINT (always shown) ──
-  {id:'complaint', group:'MOTIVO DE CONSULTA', q:'¿Qué está pasando?', sub:'Contanos qué notás diferente en tu mascota.', type:'textarea', placeholder:'Ej: Lleva 2 días sin comer, vomitó varias veces...'},
-  {id:'duration', group:'MOTIVO DE CONSULTA', q:'¿Cuándo empezó?', type:'single', options:[
+  // Selector de especialidad — solo especializada
+  {id:'specialty', group:'ESPECIALIDAD', q:'¿Con qué especialista?', sub:'Seleccioná la especialidad de tu cita.', type:'specialty-picker', onlyServices:['Consulta especializada']},
+
+  // Motivo — general + especializada
+  {id:'complaint', group:'MOTIVO DE CONSULTA', q:'¿Por qué lo trae hoy a consulta?', sub:'Contanos qué notás diferente en tu mascota.', type:'textarea', onlyServices:GEN_ESP, placeholder:'Ej: Lleva 2 días sin comer, vomitó varias veces...'},
+  {id:'duration', group:'MOTIVO DE CONSULTA', q:'¿Cuándo empezó?', type:'single', onlyServices:GEN_ESP, options:[
     {label:'Hoy', value:'Hoy'}, {label:'Ayer', value:'Ayer'},
     {label:'2-3 días', value:'Hace 2-3 días'}, {label:'Una semana', value:'Hace una semana'},
     {label:'2 semanas', value:'Hace 2 semanas'}, {label:'Un mes o más', value:'Hace un mes o mas'}
   ]},
-  {id:'evolution', group:'MOTIVO DE CONSULTA', q:'¿Cómo evolucionó?', type:'single', options:[
+  {id:'evolution', group:'MOTIVO DE CONSULTA', q:'¿Cómo evolucionó?', type:'single', onlyServices:GEN_ESP, options:[
     {label:'Empeoró rápido', value:'Empeoró rápido'}, {label:'Empeoró gradual', value:'Empeoró gradual'},
     {label:'Igual desde el inicio', value:'Igual desde el inicio'},
     {label:'Mejoró pero volvió', value:'Mejoró pero volvió'}, {label:'Mejoró levemente', value:'Mejoró levemente'}
   ]},
+  {id:'prevTreatment', group:'MOTIVO DE CONSULTA', q:'¿Ha hecho algún tratamiento para esto?', type:'single', onlyServices:GEN_ESP, branch:true, label:'Tratamiento previo', options:[
+    {label:'No', value:'No'}, {label:'Sí', value:'Si'}
+  ]},
+  {id:'prevTreatmentWhat', group:'MOTIVO DE CONSULTA', q:'¿Qué le diste a tu mascota?', sub:'Medicamento, dosis o remedio casero.', type:'text', onlyServices:GEN_ESP, conditional:'prevTreatment===Si', branch:true, label:'Qué le dio', placeholder:'Ej: media pastilla de X, suero, dieta blanda'},
 
-  // ── SYMPTOMS (always shown) ──
-  {id:'appetite', group:'SÍNTOMAS', q:'¿Cómo está su apetito?', type:'single', options:[
-    {label:'Normal 😊', value:'Normal'}, {label:'Reducido', value:'Reducido'},
-    {label:'Sin apetito 😟', value:'Sin apetito'}, {label:'Aumentado', value:'Aumentado'}
+  // ── SÍNTOMAS (solo consulta general) ──
+  {id:'appetite', group:'SÍNTOMAS', q:'¿Cómo está su apetito?', type:'single', onlyServices:GEN_ESP, options:[
+    {label:'Normal 😊', value:'Normal'}, {label:'Reducido', value:'Reducido'}, {label:'Sin apetito 😟', value:'Sin apetito'}, {label:'Aumentado', value:'Aumentado'}
   ]},
-  {id:'water', group:'SÍNTOMAS', q:'¿Cambios en el consumo de agua?', type:'single', options:[
-    {label:'Igual que siempre', value:'Normal'}, {label:'Toma más', value:'Toma mucho mas'},
-    {label:'Toma menos', value:'Toma menos'}, {label:'No toma', value:'No toma'}
+  {id:'water', group:'SÍNTOMAS', q:'¿Cambios en el consumo de agua?', type:'single', onlyServices:GEN_ESP, options:[
+    {label:'Igual que siempre', value:'Normal'}, {label:'Toma más', value:'Toma mucho mas'}, {label:'Toma menos', value:'Toma menos'}, {label:'No toma', value:'No toma'}
   ]},
-  {id:'vomit', group:'SÍNTOMAS', q:'¿Ha vomitado?', type:'single', options:[
+  {id:'vomit', group:'SÍNTOMAS', q:'¿Ha vomitado?', type:'single', onlyServices:GEN_ESP, options:[
     {label:'No', value:'No'}, {label:'1-2 veces', value:'Si, 1-2 veces'}, {label:'Frecuente', value:'Si, frecuente'}
   ]},
-  {id:'diarrhea', group:'SÍNTOMAS', q:'¿Ha tenido diarrea?', type:'single', options:[
+  {id:'diarrhea', group:'SÍNTOMAS', q:'¿Ha tenido diarrea?', type:'single', onlyServices:GEN_ESP, options:[
     {label:'No', value:'No'}, {label:'Blanda', value:'Si, blanda'}, {label:'Líquida', value:'Si, liquida'}
   ]},
-  {id:'energy', group:'SÍNTOMAS', q:'¿Cómo está su energía?', type:'single', options:[
-    {label:'Normal', value:'Normal'}, {label:'Algo decaído', value:'Algo decaido'},
-    {label:'Muy decaído 😴', value:'Muy decaido'}, {label:'Hiperactivo', value:'Hiperactivo'}
+  {id:'energy', group:'SÍNTOMAS', q:'¿Cómo está su energía?', type:'single', onlyServices:GEN_ESP, options:[
+    {label:'Normal', value:'Normal'}, {label:'Algo decaído', value:'Algo decaido'}, {label:'Muy decaído 😴', value:'Muy decaido'}, {label:'Hiperactivo', value:'Hiperactivo'}
   ]},
-  {id:'cough', group:'SÍNTOMAS', q:'¿Tiene tos o estornudos?', type:'single', options:[
-    {label:'No', value:'No'}, {label:'Tos', value:'Tos'},
-    {label:'Estornudos', value:'Estornudos'}, {label:'Ambos', value:'Ambos'}
+  {id:'cough', group:'SÍNTOMAS', q:'¿Tiene tos o estornudos?', type:'single', onlyServices:GEN_ESP, options:[
+    {label:'No', value:'No'}, {label:'Estornudos', value:'Estornudos'}, {label:'Tos ocasional', value:'Tos ocasional'}, {label:'Tos de noche o al ejercitarse', value:'Tos de noche o al ejercitarse'}, {label:'Tos y estornudos', value:'Tos y estornudos'}
   ]},
-  {id:'breathing', group:'SÍNTOMAS', q:'¿Dificultad para respirar?', type:'single', options:[
+  {id:'breathing', group:'SÍNTOMAS', q:'¿Dificultad para respirar?', type:'single', onlyServices:GEN_ESP, options:[
     {label:'No', value:'No'}, {label:'Sí 😮‍💨', value:'Si'}
   ]},
-  {id:'urine', group:'SÍNTOMAS', q:'¿Cómo está su orina?', type:'single', options:[
-    {label:'Normal', value:'Normal'}, {label:'Orina más', value:'Orina mas'},
-    {label:'Orina menos', value:'Orina menos'}, {label:'Con sangre', value:'Con sangre'}, {label:'No orina', value:'No orina'}
+  {id:'urine', group:'SÍNTOMAS', q:'¿Cómo está su orina?', type:'single', onlyServices:GEN_ESP, options:[
+    {label:'Normal', value:'Normal'}, {label:'Orina más', value:'Orina mas'}, {label:'Orina menos', value:'Orina menos'}, {label:'Con sangre', value:'Con sangre'}, {label:'No orina', value:'No orina'}
   ]},
-  {id:'skin', group:'SÍNTOMAS', q:'¿Problemas de piel o pelo?', type:'single', options:[
-    {label:'No, normal', value:'Normal'}, {label:'Se rasca mucho', value:'Se rasca'},
-    {label:'Heridas / llagas', value:'Heridas'}, {label:'Cae pelo', value:'Cae pelo'}
+  {id:'skin', group:'SÍNTOMAS', q:'¿Problemas de piel o pelo?', type:'single', onlyServices:GEN_ESP, options:[
+    {label:'No, normal', value:'Normal'}, {label:'Se rasca ocasionalmente', value:'Se rasca ocasional'}, {label:'Se rasca constantemente', value:'Se rasca constante'}, {label:'Heridas / llagas', value:'Heridas'}, {label:'Cae pelo', value:'Cae pelo'}
   ]},
-  {id:'pain', group:'SÍNTOMAS', q:'¿Señales de dolor o molestia?', type:'single', options:[
-    {label:'No noto nada', value:'No noto'}, {label:'Leve', value:'Leve'},
-    {label:'Moderado', value:'Moderado'}, {label:'Intenso 😣', value:'Intenso'}
+  {id:'pain', group:'SÍNTOMAS', q:'¿Señales de dolor o molestia?', type:'single', onlyServices:GEN_ESP, options:[
+    {label:'No noto nada', value:'No noto'}, {label:'Leve', value:'Leve'}, {label:'Moderado', value:'Moderado'}, {label:'Intenso 😣', value:'Intenso'}
   ]},
 
-  // ── HISTORY (always shown) ──
-  {id:'vaccines', group:'HISTORIAL', q:'¿Está al día con las vacunas?', type:'single', options:[
+  // ── CONTROL (solo control) ──
+  {id:'ctrl_response', group:'CONTROL', q:'¿Cómo respondió al tratamiento?', type:'single', onlyServices:['Control'], branch:true, label:'Respuesta al tratamiento', options:[
+    {label:'Mejoró mucho 😊', value:'Mejoró mucho'}, {label:'Mejoró un poco', value:'Mejoró un poco'}, {label:'Igual', value:'Igual'}, {label:'Empeoró 😟', value:'Empeoró'}
+  ]},
+  {id:'ctrl_completed', group:'CONTROL', q:'¿Completó el tratamiento indicado?', type:'single', onlyServices:['Control'], branch:true, label:'Adherencia', options:[
+    {label:'Sí, completo', value:'Completo'}, {label:'A medias', value:'A medias'}, {label:'No lo empezó', value:'No lo empezó'}
+  ]},
+  {id:'ctrl_sidefx', group:'CONTROL', q:'¿Notó efectos secundarios o reacciones?', type:'single', onlyServices:['Control'], branch:true, label:'Efectos secundarios', options:[
+    {label:'No', value:'No'}, {label:'Sí (los detallo al final)', value:'Si'}
+  ]},
+  {id:'ctrl_persist', group:'CONTROL', q:'¿Los síntomas de la visita anterior…?', type:'single', onlyServices:['Control'], branch:true, label:'Síntomas previos', options:[
+    {label:'Desaparecieron ✓', value:'Desaparecieron'}, {label:'Mejoraron pero continúan en menor medida', value:'Mejoraron pero continúan en menor medida'}, {label:'Siguen igual', value:'Siguen igual'}, {label:'Aparecieron nuevos', value:'Aparecieron nuevos'}
+  ]},
+
+  // ── HISTORIAL (general + especializada) ──
+  {id:'vaccines', group:'HISTORIAL', q:'¿Está al día con las vacunas?', type:'single', onlyServices:GEN_ESP, options:[
     {label:'Sí ✓', value:'Si'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
   ]},
-  {id:'deworming', group:'HISTORIAL', q:'¿Y con la desparasitación?', type:'single', options:[
+  {id:'deworming', group:'HISTORIAL', q:'¿Y con la desparasitación?', type:'single', onlyServices:GEN_ESP, options:[
     {label:'Sí, reciente ✓', value:'Si, reciente'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
   ]},
   {id:'medications', group:'HISTORIAL', q:'¿Toma medicamentos actualmente?', type:'text', placeholder:'Nombre y dosis, o escribí "Ninguno"', skippable:true},
-  {id:'history', group:'HISTORIAL', q:'¿Enfermedades o cirugías anteriores?', type:'text', placeholder:'Ej: Cirugía de cadera hace 2 años', skippable:true},
+  {id:'history', group:'HISTORIAL', q:'¿Enfermedades o cirugías anteriores?', type:'text', onlyServices:GEN_ESP, placeholder:'Ej: Cirugía de cadera hace 2 años', skippable:true},
   {id:'allergies', group:'HISTORIAL', q:'¿Alergias conocidas?', type:'single', options:[
     {label:'No', value:'No'}, {label:'Sí', value:'Si'}, {label:'No sé', value:'No se'}
   ]},
-  {id:'diet', group:'HISTORIAL', q:'¿Qué tipo de alimento come?', type:'2col', options:[
+  {id:'diet', group:'HISTORIAL', q:'¿Qué tipo de alimento come?', type:'2col', onlyServices:GEN_ESP, options:[
     {emoji:'🥘', label:'Concentrado', value:'Croquetas'}, {emoji:'🍖', label:'Casera', value:'Comida casera'},
     {emoji:'🥩', label:'BARF / crudo', value:'BARF'}, {emoji:'🔀', label:'Mixta', value:'Mixta'}
   ]},
+
+  // ── ESPECIALIDADES (cada una con sus preguntas, al final) ──
+  // Cardiología (tos ya se pregunta en la general, con el "cuándo")
+  {id:'sp_card_2', group:'CARDIOLOGÍA', q:'¿Se agita o cansa fácilmente?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Cardiología', branch:true, label:'Fatiga', options:[
+    {label:'No', value:'No'}, {label:'Un poco', value:'Leve'}, {label:'Bastante', value:'Marcada'}
+  ]},
+  {id:'sp_card_3', group:'CARDIOLOGÍA', q:'¿Desmayos o encías azuladas?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Cardiología', branch:true, label:'Síncope/cianosis', options:[
+    {label:'Ninguno', value:'No'}, {label:'Desmayos', value:'Desmayos'}, {label:'Encías azuladas', value:'Encías azuladas'}
+  ]},
+  {id:'sp_card_4', group:'CARDIOLOGÍA', q:'¿Duerme bien durante la noche?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Cardiología', branch:true, label:'Sueño', options:[
+    {label:'Sí, duerme bien', value:'Duerme bien'}, {label:'Se despierta varias veces', value:'Se despierta'}
+  ]},
+  {id:'sp_card_4b', group:'CARDIOLOGÍA', q:'¿Cuántas veces se despierta?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Cardiología', conditional:'sp_card_4===Se despierta', branch:true, label:'Veces que se despierta', placeholder:'Ej: 3 o 4 veces'},
+
+  // Dermatología (el rascado y su frecuencia ya se preguntan en la general)
+  {id:'sp_derm_2', group:'DERMATOLOGÍA', q:'¿Qué zonas están afectadas?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Dermatología', branch:true, label:'Zonas afectadas', placeholder:'Ej: orejas, patas, lomo'},
+  {id:'sp_derm_3', group:'DERMATOLOGÍA', q:'¿Notás pérdida de pelo, mal olor o secreción?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Dermatología', branch:true, label:'Hallazgos en piel', placeholder:'Describí lo que ves', skippable:true},
+
+  // Medicina Felina
+  {id:'sp_fel_1', group:'MEDICINA FELINA', q:'¿Tu gato sale de casa?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Medicina Felina', branch:true, label:'Sale de casa', options:[
+    {label:'Sí', value:'Si'}, {label:'No', value:'No'}, {label:'Ocasionalmente', value:'Ocasionalmente'}
+  ]},
+  {id:'sp_fel_2', group:'MEDICINA FELINA', q:'¿Hace sus necesidades en el arenero?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Medicina Felina', branch:true, label:'Usa arenero', options:[
+    {label:'Sí', value:'Si'}, {label:'No', value:'No'}
+  ]},
+  {id:'sp_fel_2b', group:'MEDICINA FELINA', q:'¿En dónde las hace?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Medicina Felina', conditional:'sp_fel_2===No', branch:true, label:'Dónde hace necesidades', placeholder:'Ej: en la alfombra, macetas, la cama'},
+  {id:'sp_fel_3', group:'MEDICINA FELINA', q:'¿Le han hecho test viral?', sub:'Leucemia felina (FeLV) o inmunodeficiencia (FIV).', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Medicina Felina', branch:true, label:'Test viral', options:[
+    {label:'Sí', value:'Si'}, {label:'No', value:'No'}
+  ]},
+  {id:'sp_fel_3b', group:'MEDICINA FELINA', q:'¿Cuál fue el resultado?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Medicina Felina', conditional:'sp_fel_3===Si', branch:true, label:'Resultado test viral', placeholder:'Ej: negativo, positivo a FeLV'},
+  {id:'sp_fel_4', group:'MEDICINA FELINA', q:'¿Hay más mascotas en casa?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Medicina Felina', branch:true, label:'Otras mascotas', options:[
+    {label:'Sí', value:'Si'}, {label:'No', value:'No'}
+  ]},
+  {id:'sp_fel_4b', group:'MEDICINA FELINA', q:'¿Cuáles?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Medicina Felina', conditional:'sp_fel_4===Si', branch:true, label:'Cuáles mascotas', placeholder:'Ej: 2 gatos y 1 perro'},
+  {id:'sp_fel_5', group:'MEDICINA FELINA', q:'¿Cómo es su carácter?', sub:'¿Es nervioso, miedoso, agresivo o se estresa con facilidad?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Medicina Felina', branch:true, label:'Carácter', options:[
+    {label:'Tranquilo', value:'Tranquilo'}, {label:'Nervioso o miedoso', value:'Nervioso o miedoso'}, {label:'Agresivo', value:'Agresivo'}, {label:'Se estresa con facilidad', value:'Se estresa con facilidad'}
+  ]},
+
+  // Gastroenterología
+  {id:'sp_gastro_destete', group:'GASTROENTEROLOGÍA', q:'¿A qué edad lo destetaron?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Gastroenterología', branch:true, label:'Edad de destete', options:[
+    {label:'A los días', value:'Días'}, {label:'Al mes', value:'Un mes'}, {label:'A los dos meses', value:'Dos meses'}, {label:'No sé', value:'No se'}
+  ]},
+  {id:'sp_gastro_3', group:'GASTROENTEROLOGÍA', q:'¿Come objetos raros o basura?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Gastroenterología', branch:true, label:'Ingesta de objetos', options:[
+    {label:'No', value:'No'}, {label:'Sí', value:'Si'}
+  ]},
+
+  // Neonatología
+  {id:'sp_neo_1', group:'NEONATOLOGÍA', q:'¿Qué edad tienen las crías?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Neonatología', branch:true, label:'Edad de las crías', placeholder:'Ej: 5 días, 3 semanas'},
+  {id:'sp_neo_2', group:'NEONATOLOGÍA', q:'¿Maman bien?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Neonatología', branch:true, label:'Lactancia', options:[
+    {label:'Sí, todas', value:'Normal'}, {label:'Algunas no', value:'Algunas no'}, {label:'No maman', value:'No maman'}
+  ]},
+  {id:'sp_neo_3', group:'NEONATOLOGÍA', q:'¿Alguna cría se ve débil o fría?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Neonatología', branch:true, label:'Cría en riesgo', options:[
+    {label:'No', value:'No'}, {label:'Sí', value:'Si'}
+  ]},
+
+  // Nutrición
+  {id:'sp_nut_1', group:'NUTRICIÓN', q:'¿Qué alimento le das y cuánto al día?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Nutrición', branch:true, label:'Alimento actual', placeholder:'Ej: 200g de concentrado X, 2 veces al día'},
+  {id:'sp_nut_2', group:'NUTRICIÓN', q:'¿Le das premios o comida humana?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Nutrición', branch:true, label:'Extras', options:[
+    {label:'No', value:'No'}, {label:'Ocasional', value:'Ocasional'}, {label:'Frecuente', value:'Frecuente'}
+  ]},
+  {id:'sp_nut_3', group:'NUTRICIÓN', q:'¿Cómo ves su cuerpo?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Nutrición', branch:true, label:'Condición corporal', options:[
+    {label:'Flaco', value:'Flaco'}, {label:'Normal', value:'Normal'}, {label:'Con sobrepeso', value:'Sobrepeso'}
+  ]},
+
+  // Oftalmología
+  {id:'sp_oft_1', group:'OFTALMOLOGÍA', q:'¿Qué ojo está afectado?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oftalmología', branch:true, label:'Ojo afectado', options:[
+    {label:'Izquierdo', value:'Izquierdo'}, {label:'Derecho', value:'Derecho'}, {label:'Ambos', value:'Ambos'}
+  ]},
+  {id:'sp_oft_2', group:'OFTALMOLOGÍA', q:'¿Qué signos notás?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oftalmología', branch:true, label:'Signos oculares', options:[
+    {label:'Lagrimeo', value:'Lagrimeo'}, {label:'Secreción', value:'Secreción'}, {label:'Enrojecimiento', value:'Enrojecimiento'}, {label:'Opacidad', value:'Opacidad'}
+  ]},
+  {id:'sp_oft_3', group:'OFTALMOLOGÍA', q:'¿Choca con objetos o ve mal?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oftalmología', branch:true, label:'Visión', options:[
+    {label:'Ve bien', value:'Normal'}, {label:'Ve mal / choca', value:'Deficiente'}
+  ]},
+
+  // Imagenología
+  {id:'sp_img_1', group:'IMAGENOLOGÍA', q:'¿Qué estudio le indicaron?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Imagenología', branch:true, label:'Estudio', options:[
+    {label:'Ecografía', value:'Ecografía'}, {label:'Radiografía', value:'Radiografía'}, {label:'No sé', value:'No se'}
+  ]},
+  {id:'sp_img_3', group:'IMAGENOLOGÍA', q:'¿Está en ayuno?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Imagenología', branch:true, label:'Ayuno', options:[
+    {label:'Sí', value:'Si'}, {label:'No', value:'No'}
+  ]},
+
+  // Endocrinología (sed y orina ya se preguntan en la general)
+  {id:'sp_endo_2', group:'ENDOCRINOLOGÍA', q:'¿Ha cambiado de peso sin cambiar la comida?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Endocrinología', branch:true, label:'Cambio de peso', options:[
+    {label:'Subió de peso', value:'Subió'}, {label:'Bajó de peso', value:'Bajó'}, {label:'Igual', value:'Igual'}
+  ]},
+  {id:'sp_endo_3', group:'ENDOCRINOLOGÍA', q:'¿Cambios en el pelo o la piel?', sub:'Caída, zonas sin pelo, piel más gruesa.', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Endocrinología', branch:true, label:'Pelo y piel', options:[
+    {label:'No', value:'No'}, {label:'Sí', value:'Si'}
+  ]},
+  {id:'sp_endo_4', group:'ENDOCRINOLOGÍA', q:'¿Está más decaído, con más apetito o jadea más?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Endocrinología', branch:true, label:'Otros signos', placeholder:'Contanos lo que notes', skippable:true},
+
+  // Terapia Física
+  {id:'sp_ter_1', group:'TERAPIA FÍSICA', q:'¿Tiene una lesión o cirugía previa?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Terapia Física', branch:true, label:'Antecedente', placeholder:'Ej: cirugía de rodilla hace 1 mes'},
+  {id:'sp_ter_2', group:'TERAPIA FÍSICA', q:'¿Cojea o le cuesta moverse?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Terapia Física', branch:true, label:'Movilidad', options:[
+    {label:'Sí', value:'Si'}, {label:'No', value:'No'}
+  ]},
+  {id:'sp_ter_3', group:'TERAPIA FÍSICA', q:'¿Qué miembro o zona afecta?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Terapia Física', branch:true, label:'Zona afectada', placeholder:'Ej: pata trasera derecha', skippable:true},
+
+  // Nefrología (agua y orina ya se preguntan en la general)
+  {id:'sp_nef_3', group:'NEFROLOGÍA', q:'¿Mal aliento o pérdida de peso reciente?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Nefrología', branch:true, label:'Mal aliento / peso', options:[
+    {label:'No', value:'No'}, {label:'Mal aliento', value:'Mal aliento'}, {label:'Perdió peso', value:'Perdió peso'}, {label:'Ambos', value:'Ambos'}
+  ]},
+
+  // Ortopedia
+  {id:'sp_ort_1', group:'ORTOPEDIA', q:'¿Cojea?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Ortopedia', branch:true, label:'Cojera', options:[
+    {label:'Sí', value:'Si'}, {label:'No', value:'No'}
+  ]},
+  {id:'sp_ort_2', group:'ORTOPEDIA', q:'¿Qué miembro afecta?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Ortopedia', branch:true, label:'Miembro', placeholder:'Ej: pata delantera izquierda'},
+  {id:'sp_ort_3', group:'ORTOPEDIA', q:'¿Empeora con ejercicio o reposo?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Ortopedia', branch:true, label:'Patrón', options:[
+    {label:'Con ejercicio', value:'Ejercicio'}, {label:'Con reposo', value:'Reposo'}, {label:'Igual', value:'Igual'}
+  ]},
+  {id:'sp_ort_4', group:'ORTOPEDIA', q:'¿Le cuesta acostarse o levantarse?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Ortopedia', branch:true, label:'Al acostarse/levantarse', options:[
+    {label:'No', value:'No'}, {label:'Sí', value:'Si'}
+  ]},
+
+  // Oncología
+  {id:'sp_onc_1', group:'ONCOLOGÍA', q:'¿Le detectaron una masa, bulto o tumor?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oncología', branch:true, label:'Masa/tumor', options:[
+    {label:'Sí', value:'Si'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
+  ]},
+  {id:'sp_onc_2', group:'ONCOLOGÍA', q:'¿Dónde está ubicada?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Oncología', branch:true, label:'Ubicación', placeholder:'Ej: costado izquierdo, mama, cuello', skippable:true},
+  {id:'sp_onc_3', group:'ONCOLOGÍA', q:'¿Ha crecido rápido en el último tiempo?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oncología', branch:true, label:'Crecimiento', options:[
+    {label:'Sí, rápido', value:'Rápido'}, {label:'Lento', value:'Lento'}, {label:'No cambió', value:'Sin cambio'}, {label:'No sé', value:'No se'}
+  ]},
+  {id:'sp_onc_4', group:'ONCOLOGÍA', q:'¿Notás pérdida de peso o apetito?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oncología', branch:true, label:'Pérdida de peso/apetito', options:[
+    {label:'No', value:'No'}, {label:'Sí', value:'Si'}
+  ]},
+  {id:'sp_onc_5', group:'ONCOLOGÍA', q:'¿La masa ha tenido algún flujo?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oncología', branch:true, label:'Flujo de la masa', options:[
+    {label:'No', value:'No'}, {label:'Sangre', value:'Sangre'}, {label:'Exudado', value:'Exudado'}, {label:'Pus', value:'Pus'}
+  ]},
+  {id:'sp_onc_6', group:'ONCOLOGÍA', q:'¿Se la lame o crees que le genera dolor?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oncología', branch:true, label:'Lamido / dolor', options:[
+    {label:'No', value:'No'}, {label:'Se la lame', value:'Se la lame'}, {label:'Le genera dolor', value:'Le genera dolor'}, {label:'Ambos', value:'Ambos'}
+  ]},
+
   {id:'notes', group:'NOTAS FINALES', q:'¿Algo más que deba saber el médico?', sub:'Campo opcional.', type:'textarea', placeholder:'Comportamiento inusual, viajes recientes, contacto con otros animales...', skippable:true}
 ];
 
 var activeIndices = [];
 var currentPos = -1;
 
-// ── Build active question list based on state ────────────────
 function buildActiveIndices() {
   activeIndices = [];
   for (var i = 0; i < QUESTIONS.length; i++) {
     var q = QUESTIONS[i];
     if (q.onlyIfNotFound && vsFound) continue;
+    if (q.onlyServices && q.onlyServices.indexOf(F.service) === -1) continue;
+    if (q.onlySpecialty && F.specialty !== q.onlySpecialty) continue;
     if (q.conditional) {
       var parts = q.conditional.split('===');
       if (F[parts[0]] !== parts[1]) continue;
@@ -269,7 +444,6 @@ function buildActiveIndices() {
   }
 }
 
-// ── Render a question by position ────────────────────────────
 function renderQuestion(pos) {
   buildActiveIndices();
   var idx = activeIndices[pos];
@@ -284,8 +458,7 @@ function renderQuestion(pos) {
   }
   if (specialTypes.indexOf(q.type) === -1) realPos++;
 
-  var pct = (pos / activeIndices.length) * 100;
-  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressBar').style.width = (pos / activeIndices.length) * 100 + '%';
   document.getElementById('progressCounter').textContent = realPos + ' / ' + realTotal;
   document.getElementById('progressCounter').style.display = specialTypes.indexOf(q.type) !== -1 ? 'none' : 'block';
   document.getElementById('backBtn').style.display = pos > 0 ? 'block' : 'none';
@@ -293,26 +466,21 @@ function renderQuestion(pos) {
   var html;
   if (q.type === 'identification') html = buildIdentScreen();
   else if (q.type === 'vetesoft') html = buildVsScreen();
+  else if (q.type === 'specialty-picker') html = buildSpecialtyScreen(q);
+  else if (q.type === 'weight') html = buildWeightScreen(q, pos);
   else if (q.type === '2col') html = buildColScreen(q, pos);
   else html = buildStdScreen(q, pos);
 
-  var newEl = document.createElement('div');
-  newEl.innerHTML = html;
+  var newEl = document.createElement('div'); newEl.innerHTML = html;
   var newScreen = newEl.firstChild;
-
   var existing = container.querySelector('.screen.active');
-  if (existing) {
-    existing.classList.add('exit-left');
-    setTimeout(function(){ if (existing.parentNode) existing.parentNode.removeChild(existing); }, 350);
-  }
+  if (existing) { existing.classList.add('exit-left'); setTimeout(function(){ if (existing.parentNode) existing.parentNode.removeChild(existing); }, 350); }
   newScreen.classList.add('active');
   container.appendChild(newScreen);
-
   var inp = newScreen.querySelector('input:not([type=hidden]), textarea');
   if (inp) setTimeout(function(){ inp.focus(); }, 400);
 }
 
-// ── Screen builders ──────────────────────────────────────────
 function buildIdentScreen() {
   return '<div class="screen">' +
     '<div class="group-label">IDENTIFIQUÉMONOS</div>' +
@@ -331,14 +499,32 @@ function buildVsScreen() {
   return '<div class="screen vs-wrap"><div class="group-label">BUSCANDO TU HISTORIA CLÍNICA</div><div id="vsArea"><div class="vs-loading"><div class="spinner"></div><p>Buscando en el sistema...</p></div></div></div>';
 }
 
+function buildWeightScreen(q, pos) {
+  return '<div class="screen"><div class="group-label">PESO</div><div class="question">'+escHtml(q.q)+'</div>' +
+    '<div class="weight-hint"><span class="em">⚖️</span><span>Por favor pesá a tu mascota en la báscula de la sala e ingresá el peso.</span></div>' +
+    '<div class="weight-input-row"><input class="text-input" type="number" step="0.1" id="inp_weight" value="'+escAttr(F.weight)+'" placeholder="'+escAttr(q.placeholder||'')+'" onkeydown="if(event.key===\'Enter\')nextFromText(\'weight\','+pos+')"><span class="weight-unit">kg</span></div>' +
+    '<button class="next-btn" onclick="nextFromText(\'weight\','+pos+')">Siguiente →</button></div>';
+}
+
+function buildSpecialtyScreen(q) {
+  var cards = '<div class="spec-grid">';
+  SPECIALTIES.forEach(function(s, i) {
+    cards += '<div class="spec-card" onclick="pickSpecialty('+i+')">' +
+      '<div class="spec-info"><div class="spec-name">'+escHtml(s.name)+'</div><div class="spec-doc">'+escHtml(s.doctor)+'</div></div>' +
+      '<div class="spec-avatar"><img src="img/'+s.slug+'.jpg" alt="" onerror="this.style.display=\'none\'"><span class="spec-initials">'+s.initials+'</span></div>' +
+    '</div>';
+  });
+  cards += '</div>';
+  return '<div class="screen"><div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+cards+'</div>';
+}
+
 function buildStdScreen(q, pos) {
   var opts = '';
   if (q.options) {
     opts = '<div class="options">';
     q.options.forEach(function(o) {
       var sel = F[q.id] === o.value ? ' sel' : '';
-      opts += '<div class="option'+sel+'" onclick="selectOption(\''+q.id+'\',\''+escAttr(o.value)+'\',this,'+pos+')">';
-      opts += '<div class="check">'+(sel ? '✓' : '')+'</div><span>'+escHtml(o.label)+'</span></div>';
+      opts += '<div class="option'+sel+'" onclick="selectOption(\''+q.id+'\',\''+escAttr(o.value)+'\',this,'+pos+')"><div class="check">'+(sel ? '✓' : '')+'</div><span>'+escHtml(o.label)+'</span></div>';
     });
     opts += '</div>';
   }
@@ -360,50 +546,39 @@ function buildColScreen(q, pos) {
   return '<div class="screen"><div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+opts+'</div>';
 }
 
-// ── Identification submit ────────────────────────────────────
 function submitIdent() {
   var ownerName = document.getElementById('inp_ownerName').value.trim();
   var petName   = document.getElementById('inp_petName').value.trim();
   var cedula    = document.getElementById('inp_cedula').value.trim();
   if (!ownerName || !petName) { alert('Por favor ingresá tu nombre y el de tu mascota.'); return; }
-  F.ownerName = ownerName;
-  F.petName   = petName;
-  F._cedula   = cedula;
+  F.ownerName = ownerName; F.petName = petName; F._cedula = cedula;
   goNext(currentPos);
 }
 
-// ── Vetesoft lookup ──────────────────────────────────────────
+function pickSpecialty(i) {
+  var s = SPECIALTIES[i];
+  F.specialty = s.name;
+  F.specialtyDoctor = s.doctor;
+  goNext(currentPos);
+}
+
 function startVsLookup(pos) {
   setTimeout(function() {
-    var url = API_URL + '?action=search&petName=' + encodeURIComponent(F.petName) +
-              '&ownerName=' + encodeURIComponent(F.ownerName) +
-              '&cedula=' + encodeURIComponent(F._cedula || '');
-    fetch(url)
-      .then(function(r){ return r.json(); })
-      .then(function(res){ renderVsResults(res, pos); })
-      .catch(function(){ renderVsError(pos); });
+    var url = API_URL + '?action=search&petName=' + encodeURIComponent(F.petName) + '&ownerName=' + encodeURIComponent(F.ownerName) + '&cedula=' + encodeURIComponent(F._cedula || '');
+    fetch(url).then(function(r){ return r.json(); }).then(function(res){ renderVsResults(res, pos); }).catch(function(){ renderVsError(pos); });
   }, 500);
 }
 
 function renderVsResults(res, pos) {
   var area = document.getElementById('vsArea');
   if (!area) return;
-
-  if (!res || !res.ok || !res.results || res.results.length === 0) {
-    renderVsNotFound(pos); return;
-  }
-
-  var html = '<div class="vs-title">¿Encontramos tu mascota?</div><div class="vs-sub">Seleccioná tu registro o indicá que no es ninguno.</div>';
-  html += '<div class="vs-results-list">';
+  if (!res || !res.ok || !res.results || res.results.length === 0) { renderVsNotFound(pos); return; }
+  var html = '<div class="vs-title">¿Encontramos tu mascota?</div><div class="vs-sub">Seleccioná tu registro o indicá que no es ninguno.</div><div class="vs-results-list">';
   res.results.forEach(function(r) {
     var hc = r.registro ? '<span class="vs-hc">HC '+escHtml(r.registro)+'</span>' : '';
-    html += '<div class="vs-item" onclick=\'confirmVs('+JSON.stringify(r)+','+pos+')\'>';
-    html += '<div class="vs-item-name">'+escHtml(r.petName||'')+hc+'</div>';
-    html += '<div class="vs-item-meta">'+escHtml(r.species||'')+(r.breed?' · '+escHtml(r.breed):'')+(r.owner?' | 👤 '+escHtml(r.owner):'')+'</div>';
-    html += '</div>';
+    html += '<div class="vs-item" onclick=\'confirmVs('+JSON.stringify(r)+','+pos+')\'><div class="vs-item-name">'+escHtml(r.petName||'')+hc+'</div><div class="vs-item-meta">'+escHtml(r.species||'')+(r.breed?' · '+escHtml(r.breed):'')+(r.owner?' | 👤 '+escHtml(r.owner):'')+'</div></div>';
   });
-  html += '</div>';
-  html += '<div class="vs-not-mine" onclick="renderVsNotFound('+pos+')">No es ninguno de estos →</div>';
+  html += '</div><div class="vs-not-mine" onclick="renderVsNotFound('+pos+')">No es ninguno de estos →</div>';
   area.innerHTML = html;
 }
 
@@ -411,13 +586,10 @@ function confirmVs(r, pos) {
   vsFound = true;
   F.vetesoftId = r.id ? String(r.id) : '';
   F.vetesoftHc = r.registro || '';
-  // Pre-fill from Vetesoft
-  if (r.petName)  F.petName  = r.petName;
-  if (r.species)  F.species  = r.species;
-  if (r.breed)    F.breed    = r.breed;
-  if (r.sex)      F.sex      = r.sex;
-  if (r.phone && !F.ownerPhone) F.ownerPhone = r.phone;
-
+  if (r.petName) F.petName = r.petName;
+  if (r.species) F.species = r.species;
+  if (r.breed)   F.breed   = r.breed;
+  if (r.sex)     F.sex     = r.sex;
   var area = document.getElementById('vsArea');
   if (area) {
     var hcLine = r.registro ? ' · HC <strong>'+escHtml(r.registro)+'</strong>' : '';
@@ -427,34 +599,16 @@ function confirmVs(r, pos) {
 }
 
 function renderVsNotFound(pos) {
-  vsFound = false;
-  F.vetesoftId = ''; F.vetesoftHc = '';
+  vsFound = false; F.vetesoftId = ''; F.vetesoftHc = '';
   var area = document.getElementById('vsArea');
-  if (area) {
-    area.innerHTML =
-      '<div class="vs-no-match">' +
-        '<div class="em">🔍</div>' +
-        '<div class="title">Parece que no tenés historia clínica</div>' +
-        '<div class="sub">No encontramos tu mascota en el sistema. El médico la creará en consulta.</div>' +
-        '<button class="vs-no-match-continue" onclick="goNext('+pos+')">Continuar y completar datos →</button>' +
-      '</div>';
-  }
+  if (area) area.innerHTML = '<div class="vs-no-match"><div class="em">🔍</div><div class="title">Parece que no tenés historia clínica</div><div class="sub">No encontramos tu mascota en el sistema. El médico la creará en consulta.</div><button class="vs-no-match-continue" onclick="goNext('+pos+')">Continuar y completar datos →</button></div>';
 }
 
 function renderVsError(pos) {
   var area = document.getElementById('vsArea');
-  if (area) {
-    area.innerHTML =
-      '<div class="vs-no-match">' +
-        '<div class="em">⚠️</div>' +
-        '<div class="title">No pudimos conectar</div>' +
-        '<div class="sub">Problema de conexión con el sistema. Podés continuar igual.</div>' +
-        '<button class="vs-no-match-continue" onclick="vsFound=false;goNext('+pos+')">Continuar →</button>' +
-      '</div>';
-  }
+  if (area) area.innerHTML = '<div class="vs-no-match"><div class="em">⚠️</div><div class="title">No pudimos conectar</div><div class="sub">Problema de conexión. Podés continuar igual.</div><button class="vs-no-match-continue" onclick="vsFound=false;goNext('+pos+')">Continuar →</button></div>';
 }
 
-// ── Navigation ───────────────────────────────────────────────
 function selectOption(fieldId, value, el, pos) {
   F[fieldId] = value;
   el.parentElement.querySelectorAll('.option').forEach(function(o){ o.classList.remove('sel'); if(o.querySelector('.check')) o.querySelector('.check').textContent=''; });
@@ -489,28 +643,36 @@ function goBack() {
   buildActiveIndices();
   var container = document.getElementById('screens');
   var existing = container.querySelector('.screen.active');
-  if (existing) {
-    existing.style.transition = 'opacity .3s,transform .3s';
-    existing.style.opacity = '0'; existing.style.transform = 'translateX(60px)';
-    setTimeout(function(){ if (existing.parentNode) existing.parentNode.removeChild(existing); }, 300);
-  }
+  if (existing) { existing.style.transition = 'opacity .3s,transform .3s'; existing.style.opacity = '0'; existing.style.transform = 'translateX(60px)'; setTimeout(function(){ if (existing.parentNode) existing.parentNode.removeChild(existing); }, 300); }
   var q2 = QUESTIONS[activeIndices[pos]];
-  var html = q2.type === '2col' ? buildColScreen(q2, pos) : buildStdScreen(q2, pos);
+  var html;
+  if (q2.type === 'specialty-picker') html = buildSpecialtyScreen(q2);
+  else if (q2.type === 'weight') html = buildWeightScreen(q2, pos);
+  else if (q2.type === '2col') html = buildColScreen(q2, pos);
+  else html = buildStdScreen(q2, pos);
   var newEl = document.createElement('div'); newEl.innerHTML = html;
   var newScreen = newEl.firstChild;
   newScreen.style.transform = 'translateX(-60px)'; newScreen.style.opacity = '0';
   container.appendChild(newScreen);
-  requestAnimationFrame(function(){ requestAnimationFrame(function(){
-    newScreen.style.transition = 'opacity .35s,transform .35s';
-    newScreen.style.opacity = '1'; newScreen.style.transform = 'translateX(0)';
-    newScreen.classList.add('active');
-  });});
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ newScreen.style.transition = 'opacity .35s,transform .35s'; newScreen.style.opacity = '1'; newScreen.style.transform = 'translateX(0)'; newScreen.classList.add('active'); });});
   document.getElementById('progressBar').style.width = (pos / activeIndices.length) * 100 + '%';
   document.getElementById('backBtn').style.display = pos > 0 ? 'block' : 'none';
 }
 
-// ── Submit ───────────────────────────────────────────────────
+function compileDetail() {
+  var lines = [];
+  if (F.service === 'Consulta especializada' && F.specialty) {
+    lines.push('Especialidad: ' + F.specialty + (F.specialtyDoctor ? ' (' + F.specialtyDoctor + ')' : ''));
+  }
+  for (var i = 0; i < QUESTIONS.length; i++) {
+    var q = QUESTIONS[i];
+    if (q.branch && F[q.id]) lines.push(q.label + ': ' + F[q.id]);
+  }
+  return lines.join('\n');
+}
+
 function doSubmit() {
+  F.detail = compileDetail();
   document.getElementById('screens').innerHTML = '<div class="screen active" style="justify-content:center;align-items:center;text-align:center"><div style="font-size:3rem;margin-bottom:16px">📤</div><div style="font-size:1.1rem;font-weight:800;color:var(--tx)">Enviando tu ficha...</div></div>';
   document.getElementById('backBtn').style.display = 'none';
   document.getElementById('progressCounter').style.display = 'none';
@@ -520,10 +682,7 @@ function doSubmit() {
       if (res && res.ok) {
         document.getElementById('screens').innerHTML = '';
         document.getElementById('successScreen').classList.add('show');
-        if (F.vetesoftHc) {
-          document.getElementById('successHc').style.display = 'block';
-          document.getElementById('successHcVal').textContent = F.vetesoftHc;
-        }
+        if (F.vetesoftHc) { document.getElementById('successHc').style.display = 'block'; document.getElementById('successHcVal').textContent = F.vetesoftHc; }
         document.getElementById('progressBar').style.display = 'none';
       } else { showSendError(); }
     }).catch(showSendError);
