@@ -20,62 +20,77 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 .progress-counter{position:fixed;top:10px;right:16px;font-size:.72rem;font-weight:700;color:var(--tm);z-index:100;letter-spacing:.3px}
 .back-btn{position:fixed;top:7px;left:14px;background:none;border:none;padding:6px;cursor:pointer;color:var(--tm);font-size:1.2rem;z-index:100;border-radius:8px}
 .back-btn:hover{background:rgba(0,0,0,.06)}
+
 .screen{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;padding:24px 24px 80px;opacity:0;transform:translateX(60px);transition:opacity .35s ease,transform .35s ease;pointer-events:none}
 .screen.active{opacity:1;transform:translateX(0);pointer-events:all}
 .screen.exit-left{opacity:0;transform:translateX(-60px)}
+
 .group-label{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--tm);margin-bottom:10px}
 .question{font-size:1.55rem;font-weight:800;color:var(--tx);line-height:1.25;margin-bottom:6px}
 .question-sub{font-size:.85rem;color:var(--tm);margin-bottom:20px;line-height:1.5}
+
 .options{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 .option{display:flex;align-items:center;gap:14px;background:var(--wh);border:2px solid var(--bd);border-radius:14px;padding:14px 18px;cursor:pointer;transition:all .15s;font-size:.95rem;font-weight:600;color:var(--tx)}
 .option:hover{border-color:var(--p);background:var(--pl)}
 .option.sel{border-color:var(--p);background:var(--pl);color:var(--p)}
 .option .check{width:22px;height:22px;border-radius:50%;border:2px solid var(--bd);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .15s}
 .option.sel .check{background:var(--p);border-color:var(--p);color:#fff}
+
 .options-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
 .options-2col .option{flex-direction:column;text-align:center;padding:16px 10px;gap:6px;font-size:.85rem}
 .options-2col .option .emoji{font-size:1.5rem}
 .options-2col .option .check{display:none}
+
 .text-wrap{margin-top:18px}
 .text-input{width:100%;border:2px solid var(--bd);border-radius:14px;padding:16px 18px;font-size:1.05rem;font-family:'Nunito',sans-serif;color:var(--tx);outline:none;background:var(--wh);transition:border .2s}
 .text-input:focus{border-color:var(--p)}
 textarea.text-input{resize:none;min-height:120px;line-height:1.6}
-.dual-inputs{display:flex;flex-direction:column;gap:10px;margin-top:18px}
-.dual-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:4px}
+
+.multi-inputs{display:flex;flex-direction:column;gap:12px;margin-top:18px}
+.input-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:4px}
+
 .next-btn{position:fixed;bottom:24px;left:24px;right:24px;padding:16px;background:var(--p);color:#fff;border:none;border-radius:14px;font-size:1rem;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;transition:background .2s}
 .next-btn:hover{background:var(--pd)}
 .skip-link{position:fixed;bottom:0;left:0;right:0;text-align:center;padding:8px;font-size:.75rem;color:var(--ts);cursor:pointer;font-weight:600}
 .skip-link:hover{color:var(--tm)}
-.vs-screen{padding:24px 24px 100px}
-.vs-loading{text-align:center;padding:20px 0}
-.vs-loading .spinner{width:44px;height:44px;border:3px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
+
+/* Vetesoft lookup screen */
+.vs-wrap{padding:0}
+.vs-loading{text-align:center;padding:30px 0}
+.vs-loading .spinner{width:48px;height:48px;border:3px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.vs-loading p{color:var(--tm);font-size:.9rem}
-.vs-title{font-size:1.2rem;font-weight:800;color:var(--tx);margin-bottom:6px}
-.vs-sub{font-size:.82rem;color:var(--tm);margin-bottom:16px;line-height:1.5}
-.vs-results-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
-.vs-item{background:var(--wh);border:2px solid var(--bd);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all .15s}
+.vs-loading p{color:var(--tm);font-size:.9rem;font-weight:600}
+.vs-results-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-height:45vh;overflow-y:auto}
+.vs-item{background:var(--wh);border:2px solid var(--bd);border-radius:12px;padding:13px 15px;cursor:pointer;transition:all .15s}
 .vs-item:hover{border-color:var(--p);background:var(--pl)}
-.vs-item-name{font-weight:800;font-size:.92rem;color:var(--tx);display:flex;align-items:center;gap:7px}
+.vs-item-name{font-weight:800;font-size:.95rem;color:var(--tx);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .vs-hc{background:var(--p);color:#fff;border-radius:99px;padding:2px 9px;font-size:.65rem;font-weight:800}
-.vs-item-meta{font-size:.73rem;color:var(--tm);margin-top:2px}
-.vs-confirmed{background:var(--okl);border:2px solid #86efac;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;margin-top:8px}
-.vs-confirmed-text .name{font-weight:800;color:#15803d;font-size:.92rem}
-.vs-confirmed-text .meta{font-size:.72rem;color:var(--tm);margin-top:1px}
-.vs-none{background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:12px 14px;font-size:.8rem;color:#92400e;text-align:center}
-.vs-cedula-row{display:flex;gap:8px;margin-top:12px;align-items:center}
-.vs-cedula-row input{flex:1;border:2px solid var(--bd);border-radius:10px;padding:10px 12px;font-size:.88rem;font-family:'Nunito',sans-serif;outline:none;color:var(--tx)}
-.vs-cedula-row input:focus{border-color:var(--p)}
-.vs-cedula-row button{padding:10px 14px;background:var(--p);color:#fff;border:none;border-radius:10px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap}
-.vs-change{font-size:.72rem;color:var(--tm);text-decoration:underline;cursor:pointer;display:block;margin-top:6px;text-align:center}
+.vs-item-meta{font-size:.74rem;color:var(--tm);margin-top:3px}
+.vs-confirmed{background:var(--okl);border:2px solid #86efac;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.vs-confirmed-icon{font-size:1.8rem}
+.vs-confirmed-text .name{font-weight:800;color:#15803d;font-size:.95rem}
+.vs-confirmed-text .meta{font-size:.74rem;color:var(--tm);margin-top:2px}
+.vs-no-match{background:#fff8e1;border:2px solid #fde68a;border-radius:12px;padding:14px 16px;text-align:center}
+.vs-no-match .em{font-size:2rem;margin-bottom:8px}
+.vs-no-match .title{font-weight:800;color:#92400e;font-size:.95rem;margin-bottom:4px}
+.vs-no-match .sub{font-size:.78rem;color:#b45309;line-height:1.5}
+.vs-no-match-continue{width:100%;margin-top:12px;padding:13px;background:#f59e0b;color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif}
+.vs-change{font-size:.72rem;color:var(--tm);text-decoration:underline;cursor:pointer;display:block;margin-top:8px;text-align:center}
+.vs-title{font-size:1.2rem;font-weight:800;color:var(--tx);margin-bottom:5px}
+.vs-sub{font-size:.82rem;color:var(--tm);margin-bottom:14px;line-height:1.5}
+.vs-not-mine{font-size:.74rem;color:var(--ts);text-align:center;margin-top:8px;cursor:pointer;text-decoration:underline}
+
+/* Start */
 .start-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center;background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%)}
 .start-logo{font-size:3rem;margin-bottom:12px}
 .start-h1{font-size:2rem;font-weight:900;color:var(--tx);line-height:1.15;margin-bottom:10px}
 .start-h1 span{color:var(--p)}
 .start-sub{font-size:.88rem;color:var(--tm);line-height:1.6;max-width:320px;margin-bottom:32px}
-.start-meta{display:flex;align-items:center;justify-content:center;gap:6px;font-size:.78rem;color:var(--ts);margin-bottom:28px}
+.start-meta{font-size:.78rem;color:var(--ts);margin-bottom:28px}
 .start-btn{width:100%;max-width:320px;padding:16px;background:var(--p);color:#fff;border:none;border-radius:14px;font-size:1.05rem;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer}
 .start-btn:hover{background:var(--pd)}
+
+/* Success */
 .success-screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center;background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%)}
 .success-screen.show{display:flex}
 .success-em{font-size:4rem;margin-bottom:14px}
@@ -89,15 +104,15 @@ textarea.text-input{resize:none;min-height:120px;line-height:1.6}
 <body>
 
 <script>
-// ⚠️ Actualizá esta URL luego de redesplegar Apps Script
 const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
 </script>
 
+<!-- START -->
 <div class="start-screen" id="startScreen">
   <div class="start-logo">🐾</div>
-  <h1 class="start-h1">Cuéntanos sobre<br><span>tu peludo</span></h1>
-  <p class="start-sub">Unas preguntas rápidas para que el veterinario conozca a tu mascota antes de la consulta.</p>
-  <div class="start-meta">⏱️ Toma unos 3-4 minutos</div>
+  <h1 class="start-h1">Bienvenido a<br><span>Animal Center</span></h1>
+  <p class="start-sub">Completá tu ficha de pre-consulta para que el médico conozca a tu mascota antes de entrar.</p>
+  <div class="start-meta">⏱️ Toma unos 3 minutos</div>
   <button class="start-btn" onclick="startForm()">Empezar →</button>
 </div>
 
@@ -111,217 +126,420 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_N
   <h2 class="success-h">¡Ficha enviada!</h2>
   <p class="success-p">El médico ya puede ver tu información. Podés esperar a ser llamado.</p>
   <div class="success-hc" id="successHc" style="display:none">
-    <div class="success-hc-label">Historia Clínica identificada</div>
+    <div class="success-hc-label">Historia Clínica</div>
     <div class="success-hc-val" id="successHcVal"></div>
   </div>
-  <p style="margin-top:16px;font-size:.78rem;color:#b8a8c2">Gracias por completar la pre-consulta de Animal Center 🐾</p>
+  <p style="margin-top:16px;font-size:.78rem;color:#b8a8c2">Gracias por tu visita 🐾 Animal Center</p>
 </div>
 
 <script>
+// ── Form state ───────────────────────────────────────────────
+var F = {
+  petName:'', species:'', breed:'', age:'', sex:'', neutered:'',
+  ownerName:'', ownerPhone:'', service:'', specialty:'',
+  complaint:'', duration:'', evolution:'', appetite:'', water:'',
+  vomit:'', diarrhea:'', energy:'', cough:'', breathing:'',
+  urine:'', skin:'', pain:'', vaccines:'', deworming:'',
+  medications:'', history:'', allergies:'', diet:'', notes:'',
+  vetesoftId:'', vetesoftHc:''
+};
+
+var vsFound = false; // true when patient identified in Vetesoft
+
+// ── Question definitions ─────────────────────────────────────
+// type: 'identification' | 'vetesoft' | 'single' | '2col' | 'text' | 'textarea' | 'multi'
 var QUESTIONS = [
-  {id:'species',group:'TU MASCOTA',q:'¿Quién nos visita hoy?',type:'2col',options:[{emoji:'🐕',label:'Perro',value:'Canino'},{emoji:'🐈',label:'Gato',value:'Felino'}]},
-  {id:'_names',group:'TU MASCOTA',q:'¿Cómo se llaman?',sub:'Tu nombre y el de tu mascota.',type:'dual',fields:[{id:'ownerName',label:'TU NOMBRE',placeholder:'Nombre y apellido'},{id:'petName',label:'NOMBRE DE TU MASCOTA',placeholder:'Ej: Firulais'}]},
-  {id:'ownerPhone',group:'TU MASCOTA',q:'¿Número de teléfono o WhatsApp?',type:'text',placeholder:'Ej: 3001234567',skippable:true},
-  {id:'breed',group:'TU MASCOTA',q:'¿Cuál es su raza?',type:'text',placeholder:'Ej: Golden Retriever, Mestizo',skippable:true},
-  {id:'age',group:'TU MASCOTA',q:'¿Qué edad tiene?',type:'text',placeholder:'Ej: 3 años, 8 meses'},
-  {id:'sex',group:'TU MASCOTA',q:'¿Es macho o hembra?',type:'single',options:[{label:'♂ Macho',value:'Macho'},{label:'♀ Hembra',value:'Hembra'}]},
-  {id:'neutered',group:'TU MASCOTA',q:'¿Está castrado/a?',type:'single',options:[{label:'Sí',value:'Si'},{label:'No',value:'No'},{label:'No sé',value:'No se'}]},
-  {id:'_vetesoft',group:'IDENTIFICACIÓN',type:'vetesoft'},
-  {id:'service',group:'SERVICIO',q:'¿Qué los trae hoy a consulta?',type:'single',options:[{label:'🩺 Consulta general',value:'Consulta general'},{label:'⚕️ Consulta especializada',value:'Consulta especializada'},{label:'📋 Control / seguimiento',value:'Control'},{label:'🔬 Ecografía',value:'Ecografia'},{label:'🦴 Radiografía',value:'Radiografia'},{label:'🚨 Urgencias',value:'Urgencias'}]},
-  {id:'specialty',group:'SERVICIO',q:'¿A qué especialidad?',type:'single',conditional:'service===Consulta especializada',options:[{label:'Dermatología',value:'Dermatología'},{label:'Cardiología',value:'Cardiología'},{label:'Neurología',value:'Neurología'},{label:'Oftalmología',value:'Oftalmología'},{label:'Oncología',value:'Oncología'},{label:'Ortopedia',value:'Ortopedia'},{label:'Otra',value:'Otra'}]},
-  {id:'complaint',group:'MOTIVO DE CONSULTA',q:'¿Qué está pasando?',sub:'Contanos qué notas diferente en tu mascota.',type:'textarea',placeholder:'Ej: Lleva 2 días sin comer, vomitó varias veces...'},
-  {id:'duration',group:'MOTIVO DE CONSULTA',q:'¿Cuándo empezó?',type:'single',options:[{label:'Hoy',value:'Hoy'},{label:'Ayer',value:'Ayer'},{label:'2-3 días',value:'Hace 2-3 días'},{label:'Una semana',value:'Hace una semana'},{label:'2 semanas',value:'Hace 2 semanas'},{label:'Un mes o más',value:'Hace un mes o mas'}]},
-  {id:'evolution',group:'MOTIVO DE CONSULTA',q:'¿Cómo evolucionó?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'Empeoró rápido',value:'Empeoró rápido'},{label:'Empeoró gradual',value:'Empeoró gradual'},{label:'Igual desde el inicio',value:'Igual desde el inicio'},{label:'Mejoró pero volvió',value:'Mejoró pero volvió'},{label:'Mejoró levemente',value:'Mejoró levemente'}]},
-  {id:'appetite',group:'SÍNTOMAS',q:'¿Cómo está su apetito?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'Normal 😊',value:'Normal'},{label:'Reducido',value:'Reducido'},{label:'Sin apetito 😟',value:'Sin apetito'},{label:'Aumentado',value:'Aumentado'}]},
-  {id:'water',group:'SÍNTOMAS',q:'¿Cambios en el consumo de agua?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'Igual que siempre',value:'Normal'},{label:'Toma más',value:'Toma mucho mas'},{label:'Toma menos',value:'Toma menos'},{label:'No toma',value:'No toma'}]},
-  {id:'vomit',group:'SÍNTOMAS',q:'¿Ha vomitado?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'No',value:'No'},{label:'1-2 veces',value:'Si, 1-2 veces'},{label:'Frecuente',value:'Si, frecuente'}]},
-  {id:'diarrhea',group:'SÍNTOMAS',q:'¿Ha tenido diarrea?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'No',value:'No'},{label:'Blanda',value:'Si, blanda'},{label:'Líquida',value:'Si, liquida'}]},
-  {id:'energy',group:'SÍNTOMAS',q:'¿Cómo está su energía?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'Normal',value:'Normal'},{label:'Algo decaído',value:'Algo decaido'},{label:'Muy decaído 😴',value:'Muy decaido'},{label:'Hiperactivo',value:'Hiperactivo'}]},
-  {id:'cough',group:'SÍNTOMAS',q:'¿Tiene tos o estornudos?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'No',value:'No'},{label:'Tos',value:'Tos'},{label:'Estornudos',value:'Estornudos'},{label:'Ambos',value:'Ambos'}]},
-  {id:'breathing',group:'SÍNTOMAS',q:'¿Dificultad para respirar?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'No',value:'No'},{label:'Sí 😮‍💨',value:'Si'}]},
-  {id:'urine',group:'SÍNTOMAS',q:'¿Cómo está su orina?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'Normal',value:'Normal'},{label:'Orina más',value:'Orina mas'},{label:'Orina menos',value:'Orina menos'},{label:'Con sangre',value:'Con sangre'},{label:'No orina',value:'No orina'}]},
-  {id:'skin',group:'SÍNTOMAS',q:'¿Problemas de piel o pelo?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'No, normal',value:'Normal'},{label:'Se rasca mucho',value:'Se rasca'},{label:'Heridas / llagas',value:'Heridas'},{label:'Cae pelo',value:'Cae pelo'}]},
-  {id:'pain',group:'SÍNTOMAS',q:'¿Señales de dolor o molestia?',type:'single',skipServices:['Ecografia','Radiografia'],options:[{label:'No noto nada',value:'No noto'},{label:'Leve',value:'Leve'},{label:'Moderado',value:'Moderado'},{label:'Intenso 😣',value:'Intenso'}]},
-  {id:'vaccines',group:'HISTORIAL',q:'¿Está al día con las vacunas?',type:'single',options:[{label:'Sí ✓',value:'Si'},{label:'No',value:'No'},{label:'No sé',value:'No se'}]},
-  {id:'deworming',group:'HISTORIAL',q:'¿Y con la desparasitación?',type:'single',options:[{label:'Sí, reciente ✓',value:'Si, reciente'},{label:'No',value:'No'},{label:'No sé',value:'No se'}]},
-  {id:'medications',group:'HISTORIAL',q:'¿Toma medicamentos actualmente?',type:'text',placeholder:'Nombre y dosis, o escribí "Ninguno"',skippable:true},
-  {id:'history',group:'HISTORIAL',q:'¿Enfermedades o cirugías anteriores?',type:'text',placeholder:'Ej: Cirugía de cadera hace 2 años',skippable:true},
-  {id:'allergies',group:'HISTORIAL',q:'¿Alergias conocidas?',type:'single',options:[{label:'No',value:'No'},{label:'Sí (lo indico en notas)',value:'Si (indicar en notas)'},{label:'No sé',value:'No se'}]},
-  {id:'diet',group:'HISTORIAL',q:'¿Qué tipo de alimento come?',type:'2col',options:[{emoji:'🥘',label:'Concentrado',value:'Croquetas'},{emoji:'🍖',label:'Casera',value:'Comida casera'},{emoji:'🥩',label:'BARF / crudo',value:'BARF'},{emoji:'🔀',label:'Mixta',value:'Mixta'}]},
-  {id:'notes',group:'NOTAS FINALES',q:'¿Algo más que deba saber el médico?',sub:'Campo opcional.',type:'textarea',placeholder:'Comportamiento inusual, viajes recientes, contacto con otros animales...',skippable:true}
+  // ── IDENTIFICATION (always shown) ──
+  {id:'_ident', group:'IDENTIFIQUÉMONOS', type:'identification'},
+
+  // ── VETESOFT LOOKUP (always shown after identification) ──
+  {id:'_vetesoft', group:'BUSCANDO TU HISTORIA CLÍNICA', type:'vetesoft'},
+
+  // ── PATIENT INFO (only if NOT found in Vetesoft) ──
+  {id:'species', group:'TU MASCOTA', q:'¿Tu mascota es perro o gato?', type:'2col', onlyIfNotFound:true, options:[
+    {emoji:'🐕', label:'Perro', value:'Canino'},
+    {emoji:'🐈', label:'Gato', value:'Felino'}
+  ]},
+  {id:'breed', group:'TU MASCOTA', q:'¿Cuál es su raza?', type:'text', onlyIfNotFound:true, placeholder:'Ej: Golden Retriever, Mestizo', skippable:true},
+  {id:'age', group:'TU MASCOTA', q:'¿Qué edad tiene?', type:'text', onlyIfNotFound:true, placeholder:'Ej: 3 años, 8 meses'},
+  {id:'sex', group:'TU MASCOTA', q:'¿Es macho o hembra?', type:'single', onlyIfNotFound:true, options:[
+    {label:'♂ Macho', value:'Macho'}, {label:'♀ Hembra', value:'Hembra'}
+  ]},
+  {id:'neutered', group:'TU MASCOTA', q:'¿Está castrado/a?', type:'single', options:[
+    {label:'Sí', value:'Si'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
+  ]},
+
+  // ── SERVICE (always shown) ──
+  {id:'service', group:'SERVICIO', q:'¿Qué los trae hoy a consulta?', type:'single', options:[
+    {label:'🩺 Consulta general', value:'Consulta general'},
+    {label:'⚕️ Consulta especializada', value:'Consulta especializada'},
+    {label:'📋 Control / seguimiento', value:'Control'}
+  ]},
+  {id:'specialty', group:'SERVICIO', q:'¿A qué especialidad?', type:'single', conditional:'service===Consulta especializada', options:[
+    {label:'Dermatología', value:'Dermatología'}, {label:'Cardiología', value:'Cardiología'},
+    {label:'Neurología', value:'Neurología'}, {label:'Oftalmología', value:'Oftalmología'},
+    {label:'Oncología', value:'Oncología'}, {label:'Ortopedia', value:'Ortopedia'}, {label:'Otra', value:'Otra'}
+  ]},
+
+  // ── COMPLAINT (always shown) ──
+  {id:'complaint', group:'MOTIVO DE CONSULTA', q:'¿Qué está pasando?', sub:'Contanos qué notás diferente en tu mascota.', type:'textarea', placeholder:'Ej: Lleva 2 días sin comer, vomitó varias veces...'},
+  {id:'duration', group:'MOTIVO DE CONSULTA', q:'¿Cuándo empezó?', type:'single', options:[
+    {label:'Hoy', value:'Hoy'}, {label:'Ayer', value:'Ayer'},
+    {label:'2-3 días', value:'Hace 2-3 días'}, {label:'Una semana', value:'Hace una semana'},
+    {label:'2 semanas', value:'Hace 2 semanas'}, {label:'Un mes o más', value:'Hace un mes o mas'}
+  ]},
+  {id:'evolution', group:'MOTIVO DE CONSULTA', q:'¿Cómo evolucionó?', type:'single', options:[
+    {label:'Empeoró rápido', value:'Empeoró rápido'}, {label:'Empeoró gradual', value:'Empeoró gradual'},
+    {label:'Igual desde el inicio', value:'Igual desde el inicio'},
+    {label:'Mejoró pero volvió', value:'Mejoró pero volvió'}, {label:'Mejoró levemente', value:'Mejoró levemente'}
+  ]},
+
+  // ── SYMPTOMS (always shown) ──
+  {id:'appetite', group:'SÍNTOMAS', q:'¿Cómo está su apetito?', type:'single', options:[
+    {label:'Normal 😊', value:'Normal'}, {label:'Reducido', value:'Reducido'},
+    {label:'Sin apetito 😟', value:'Sin apetito'}, {label:'Aumentado', value:'Aumentado'}
+  ]},
+  {id:'water', group:'SÍNTOMAS', q:'¿Cambios en el consumo de agua?', type:'single', options:[
+    {label:'Igual que siempre', value:'Normal'}, {label:'Toma más', value:'Toma mucho mas'},
+    {label:'Toma menos', value:'Toma menos'}, {label:'No toma', value:'No toma'}
+  ]},
+  {id:'vomit', group:'SÍNTOMAS', q:'¿Ha vomitado?', type:'single', options:[
+    {label:'No', value:'No'}, {label:'1-2 veces', value:'Si, 1-2 veces'}, {label:'Frecuente', value:'Si, frecuente'}
+  ]},
+  {id:'diarrhea', group:'SÍNTOMAS', q:'¿Ha tenido diarrea?', type:'single', options:[
+    {label:'No', value:'No'}, {label:'Blanda', value:'Si, blanda'}, {label:'Líquida', value:'Si, liquida'}
+  ]},
+  {id:'energy', group:'SÍNTOMAS', q:'¿Cómo está su energía?', type:'single', options:[
+    {label:'Normal', value:'Normal'}, {label:'Algo decaído', value:'Algo decaido'},
+    {label:'Muy decaído 😴', value:'Muy decaido'}, {label:'Hiperactivo', value:'Hiperactivo'}
+  ]},
+  {id:'cough', group:'SÍNTOMAS', q:'¿Tiene tos o estornudos?', type:'single', options:[
+    {label:'No', value:'No'}, {label:'Tos', value:'Tos'},
+    {label:'Estornudos', value:'Estornudos'}, {label:'Ambos', value:'Ambos'}
+  ]},
+  {id:'breathing', group:'SÍNTOMAS', q:'¿Dificultad para respirar?', type:'single', options:[
+    {label:'No', value:'No'}, {label:'Sí 😮‍💨', value:'Si'}
+  ]},
+  {id:'urine', group:'SÍNTOMAS', q:'¿Cómo está su orina?', type:'single', options:[
+    {label:'Normal', value:'Normal'}, {label:'Orina más', value:'Orina mas'},
+    {label:'Orina menos', value:'Orina menos'}, {label:'Con sangre', value:'Con sangre'}, {label:'No orina', value:'No orina'}
+  ]},
+  {id:'skin', group:'SÍNTOMAS', q:'¿Problemas de piel o pelo?', type:'single', options:[
+    {label:'No, normal', value:'Normal'}, {label:'Se rasca mucho', value:'Se rasca'},
+    {label:'Heridas / llagas', value:'Heridas'}, {label:'Cae pelo', value:'Cae pelo'}
+  ]},
+  {id:'pain', group:'SÍNTOMAS', q:'¿Señales de dolor o molestia?', type:'single', options:[
+    {label:'No noto nada', value:'No noto'}, {label:'Leve', value:'Leve'},
+    {label:'Moderado', value:'Moderado'}, {label:'Intenso 😣', value:'Intenso'}
+  ]},
+
+  // ── HISTORY (always shown) ──
+  {id:'vaccines', group:'HISTORIAL', q:'¿Está al día con las vacunas?', type:'single', options:[
+    {label:'Sí ✓', value:'Si'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
+  ]},
+  {id:'deworming', group:'HISTORIAL', q:'¿Y con la desparasitación?', type:'single', options:[
+    {label:'Sí, reciente ✓', value:'Si, reciente'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
+  ]},
+  {id:'medications', group:'HISTORIAL', q:'¿Toma medicamentos actualmente?', type:'text', placeholder:'Nombre y dosis, o escribí "Ninguno"', skippable:true},
+  {id:'history', group:'HISTORIAL', q:'¿Enfermedades o cirugías anteriores?', type:'text', placeholder:'Ej: Cirugía de cadera hace 2 años', skippable:true},
+  {id:'allergies', group:'HISTORIAL', q:'¿Alergias conocidas?', type:'single', options:[
+    {label:'No', value:'No'}, {label:'Sí', value:'Si'}, {label:'No sé', value:'No se'}
+  ]},
+  {id:'diet', group:'HISTORIAL', q:'¿Qué tipo de alimento come?', type:'2col', options:[
+    {emoji:'🥘', label:'Concentrado', value:'Croquetas'}, {emoji:'🍖', label:'Casera', value:'Comida casera'},
+    {emoji:'🥩', label:'BARF / crudo', value:'BARF'}, {emoji:'🔀', label:'Mixta', value:'Mixta'}
+  ]},
+  {id:'notes', group:'NOTAS FINALES', q:'¿Algo más que deba saber el médico?', sub:'Campo opcional.', type:'textarea', placeholder:'Comportamiento inusual, viajes recientes, contacto con otros animales...', skippable:true}
 ];
 
-var F={petName:'',species:'',breed:'',age:'',sex:'',neutered:'',ownerName:'',ownerPhone:'',service:'',specialty:'',complaint:'',duration:'',evolution:'',appetite:'',water:'',vomit:'',diarrhea:'',energy:'',cough:'',breathing:'',urine:'',skin:'',pain:'',vaccines:'',deworming:'',medications:'',history:'',allergies:'',diet:'',notes:'',vetesoftId:'',vetesoftHc:''};
-var activeIndices=[];
-var currentPos=-1;
+var activeIndices = [];
+var currentPos = -1;
 
-function buildActiveIndices(){activeIndices=[];for(var i=0;i<QUESTIONS.length;i++){var q=QUESTIONS[i];if(q.conditional){var parts=q.conditional.split('===');if(F[parts[0]]!==parts[1])continue;}if(q.skipServices&&q.skipServices.indexOf(F.service)!==-1)continue;activeIndices.push(i);}}
+// ── Build active question list based on state ────────────────
+function buildActiveIndices() {
+  activeIndices = [];
+  for (var i = 0; i < QUESTIONS.length; i++) {
+    var q = QUESTIONS[i];
+    if (q.onlyIfNotFound && vsFound) continue;
+    if (q.conditional) {
+      var parts = q.conditional.split('===');
+      if (F[parts[0]] !== parts[1]) continue;
+    }
+    activeIndices.push(i);
+  }
+}
 
-function renderQuestion(pos){
+// ── Render a question by position ────────────────────────────
+function renderQuestion(pos) {
   buildActiveIndices();
-  var idx=activeIndices[pos];var q=QUESTIONS[idx];var container=document.getElementById('screens');
-  var realTotal=activeIndices.filter(function(i){return QUESTIONS[i].type!=='vetesoft';}).length;
-  var realPos=0;for(var i=0;i<pos;i++){if(QUESTIONS[activeIndices[i]].type!=='vetesoft')realPos++;}
-  if(q.type!=='vetesoft')realPos++;
-  var pct=(pos/activeIndices.length)*100;
-  document.getElementById('progressBar').style.width=pct+'%';
-  document.getElementById('progressCounter').textContent=realPos+' / '+realTotal;
-  document.getElementById('progressCounter').style.display='block';
-  document.getElementById('backBtn').style.display=pos>0?'block':'none';
-  var html=q.type==='vetesoft'?buildVetesoftScreen():q.type==='dual'?buildDualScreen(q,pos):q.type==='2col'?buildColScreen(q,pos):buildStdScreen(q,pos);
-  var newEl=document.createElement('div');newEl.innerHTML=html;var newScreen=newEl.firstChild;
-  var existing=container.querySelector('.screen.active');
-  if(existing){existing.classList.add('exit-left');setTimeout(function(){if(existing.parentNode)existing.parentNode.removeChild(existing);},350);}
-  newScreen.classList.add('active');container.appendChild(newScreen);
-  var inp=newScreen.querySelector('input, textarea');if(inp)setTimeout(function(){inp.focus();},400);
+  var idx = activeIndices[pos];
+  var q = QUESTIONS[idx];
+  var container = document.getElementById('screens');
+
+  var specialTypes = ['identification', 'vetesoft'];
+  var realTotal = activeIndices.filter(function(i){ return specialTypes.indexOf(QUESTIONS[i].type) === -1; }).length;
+  var realPos = 0;
+  for (var i = 0; i < pos; i++) {
+    if (specialTypes.indexOf(QUESTIONS[activeIndices[i]].type) === -1) realPos++;
+  }
+  if (specialTypes.indexOf(q.type) === -1) realPos++;
+
+  var pct = (pos / activeIndices.length) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressCounter').textContent = realPos + ' / ' + realTotal;
+  document.getElementById('progressCounter').style.display = specialTypes.indexOf(q.type) !== -1 ? 'none' : 'block';
+  document.getElementById('backBtn').style.display = pos > 0 ? 'block' : 'none';
+
+  var html;
+  if (q.type === 'identification') html = buildIdentScreen();
+  else if (q.type === 'vetesoft') html = buildVsScreen();
+  else if (q.type === '2col') html = buildColScreen(q, pos);
+  else html = buildStdScreen(q, pos);
+
+  var newEl = document.createElement('div');
+  newEl.innerHTML = html;
+  var newScreen = newEl.firstChild;
+
+  var existing = container.querySelector('.screen.active');
+  if (existing) {
+    existing.classList.add('exit-left');
+    setTimeout(function(){ if (existing.parentNode) existing.parentNode.removeChild(existing); }, 350);
+  }
+  newScreen.classList.add('active');
+  container.appendChild(newScreen);
+
+  var inp = newScreen.querySelector('input:not([type=hidden]), textarea');
+  if (inp) setTimeout(function(){ inp.focus(); }, 400);
 }
 
-function buildStdScreen(q,pos){
-  var opts='';
-  if(q.options){opts='<div class="options">';q.options.forEach(function(o){var sel=F[q.id]===o.value?' sel':'';opts+='<div class="option'+sel+'" onclick="selectOption(\''+q.id+'\',\''+escAttr(o.value)+'\',this,'+pos+')">';opts+='<div class="check">'+(sel?'✓':'')+'</div><span>'+escHtml(o.label)+'</span></div>';});opts+='</div>';}
-  if(q.type==='text')opts+='<div class="text-wrap"><input class="text-input" type="text" id="inp_'+q.id+'" value="'+escAttr(F[q.id]||'')+'" placeholder="'+escAttr(q.placeholder||'')+'" onkeydown="if(event.key===\'Enter\')nextFromText(\''+q.id+'\','+pos+')"></div>';
-  if(q.type==='textarea')opts+='<div class="text-wrap"><textarea class="text-input" id="inp_'+q.id+'" placeholder="'+escAttr(q.placeholder||'')+'">'+escHtml(F[q.id]||'')+'</textarea></div>';
-  var showNext=(q.type==='text'||q.type==='textarea');
-  return'<div class="screen"><div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+opts+(showNext?'<button class="next-btn" onclick="nextFromText(\''+q.id+'\','+pos+')">Siguiente →</button>':'')+(q.skippable?'<div class="skip-link" onclick="skipAndNext('+pos+')">Omitir →</div>':'')+'</div>';
+// ── Screen builders ──────────────────────────────────────────
+function buildIdentScreen() {
+  return '<div class="screen">' +
+    '<div class="group-label">IDENTIFIQUÉMONOS</div>' +
+    '<div class="question">¿Quiénes vienen hoy?</div>' +
+    '<div class="question-sub">Con estos datos buscamos tu historia clínica en el sistema.</div>' +
+    '<div class="multi-inputs">' +
+      '<div><div class="input-label">Tu nombre completo</div><input class="text-input" type="text" id="inp_ownerName" value="'+escAttr(F.ownerName)+'" placeholder="Nombre y apellido"></div>' +
+      '<div><div class="input-label">Nombre de tu mascota</div><input class="text-input" type="text" id="inp_petName" value="'+escAttr(F.petName)+'" placeholder="Ej: Firulais"></div>' +
+      '<div><div class="input-label">Cédula del propietario <span style="font-weight:400;text-transform:none;font-size:.9em">(opcional, mejora la búsqueda)</span></div><input class="text-input" type="number" id="inp_cedula" value="'+escAttr(F._cedula||'')+'" placeholder="Ej: 1234567890"></div>' +
+    '</div>' +
+    '<button class="next-btn" onclick="submitIdent()">Buscar mi historia clínica →</button>' +
+  '</div>';
 }
 
-function buildColScreen(q,pos){
-  var opts='<div class="options-2col">';
-  q.options.forEach(function(o){var sel=F[q.id]===o.value?' sel':'';opts+='<div class="option'+sel+'" onclick="selectOption(\''+q.id+'\',\''+escAttr(o.value)+'\',this,'+pos+')">';if(o.emoji)opts+='<div class="emoji">'+o.emoji+'</div>';opts+='<span>'+escHtml(o.label)+'</span></div>';});
-  opts+='</div>';
-  return'<div class="screen"><div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+opts+'</div>';
+function buildVsScreen() {
+  return '<div class="screen vs-wrap"><div class="group-label">BUSCANDO TU HISTORIA CLÍNICA</div><div id="vsArea"><div class="vs-loading"><div class="spinner"></div><p>Buscando en el sistema...</p></div></div></div>';
 }
 
-function buildDualScreen(q,pos){
-  var inputs='<div class="dual-inputs">';
-  q.fields.forEach(function(f){inputs+='<div><div class="dual-label">'+escHtml(f.label)+'</div><input class="text-input" type="text" id="inp_'+f.id+'" value="'+escAttr(F[f.id]||'')+'" placeholder="'+escAttr(f.placeholder||'')+'"></div>';});
-  inputs+='</div>';
-  return'<div class="screen"><div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+inputs+'<button class="next-btn" onclick="nextFromDual('+pos+')">Siguiente →</button></div>';
+function buildStdScreen(q, pos) {
+  var opts = '';
+  if (q.options) {
+    opts = '<div class="options">';
+    q.options.forEach(function(o) {
+      var sel = F[q.id] === o.value ? ' sel' : '';
+      opts += '<div class="option'+sel+'" onclick="selectOption(\''+q.id+'\',\''+escAttr(o.value)+'\',this,'+pos+')">';
+      opts += '<div class="check">'+(sel ? '✓' : '')+'</div><span>'+escHtml(o.label)+'</span></div>';
+    });
+    opts += '</div>';
+  }
+  if (q.type === 'text') opts += '<div class="text-wrap"><input class="text-input" type="text" id="inp_'+q.id+'" value="'+escAttr(F[q.id]||'')+'" placeholder="'+escAttr(q.placeholder||'')+'" onkeydown="if(event.key===\'Enter\')nextFromText(\''+q.id+'\','+pos+')"></div>';
+  if (q.type === 'textarea') opts += '<div class="text-wrap"><textarea class="text-input" id="inp_'+q.id+'" placeholder="'+escAttr(q.placeholder||'')+'">'+escHtml(F[q.id]||'')+'</textarea></div>';
+  var showNext = (q.type === 'text' || q.type === 'textarea');
+  return '<div class="screen"><div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+opts+(showNext?'<button class="next-btn" onclick="nextFromText(\''+q.id+'\','+pos+')">Siguiente →</button>':'')+(q.skippable?'<div class="skip-link" onclick="goNext('+pos+')">Omitir →</div>':'')+'</div>';
 }
 
-function buildVetesoftScreen(){return'<div class="screen vs-screen"><div class="group-label">IDENTIFICACIÓN EN VETESOFT</div><div class="vs-loading" id="vsLoading"><div class="spinner"></div><p>Buscando tu historia clínica...</p></div><div id="vsResultArea" style="display:none"></div></div>';}
-
-function selectOption(fieldId,value,el,pos){
-  F[fieldId]=value;
-  el.parentElement.querySelectorAll('.option').forEach(function(o){o.classList.remove('sel');if(o.querySelector('.check'))o.querySelector('.check').textContent='';});
-  el.classList.add('sel');if(el.querySelector('.check'))el.querySelector('.check').textContent='✓';
-  setTimeout(function(){goNext(pos);},260);
+function buildColScreen(q, pos) {
+  var opts = '<div class="options-2col">';
+  q.options.forEach(function(o) {
+    var sel = F[q.id] === o.value ? ' sel' : '';
+    opts += '<div class="option'+sel+'" onclick="selectOption(\''+q.id+'\',\''+escAttr(o.value)+'\',this,'+pos+')">';
+    if (o.emoji) opts += '<div class="emoji">'+o.emoji+'</div>';
+    opts += '<span>'+escHtml(o.label)+'</span></div>';
+  });
+  opts += '</div>';
+  return '<div class="screen"><div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+opts+'</div>';
 }
 
-function nextFromText(fieldId,pos){var inp=document.getElementById('inp_'+fieldId);if(inp)F[fieldId]=inp.value.trim();goNext(pos);}
+// ── Identification submit ────────────────────────────────────
+function submitIdent() {
+  var ownerName = document.getElementById('inp_ownerName').value.trim();
+  var petName   = document.getElementById('inp_petName').value.trim();
+  var cedula    = document.getElementById('inp_cedula').value.trim();
+  if (!ownerName || !petName) { alert('Por favor ingresá tu nombre y el de tu mascota.'); return; }
+  F.ownerName = ownerName;
+  F.petName   = petName;
+  F._cedula   = cedula;
+  goNext(currentPos);
+}
 
-function nextFromDual(pos){
-  var q=QUESTIONS[activeIndices[pos]];
-  q.fields.forEach(function(f){var inp=document.getElementById('inp_'+f.id);if(inp)F[f.id]=inp.value.trim();});
-  if(!F.ownerName||!F.petName){alert('Ingresá tu nombre y el de tu mascota.');return;}
+// ── Vetesoft lookup ──────────────────────────────────────────
+function startVsLookup(pos) {
+  setTimeout(function() {
+    var url = API_URL + '?action=search&petName=' + encodeURIComponent(F.petName) +
+              '&ownerName=' + encodeURIComponent(F.ownerName) +
+              '&cedula=' + encodeURIComponent(F._cedula || '');
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(res){ renderVsResults(res, pos); })
+      .catch(function(){ renderVsError(pos); });
+  }, 500);
+}
+
+function renderVsResults(res, pos) {
+  var area = document.getElementById('vsArea');
+  if (!area) return;
+
+  if (!res || !res.ok || !res.results || res.results.length === 0) {
+    renderVsNotFound(pos); return;
+  }
+
+  var html = '<div class="vs-title">¿Encontramos tu mascota?</div><div class="vs-sub">Seleccioná tu registro o indicá que no es ninguno.</div>';
+  html += '<div class="vs-results-list">';
+  res.results.forEach(function(r) {
+    var hc = r.registro ? '<span class="vs-hc">HC '+escHtml(r.registro)+'</span>' : '';
+    html += '<div class="vs-item" onclick=\'confirmVs('+JSON.stringify(r)+','+pos+')\'>';
+    html += '<div class="vs-item-name">'+escHtml(r.petName||'')+hc+'</div>';
+    html += '<div class="vs-item-meta">'+escHtml(r.species||'')+(r.breed?' · '+escHtml(r.breed):'')+(r.owner?' | 👤 '+escHtml(r.owner):'')+'</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<div class="vs-not-mine" onclick="renderVsNotFound('+pos+')">No es ninguno de estos →</div>';
+  area.innerHTML = html;
+}
+
+function confirmVs(r, pos) {
+  vsFound = true;
+  F.vetesoftId = r.id ? String(r.id) : '';
+  F.vetesoftHc = r.registro || '';
+  // Pre-fill from Vetesoft
+  if (r.petName)  F.petName  = r.petName;
+  if (r.species)  F.species  = r.species;
+  if (r.breed)    F.breed    = r.breed;
+  if (r.sex)      F.sex      = r.sex;
+  if (r.phone && !F.ownerPhone) F.ownerPhone = r.phone;
+
+  var area = document.getElementById('vsArea');
+  if (area) {
+    var hcLine = r.registro ? ' · HC <strong>'+escHtml(r.registro)+'</strong>' : '';
+    area.innerHTML = '<div class="vs-confirmed"><div class="vs-confirmed-icon">✅</div><div class="vs-confirmed-text"><div class="name">'+escHtml(r.petName||F.petName)+' identificado/a</div><div class="meta">'+escHtml(r.owner||F.ownerName)+hcLine+'</div></div></div>';
+  }
+  setTimeout(function(){ goNext(pos); }, 1200);
+}
+
+function renderVsNotFound(pos) {
+  vsFound = false;
+  F.vetesoftId = ''; F.vetesoftHc = '';
+  var area = document.getElementById('vsArea');
+  if (area) {
+    area.innerHTML =
+      '<div class="vs-no-match">' +
+        '<div class="em">🔍</div>' +
+        '<div class="title">Parece que no tenés historia clínica</div>' +
+        '<div class="sub">No encontramos tu mascota en el sistema. El médico la creará en consulta.</div>' +
+        '<button class="vs-no-match-continue" onclick="goNext('+pos+')">Continuar y completar datos →</button>' +
+      '</div>';
+  }
+}
+
+function renderVsError(pos) {
+  var area = document.getElementById('vsArea');
+  if (area) {
+    area.innerHTML =
+      '<div class="vs-no-match">' +
+        '<div class="em">⚠️</div>' +
+        '<div class="title">No pudimos conectar</div>' +
+        '<div class="sub">Problema de conexión con el sistema. Podés continuar igual.</div>' +
+        '<button class="vs-no-match-continue" onclick="vsFound=false;goNext('+pos+')">Continuar →</button>' +
+      '</div>';
+  }
+}
+
+// ── Navigation ───────────────────────────────────────────────
+function selectOption(fieldId, value, el, pos) {
+  F[fieldId] = value;
+  el.parentElement.querySelectorAll('.option').forEach(function(o){ o.classList.remove('sel'); if(o.querySelector('.check')) o.querySelector('.check').textContent=''; });
+  el.classList.add('sel');
+  if (el.querySelector('.check')) el.querySelector('.check').textContent = '✓';
+  setTimeout(function(){ goNext(pos); }, 260);
+}
+
+function nextFromText(fieldId, pos) {
+  var inp = document.getElementById('inp_'+fieldId);
+  if (inp) F[fieldId] = inp.value.trim();
   goNext(pos);
 }
 
-function skipAndNext(pos){goNext(pos);}
-
-function goNext(pos){
+function goNext(pos) {
   buildActiveIndices();
-  var nextPos=pos+1;
-  if(nextPos>=activeIndices.length){doSubmit();return;}
-  currentPos=nextPos;
+  var nextPos = pos + 1;
+  if (nextPos >= activeIndices.length) { doSubmit(); return; }
+  currentPos = nextPos;
   renderQuestion(nextPos);
-  if(QUESTIONS[activeIndices[nextPos]].type==='vetesoft')startVetesoftLookup(nextPos);
+  var nextQ = QUESTIONS[activeIndices[nextPos]];
+  if (nextQ.type === 'vetesoft') startVsLookup(nextPos);
 }
 
-function goBack(){
-  if(currentPos<=0)return;
-  buildActiveIndices();currentPos--;
-  var container=document.getElementById('screens');
-  var existing=container.querySelector('.screen.active');
-  if(existing){existing.style.transition='opacity .3s,transform .3s';existing.style.opacity='0';existing.style.transform='translateX(60px)';setTimeout(function(){if(existing.parentNode)existing.parentNode.removeChild(existing);},300);}
-  var pos=currentPos;buildActiveIndices();var q=QUESTIONS[activeIndices[pos]];
-  if(q.type==='vetesoft'){currentPos--;goBack();return;}
-  var html=q.type==='dual'?buildDualScreen(q,pos):q.type==='2col'?buildColScreen(q,pos):buildStdScreen(q,pos);
-  var newEl=document.createElement('div');newEl.innerHTML=html;var newScreen=newEl.firstChild;
-  newScreen.style.transform='translateX(-60px)';newScreen.style.opacity='0';
-  container.appendChild(newScreen);
-  requestAnimationFrame(function(){requestAnimationFrame(function(){newScreen.style.transition='opacity .35s,transform .35s';newScreen.style.opacity='1';newScreen.style.transform='translateX(0)';newScreen.classList.add('active');});});
-  document.getElementById('progressBar').style.width=(pos/activeIndices.length)*100+'%';
-  document.getElementById('backBtn').style.display=pos>0?'block':'none';
-}
-
-function startVetesoftLookup(pos){
-  setTimeout(function(){
-    fetch(API_URL+'?action=search&petName='+encodeURIComponent(F.petName)+'&ownerName='+encodeURIComponent(F.ownerName)+'&cedula=')
-      .then(function(r){return r.json();})
-      .then(function(res){renderVsResults(res,pos);})
-      .catch(function(){renderVsError(pos);});
-  },600);
-}
-
-function renderVsResults(res,pos){
-  var loading=document.getElementById('vsLoading');var area=document.getElementById('vsResultArea');
-  if(!loading||!area)return;
-  loading.style.display='none';area.style.display='block';
-  var html='<div class="vs-title">¿Es tu mascota?</div><div class="vs-sub">Encontramos estos registros. Seleccioná el correcto o buscá por cédula.</div>';
-  if(!res||!res.ok||!res.results||res.results.length===0){
-    html+='<div class="vs-none">No encontramos coincidencias. Podés continuar y el médico te ayudará.</div>';
-  }else if(res.results.length===1){confirmVsClick(res.results[0],pos);return;}
-  else{
-    html+='<div class="vs-results-list">';
-    res.results.forEach(function(r){var hc=r.registro?'<span class="vs-hc">HC: '+escHtml(r.registro)+'</span>':'';html+='<div class="vs-item" onclick=\'confirmVsClick('+JSON.stringify(r)+','+pos+')\' ><div class="vs-item-name">'+escHtml(r.petName||'')+hc+'</div><div class="vs-item-meta">'+escHtml(r.species||'')+(r.breed?' · '+escHtml(r.breed):'')+(r.owner?' | 👤 '+escHtml(r.owner):'')+'</div></div>';});
-    html+='</div><div class="skip-link" style="position:static;padding:6px 0;font-size:.75rem" onclick="goNext('+pos+')">No es ninguno → continuar</div>';
+function goBack() {
+  if (currentPos <= 0) return;
+  currentPos--;
+  buildActiveIndices();
+  var q = QUESTIONS[activeIndices[currentPos]];
+  if (q.type === 'vetesoft') { currentPos--; }
+  var pos = currentPos;
+  buildActiveIndices();
+  var container = document.getElementById('screens');
+  var existing = container.querySelector('.screen.active');
+  if (existing) {
+    existing.style.transition = 'opacity .3s,transform .3s';
+    existing.style.opacity = '0'; existing.style.transform = 'translateX(60px)';
+    setTimeout(function(){ if (existing.parentNode) existing.parentNode.removeChild(existing); }, 300);
   }
-  html+='<div class="vs-cedula-row"><input type="number" id="cedulaInp" placeholder="Buscar por cédula del propietario"><button onclick="searchByCedula('+pos+')">Buscar</button></div>';
-  area.innerHTML=html;
+  var q2 = QUESTIONS[activeIndices[pos]];
+  var html = q2.type === '2col' ? buildColScreen(q2, pos) : buildStdScreen(q2, pos);
+  var newEl = document.createElement('div'); newEl.innerHTML = html;
+  var newScreen = newEl.firstChild;
+  newScreen.style.transform = 'translateX(-60px)'; newScreen.style.opacity = '0';
+  container.appendChild(newScreen);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    newScreen.style.transition = 'opacity .35s,transform .35s';
+    newScreen.style.opacity = '1'; newScreen.style.transform = 'translateX(0)';
+    newScreen.classList.add('active');
+  });});
+  document.getElementById('progressBar').style.width = (pos / activeIndices.length) * 100 + '%';
+  document.getElementById('backBtn').style.display = pos > 0 ? 'block' : 'none';
 }
 
-function confirmVsClick(r,pos){
-  F.vetesoftId=r.id?String(r.id):'';F.vetesoftHc=r.registro||'';
-  var area=document.getElementById('vsResultArea');
-  area.innerHTML='<div class="vs-confirmed"><div style="font-size:1.5rem">✅</div><div class="vs-confirmed-text"><div class="name">'+escHtml(r.petName||'')+' identificado/a</div><div class="meta">'+escHtml(r.owner||'')+(r.registro?' · HC: <strong>'+escHtml(r.registro)+'</strong>':'')+'</div></div></div><span class="vs-change" onclick="resetVs('+pos+')">Cambiar selección</span>';
-  setTimeout(function(){goNext(pos);},1400);
-}
-
-function searchByCedula(pos){
-  var cedula=document.getElementById('cedulaInp').value.trim();if(!cedula)return;
-  var area=document.getElementById('vsResultArea');
-  area.innerHTML='<div class="vs-loading"><div class="spinner"></div><p>Buscando por cédula...</p></div>';
-  fetch(API_URL+'?action=search&petName=&ownerName=&cedula='+encodeURIComponent(cedula))
-    .then(function(r){return r.json();}).then(function(res){renderVsResults(res,pos);}).catch(function(){renderVsError(pos);});
-}
-
-function resetVs(pos){
-  F.vetesoftId='';F.vetesoftHc='';
-  var loading=document.getElementById('vsLoading');var area=document.getElementById('vsResultArea');
-  if(loading)loading.style.display='block';if(area)area.style.display='none';
-  startVetesoftLookup(pos);
-}
-
-function renderVsError(pos){
-  var loading=document.getElementById('vsLoading');var area=document.getElementById('vsResultArea');
-  if(loading)loading.style.display='none';
-  if(area){area.style.display='block';area.innerHTML='<div class="vs-none">No se pudo conectar con el sistema. Podés continuar igual.</div><div class="skip-link" style="position:static;padding:10px 0" onclick="goNext('+pos+')">Continuar →</div>';}
-}
-
-function doSubmit(){
-  document.getElementById('screens').innerHTML='<div class="screen active" style="justify-content:center;align-items:center;text-align:center"><div style="font-size:3rem;margin-bottom:16px">📤</div><div style="font-size:1.1rem;font-weight:800;color:var(--tx)">Enviando tu ficha...</div></div>';
-  document.getElementById('backBtn').style.display='none';
-  document.getElementById('progressCounter').style.display='none';
-  fetch(API_URL,{method:'POST',body:JSON.stringify({action:'submit',data:F})})
-    .then(function(r){return r.json();})
+// ── Submit ───────────────────────────────────────────────────
+function doSubmit() {
+  document.getElementById('screens').innerHTML = '<div class="screen active" style="justify-content:center;align-items:center;text-align:center"><div style="font-size:3rem;margin-bottom:16px">📤</div><div style="font-size:1.1rem;font-weight:800;color:var(--tx)">Enviando tu ficha...</div></div>';
+  document.getElementById('backBtn').style.display = 'none';
+  document.getElementById('progressCounter').style.display = 'none';
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'submit', data:F }) })
+    .then(function(r){ return r.json(); })
     .then(function(res){
-      if(res&&res.ok){
-        document.getElementById('screens').innerHTML='';
-        var ss=document.getElementById('successScreen');ss.classList.add('show');
-        if(F.vetesoftHc){document.getElementById('successHc').style.display='block';document.getElementById('successHcVal').textContent=F.vetesoftHc;}
-        document.getElementById('progressBar').style.display='none';
-      }else{showSendError();}
-    })
-    .catch(showSendError);
+      if (res && res.ok) {
+        document.getElementById('screens').innerHTML = '';
+        document.getElementById('successScreen').classList.add('show');
+        if (F.vetesoftHc) {
+          document.getElementById('successHc').style.display = 'block';
+          document.getElementById('successHcVal').textContent = F.vetesoftHc;
+        }
+        document.getElementById('progressBar').style.display = 'none';
+      } else { showSendError(); }
+    }).catch(showSendError);
 }
 
-function showSendError(){document.getElementById('screens').innerHTML='<div class="screen active" style="justify-content:center;align-items:center;text-align:center"><div style="font-size:2.5rem;margin-bottom:12px">⚠️</div><div style="font-size:1rem;font-weight:700;color:var(--tx);margin-bottom:16px">Hubo un error al enviar.<br>Por favor intentá de nuevo.</div><button onclick="doSubmit()" style="padding:14px 24px;background:var(--p);color:#fff;border:none;border-radius:12px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:Nunito,sans-serif">Reintentar</button></div>';}
+function showSendError() {
+  document.getElementById('screens').innerHTML = '<div class="screen active" style="justify-content:center;align-items:center;text-align:center"><div style="font-size:2.5rem;margin-bottom:12px">⚠️</div><div style="font-size:1rem;font-weight:700;color:var(--tx);margin-bottom:16px">Hubo un error al enviar.<br>Por favor intentá de nuevo.</div><button onclick="doSubmit()" style="padding:14px 24px;background:var(--p);color:#fff;border:none;border-radius:12px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:Nunito,sans-serif">Reintentar</button></div>';
+}
 
-function startForm(){document.getElementById('startScreen').style.display='none';buildActiveIndices();currentPos=0;renderQuestion(0);}
+function startForm() {
+  document.getElementById('startScreen').style.display = 'none';
+  buildActiveIndices(); currentPos = 0; renderQuestion(0);
+}
 
-function escHtml(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function escAttr(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+function escHtml(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 </script>
 </body>
 </html>
