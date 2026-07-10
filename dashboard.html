@@ -147,14 +147,16 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <div class="toast" id="toast"></div>
 
 <script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
 let allRecords = [];
 let activeFilter = 'all';
 
 function loadRecords() {
   document.getElementById('mainCnt').innerHTML = '<div class="spinner"></div>';
   document.getElementById('lastUpdated').textContent = 'Actualizando...';
-  google.script.run
-    .withSuccessHandler(function(res) {
+  fetch(API_URL + '?action=records')
+    .then(function(r){ return r.json(); })
+    .then(function(res) {
       if (res && res.ok) {
         allRecords = res.records || [];
         renderAll();
@@ -166,10 +168,9 @@ function loadRecords() {
         showError('Error al cargar los registros.');
       }
     })
-    .withFailureHandler(function(err) {
+    .catch(function(err) {
       showError('Error de conexión: ' + err.message);
-    })
-    .getRecords();
+    });
 }
 
 function showError(msg) {
@@ -345,8 +346,9 @@ function markReviewed(rowIdx) {
   const btn = document.getElementById('rev-' + rowIdx);
   btn.textContent = '⏳ Guardando...';
   btn.disabled = true;
-  google.script.run
-    .withSuccessHandler(function(res) {
+  fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'markReviewed', rowIndex: rowIdx }) })
+    .then(function(r){ return r.json(); })
+    .then(function(res) {
       if (res && res.ok) {
         const r = allRecords.find(x => x.rowIndex === rowIdx);
         if (r) r.status = 'revisado';
@@ -365,12 +367,11 @@ function markReviewed(rowIdx) {
         showToast('❌ Error al guardar');
       }
     })
-    .withFailureHandler(function() {
+    .catch(function() {
       btn.textContent = '✅ Marcar como revisado';
       btn.disabled = false;
       showToast('❌ Error de conexión');
-    })
-    .markReviewed(rowIdx);
+    });
 }
 
 function copyRecord(rowIdx) {
