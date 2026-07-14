@@ -21,7 +21,7 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 .back-btn{position:fixed;top:7px;left:14px;background:none;border:none;padding:6px;cursor:pointer;color:var(--tm);font-size:1.2rem;z-index:100;border-radius:8px}
 .back-btn:hover{background:rgba(0,0,0,.06)}
 
-.screen{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;padding:24px 24px 80px;opacity:0;transform:translateX(60px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;padding:24px 24px 124px;opacity:0;transform:translateX(60px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;overflow-y:auto}
 .screen.active{opacity:1;transform:translateX(0);pointer-events:all}
 .screen.exit-left{opacity:0;transform:translateX(-60px)}
 
@@ -55,9 +55,9 @@ textarea.text-input{resize:none;min-height:120px;line-height:1.6}
 .multi-inputs{display:flex;flex-direction:column;gap:12px;margin-top:18px}
 .input-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:4px}
 
-.next-btn{position:fixed;bottom:24px;left:24px;right:24px;padding:16px;background:var(--p);color:#fff;border:none;border-radius:14px;font-size:1rem;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;transition:background .2s}
+.next-btn{position:fixed;bottom:56px;left:24px;right:24px;padding:16px;background:var(--p);color:#fff;border:none;border-radius:14px;font-size:1rem;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;transition:background .2s}
 .next-btn:hover{background:var(--pd)}
-.skip-link{position:fixed;bottom:0;left:0;right:0;text-align:center;padding:8px;font-size:.75rem;color:var(--ts);cursor:pointer;font-weight:600}
+.skip-link{position:fixed;bottom:14px;left:0;right:0;text-align:center;padding:8px;font-size:.82rem;color:var(--ts);cursor:pointer;font-weight:700}
 .skip-link:hover{color:var(--tm)}
 
 /* Specialty picker */
@@ -122,6 +122,9 @@ textarea.text-input{resize:none;min-height:120px;line-height:1.6}
 .success-em{font-size:4rem;margin-bottom:14px}
 .success-h{font-size:1.4rem;font-weight:800;color:var(--ok);margin-bottom:8px}
 .success-p{font-size:.85rem;color:var(--tm);line-height:1.6;max-width:300px}
+.turno-box{background:var(--p);border-radius:18px;padding:18px 32px;margin:20px 0 8px;text-align:center;box-shadow:0 8px 24px rgba(142,63,158,.3)}
+.turno-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#f0d9f7}
+.turno-val{font-size:3rem;font-weight:900;color:#fff;line-height:1.1;letter-spacing:1px}
 .success-hc{background:var(--pl);border:2px solid #d8b4fe;border-radius:12px;padding:14px 18px;margin:20px 0;text-align:left;width:100%;max-width:320px}
 .success-hc-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--p);margin-bottom:4px}
 .success-hc-val{font-size:1.1rem;font-weight:800;color:var(--pd)}
@@ -137,7 +140,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_N
   <img class="start-logo-img" src="img/logo.png" alt="Animal Center" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block'">
   <div class="start-logo" id="logoFallback" style="display:none">🐾</div>
   <h1 class="start-h1">Cuéntanos sobre<br><span>tu mascota</span></h1>
-  <p class="start-sub">Completá tu ficha de pre-consulta para que el médico conozca a tu mascota antes de entrar.</p>
+  <p class="start-sub">Completa tu ficha de pre-consulta para que el médico conozca a tu mascota antes de entrar.</p>
   <div class="start-meta">⏱️ Toma unos 3 minutos</div>
   <button class="start-btn" onclick="startForm()">Empezar →</button>
 </div>
@@ -150,7 +153,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_N
 <div class="success-screen" id="successScreen">
   <div class="success-em">🎉</div>
   <h2 class="success-h">¡Ficha enviada!</h2>
-  <p class="success-p">El médico ya puede ver tu información. Podés esperar a ser llamado.</p>
+  <div class="turno-box" id="turnoBox" style="display:none">
+    <div class="turno-label">Tu turno</div>
+    <div class="turno-val" id="turnoVal"></div>
+  </div>
+  <p class="success-p">Espera en la sala a ser llamado por tu turno.</p>
   <div class="success-hc" id="successHc" style="display:none">
     <div class="success-hc-label">Historia Clínica</div>
     <div class="success-hc-val" id="successHcVal"></div>
@@ -364,17 +371,19 @@ var QUESTIONS = [
   ]},
 
   // Servicio — siempre
-  {id:'service', group:'SERVICIO', q:'¿Qué los trae hoy a consulta?', type:'single', options:[
+  {id:'service', group:'SERVICIO', q:'¿A qué servicio vienes hoy?', type:'single', options:[
     {label:'🩺 Consulta general', value:'Consulta general'},
     {label:'⚕️ Consulta especializada', value:'Consulta especializada'},
-    {label:'📋 Control / seguimiento', value:'Control'}
+    {label:'📋 Control / seguimiento', value:'Control'},
+    {label:'💉 Vacunación', value:'Vacunación'},
+    {label:'🩹 Inyectología', value:'Inyectología'}
   ]},
 
   // Selector de especialidad — solo especializada
-  {id:'specialty', group:'ESPECIALIDAD', q:'¿Con qué especialista?', sub:'Seleccioná la especialidad de tu cita.', type:'specialty-picker', onlyServices:['Consulta especializada']},
+  {id:'specialty', group:'ESPECIALIDAD', q:'¿Con qué especialista?', sub:'Selecciona la especialidad de tu cita.', type:'specialty-picker', onlyServices:['Consulta especializada']},
 
   // Motivo — general + especializada
-  {id:'complaint', group:'MOTIVO DE CONSULTA', q:'¿Por qué lo trae hoy a consulta?', sub:'Contanos qué notás diferente en tu mascota.', type:'textarea', onlyServices:GEN_ESP, placeholder:'Ej: Lleva 2 días sin comer, vomitó varias veces...'},
+  {id:'complaint', group:'MOTIVO DE CONSULTA', q:'¿Por qué lo trae hoy a consulta?', sub:'Cuéntanos qué notas diferente en tu mascota.', type:'textarea', onlyServices:GEN_ESP, placeholder:'Ej: Lleva 2 días sin comer, vomitó varias veces...'},
   {id:'duration', group:'MOTIVO DE CONSULTA', q:'¿Cuándo empezó?', type:'single', onlyServices:GEN_ESP, options:[
     {label:'Hoy', value:'Hoy'}, {label:'Ayer', value:'Ayer'},
     {label:'2-3 días', value:'Hace 2-3 días'}, {label:'Una semana', value:'Hace una semana'},
@@ -443,7 +452,7 @@ var QUESTIONS = [
   {id:'deworming', group:'HISTORIAL', q:'¿Y con la desparasitación?', type:'single', onlyServices:GEN_ESP, options:[
     {label:'Sí, reciente ✓', value:'Si, reciente'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
   ]},
-  {id:'medications', group:'HISTORIAL', q:'¿Toma medicamentos actualmente?', type:'text', placeholder:'Nombre y dosis, o escribí "Ninguno"', skippable:true},
+  {id:'medications', group:'HISTORIAL', q:'¿Toma medicamentos actualmente?', type:'text', placeholder:'Nombre y dosis, o escribe "Ninguno"', skippable:true},
   {id:'history', group:'HISTORIAL', q:'¿Enfermedades o cirugías anteriores?', type:'text', onlyServices:GEN_ESP, placeholder:'Ej: Cirugía de cadera hace 2 años', skippable:true},
   {id:'allergies', group:'HISTORIAL', q:'¿Alergias conocidas?', type:'single', options:[
     {label:'No', value:'No'}, {label:'Sí', value:'Si'}, {label:'No sé', value:'No se'}
@@ -468,7 +477,7 @@ var QUESTIONS = [
 
   // Dermatología (el rascado y su frecuencia ya se preguntan en la general)
   {id:'sp_derm_2', group:'DERMATOLOGÍA', q:'¿Qué zonas están afectadas?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Dermatología', branch:true, label:'Zonas afectadas', placeholder:'Ej: orejas, patas, lomo'},
-  {id:'sp_derm_3', group:'DERMATOLOGÍA', q:'¿Notás pérdida de pelo, mal olor o secreción?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Dermatología', branch:true, label:'Hallazgos en piel', placeholder:'Describí lo que ves', skippable:true},
+  {id:'sp_derm_3', group:'DERMATOLOGÍA', q:'¿Notas pérdida de pelo, mal olor o secreción?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Dermatología', branch:true, label:'Hallazgos en piel', placeholder:'Describe lo que ves', skippable:true},
 
   // Medicina Felina
   {id:'sp_fel_1', group:'MEDICINA FELINA', q:'¿Tu gato sale de casa?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Medicina Felina', branch:true, label:'Sale de casa', options:[
@@ -520,7 +529,7 @@ var QUESTIONS = [
   {id:'sp_oft_1', group:'OFTALMOLOGÍA', q:'¿Qué ojo está afectado?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oftalmología', branch:true, label:'Ojo afectado', options:[
     {label:'Izquierdo', value:'Izquierdo'}, {label:'Derecho', value:'Derecho'}, {label:'Ambos', value:'Ambos'}
   ]},
-  {id:'sp_oft_2', group:'OFTALMOLOGÍA', q:'¿Qué signos notás?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oftalmología', branch:true, label:'Signos oculares', options:[
+  {id:'sp_oft_2', group:'OFTALMOLOGÍA', q:'¿Qué signos notas?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oftalmología', branch:true, label:'Signos oculares', options:[
     {label:'Lagrimeo', value:'Lagrimeo'}, {label:'Secreción', value:'Secreción'}, {label:'Enrojecimiento', value:'Enrojecimiento'}, {label:'Opacidad', value:'Opacidad'}
   ]},
   {id:'sp_oft_3', group:'OFTALMOLOGÍA', q:'¿Choca con objetos o ve mal?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Oftalmología', branch:true, label:'Visión', options:[
@@ -542,7 +551,7 @@ var QUESTIONS = [
   {id:'sp_endo_3', group:'ENDOCRINOLOGÍA', q:'¿Cambios en el pelo o la piel?', sub:'Caída, zonas sin pelo, piel más gruesa.', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Endocrinología', branch:true, label:'Pelo y piel', options:[
     {label:'No', value:'No'}, {label:'Sí', value:'Si'}
   ]},
-  {id:'sp_endo_4', group:'ENDOCRINOLOGÍA', q:'¿Está más decaído, con más apetito o jadea más?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Endocrinología', branch:true, label:'Otros signos', placeholder:'Contanos lo que notes', skippable:true},
+  {id:'sp_endo_4', group:'ENDOCRINOLOGÍA', q:'¿Está más decaído, con más apetito o jadea más?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Endocrinología', branch:true, label:'Otros signos', placeholder:'Cuéntanos lo que notes', skippable:true},
 
   // Terapia Física
   {id:'sp_ter_1', group:'TERAPIA FÍSICA', q:'¿Tiene una lesión o cirugía previa?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Terapia Física', branch:true, label:'Antecedente', placeholder:'Ej: cirugía de rodilla hace 1 mes'},
@@ -664,8 +673,8 @@ function buildVsScreen() {
 
 function buildWeightScreen(q, pos) {
   return '<div class="screen has-illo">'+illoBlock(q)+'<div class="group-label">PESO</div><div class="question">'+escHtml(q.q)+'</div>' +
-    '<div class="weight-hint"><span class="em">⚖️</span><span>Por favor pesá a tu mascota en la báscula de la sala e ingresá el peso.</span></div>' +
-    '<div class="weight-input-row"><input class="text-input" type="number" inputmode="decimal" step="0.1" id="inp_weight" value="'+escAttr(F.weight)+'" placeholder="'+escAttr(q.placeholder||'')+'" onkeydown="if(event.key===\'Enter\')nextFromText(\'weight\','+pos+')"><span class="weight-unit">kg</span></div>' +
+    '<div class="weight-hint"><span class="em">⚖️</span><span>Por favor pesa a tu mascota en la báscula de la sala e ingresa el peso.</span></div>' +
+    '<div class="weight-input-row"><input class="text-input" type="text" inputmode="decimal" id="inp_weight" value="'+escAttr(F.weight)+'" placeholder="'+escAttr(q.placeholder||'')+'" onkeydown="if(event.key===\'Enter\')nextFromText(\'weight\','+pos+')"><span class="weight-unit">kg</span></div>' +
     '<button class="next-btn" onclick="nextFromText(\'weight\','+pos+')">Siguiente →</button></div>';
 }
 
@@ -713,7 +722,7 @@ function submitIdent() {
   var ownerName = document.getElementById('inp_ownerName').value.trim();
   var petName   = document.getElementById('inp_petName').value.trim();
   var cedula    = document.getElementById('inp_cedula').value.trim();
-  if (!ownerName || !petName) { alert('Por favor ingresá tu nombre y el de tu mascota.'); return; }
+  if (!ownerName || !petName) { alert('Por favor ingresa tu nombre y el de tu mascota.'); return; }
   F.ownerName = ownerName; F.petName = petName; F._cedula = cedula;
   goNext(currentPos);
 }
@@ -736,7 +745,7 @@ function renderVsResults(res, pos) {
   var area = document.getElementById('vsArea');
   if (!area) return;
   if (!res || !res.ok || !res.results || res.results.length === 0) { renderVsNotFound(pos); return; }
-  var html = '<div class="vs-title">¿Encontramos tu mascota?</div><div class="vs-sub">Seleccioná tu registro o indicá que no es ninguno.</div><div class="vs-results-list">';
+  var html = '<div class="vs-title">¿Encontramos tu mascota?</div><div class="vs-sub">Selecciona tu registro o indica que no es ninguno.</div><div class="vs-results-list">';
   res.results.forEach(function(r) {
     var hc = r.registro ? '<span class="vs-hc">HC '+escHtml(r.registro)+'</span>' : '';
     html += '<div class="vs-item" onclick=\'confirmVs('+JSON.stringify(r)+','+pos+')\'><div class="vs-item-name">'+escHtml(r.petName||'')+hc+'</div><div class="vs-item-meta">'+escHtml(r.species||'')+(r.breed?' · '+escHtml(r.breed):'')+(r.owner?' | 👤 '+escHtml(r.owner):'')+'</div></div>';
@@ -764,12 +773,12 @@ function confirmVs(r, pos) {
 function renderVsNotFound(pos) {
   vsFound = false; F.vetesoftId = ''; F.vetesoftHc = '';
   var area = document.getElementById('vsArea');
-  if (area) area.innerHTML = '<div class="vs-no-match"><div class="em">🔍</div><div class="title">Parece que no tenés historia clínica</div><div class="sub">No encontramos tu mascota en el sistema. El médico la creará en consulta.</div><button class="vs-no-match-continue" onclick="goNext('+pos+')">Continuar y completar datos →</button></div>';
+  if (area) area.innerHTML = '<div class="vs-no-match"><div class="em">🔍</div><div class="title">Parece que no tienes historia clínica</div><div class="sub">No encontramos tu mascota en el sistema. El médico la creará en consulta.</div><button class="vs-no-match-continue" onclick="goNext('+pos+')">Continuar y completar datos →</button></div>';
 }
 
 function renderVsError(pos) {
   var area = document.getElementById('vsArea');
-  if (area) area.innerHTML = '<div class="vs-no-match"><div class="em">⚠️</div><div class="title">No pudimos conectar</div><div class="sub">Problema de conexión. Podés continuar igual.</div><button class="vs-no-match-continue" onclick="vsFound=false;goNext('+pos+')">Continuar →</button></div>';
+  if (area) area.innerHTML = '<div class="vs-no-match"><div class="em">⚠️</div><div class="title">No pudimos conectar</div><div class="sub">Problema de conexión. Puedes continuar igual.</div><button class="vs-no-match-continue" onclick="vsFound=false;goNext('+pos+')">Continuar →</button></div>';
 }
 
 function selectOption(fieldId, value, el, pos) {
@@ -845,6 +854,7 @@ function doSubmit() {
       if (res && res.ok) {
         document.getElementById('screens').innerHTML = '';
         document.getElementById('successScreen').classList.add('show');
+        if (res.turno) { document.getElementById('turnoBox').style.display = 'block'; document.getElementById('turnoVal').textContent = res.turno; }
         if (F.vetesoftHc) { document.getElementById('successHc').style.display = 'block'; document.getElementById('successHcVal').textContent = F.vetesoftHc; }
         document.getElementById('progressBar').style.display = 'none';
       } else { showSendError(); }
