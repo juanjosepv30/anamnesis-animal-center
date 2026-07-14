@@ -105,6 +105,15 @@ textarea.text-input{resize:none;min-height:120px;line-height:1.6}
 .start-meta{font-size:.78rem;color:var(--ts);margin-bottom:28px}
 .start-btn{width:100%;max-width:320px;padding:16px;background:var(--p);color:#fff;border:none;border-radius:14px;font-size:1.05rem;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer}
 .start-btn:hover{background:var(--pd)}
+.start-logo-img{max-width:250px;max-height:130px;object-fit:contain;margin-bottom:22px}
+
+/* Illustration per screen */
+.illo{width:100%;max-width:260px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center}
+.illo svg{width:100%;height:auto;max-height:34vh}
+.illo svg .st{fill:none;stroke:var(--p);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.illo svg .fillp{fill:var(--p)}
+.illo svg .fillbg{fill:var(--wh)}
+.screen.has-illo{justify-content:flex-start;padding-top:8vh}
 
 /* Success */
 .success-screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center;background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%)}
@@ -124,8 +133,9 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_N
 </script>
 
 <div class="start-screen" id="startScreen">
-  <div class="start-logo">🐾</div>
-  <h1 class="start-h1">Bienvenido a<br><span>Animal Center</span></h1>
+  <img class="start-logo-img" src="img/logo.png" alt="Animal Center" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block'">
+  <div class="start-logo" id="logoFallback" style="display:none">🐾</div>
+  <h1 class="start-h1">Cuéntanos sobre<br><span>tu mascota</span></h1>
   <p class="start-sub">Completá tu ficha de pre-consulta para que el médico conozca a tu mascota antes de entrar.</p>
   <div class="start-meta">⏱️ Toma unos 3 minutos</div>
   <button class="start-btn" onclick="startForm()">Empezar →</button>
@@ -180,18 +190,113 @@ var vsFound = false;
 var GEN = ['Consulta general'];
 var GEN_ESP = ['Consulta general','Consulta especializada'];
 
+// ── Ilustraciones a color (SVG originales) ───────────────────
+var ILLOS = {
+  dog:
+    '<svg viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M138 182 Q166 178 160 150" fill="none" stroke="#3a2140" stroke-width="5" stroke-linecap="round"/>' +
+    '<path d="M74 74 Q50 80 52 114 Q68 112 76 98 Z" fill="#e79a5a" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<path d="M126 74 Q150 80 148 114 Q132 112 124 98 Z" fill="#e79a5a" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<path d="M62 205 Q56 152 76 132 Q66 120 70 100 Q74 62 100 60 Q126 62 130 100 Q134 120 124 132 Q144 152 138 205 Z" fill="#fff1dc" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<ellipse cx="122" cy="170" rx="17" ry="13" fill="#ff6b5c"/>' +
+    '<ellipse cx="80" cy="150" rx="10" ry="8" fill="#ffc94d"/>' +
+    '<path d="M89 205 L89 178 M111 205 L111 178" fill="none" stroke="#3a2140" stroke-width="5" stroke-linecap="round"/>' +
+    '<rect x="78" y="126" width="44" height="10" rx="5" fill="#23c4a8"/>' +
+    '<circle cx="100" cy="142" r="5.5" fill="#ffc94d" stroke="#3a2140" stroke-width="2"/>' +
+    '<circle cx="82" cy="104" r="6.5" fill="#ff9db0" opacity=".6"/><circle cx="118" cy="104" r="6.5" fill="#ff9db0" opacity=".6"/>' +
+    '<circle cx="88" cy="92" r="3.8" fill="#3a2140"/><circle cx="112" cy="92" r="3.8" fill="#3a2140"/>' +
+    '<ellipse cx="100" cy="106" rx="5" ry="3.6" fill="#3a2140"/>' +
+    '<path d="M100 110 Q92 118 86 112 M100 110 Q108 118 114 112" fill="none" stroke="#3a2140" stroke-width="4" stroke-linecap="round"/>' +
+    '</svg>',
+  cat:
+    '<svg viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M62 205 Q40 200 44 174 Q46 158 62 160" fill="none" stroke="#3a2140" stroke-width="5" stroke-linecap="round"/>' +
+    '<path d="M74 72 L64 44 L92 62 Z" fill="#f7b7c9" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<path d="M126 72 L136 44 L108 62 Z" fill="#f7b7c9" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<path d="M70 98 Q68 60 100 58 Q132 60 130 98 Q140 122 138 205 L62 205 Q60 122 70 98 Z" fill="#b79be0" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<path d="M100 118 Q84 150 90 205 L110 205 Q116 150 100 118 Z" fill="#fff1dc"/>' +
+    '<rect x="78" y="126" width="44" height="9" rx="4" fill="#ffc94d"/>' +
+    '<circle cx="100" cy="141" r="5.5" fill="#23c4a8" stroke="#3a2140" stroke-width="2"/>' +
+    '<circle cx="82" cy="106" r="6.5" fill="#ff9db0" opacity=".6"/><circle cx="118" cy="106" r="6.5" fill="#ff9db0" opacity=".6"/>' +
+    '<circle cx="88" cy="94" r="3.8" fill="#3a2140"/><circle cx="112" cy="94" r="3.8" fill="#3a2140"/>' +
+    '<path d="M100 104 l6 -3 l-6 5 l-6 -5 z" fill="#ff6b5c"/>' +
+    '<path d="M100 106 l0 5 M100 111 Q94 116 90 112 M100 111 Q106 116 110 112" fill="none" stroke="#3a2140" stroke-width="4" stroke-linecap="round"/>' +
+    '<path d="M116 106 L142 102 M116 112 L142 116 M84 106 L58 102 M84 112 L58 116" fill="none" stroke="#3a2140" stroke-width="3.5" stroke-linecap="round"/>' +
+    '</svg>',
+  scale_dog:
+    '<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">' +
+    '<ellipse cx="100" cy="116" rx="52" ry="47" fill="#fff1dc" stroke="#3a2140" stroke-width="5"/>' +
+    '<path d="M64 92 Q46 98 50 126 Q64 122 72 108 Z" fill="#e79a5a" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<path d="M136 92 Q154 98 150 126 Q136 122 128 108 Z" fill="#e79a5a" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<ellipse cx="124" cy="142" rx="14" ry="10" fill="#ff6b5c"/>' +
+    '<circle cx="82" cy="108" r="6.5" fill="#ff9db0" opacity=".6"/><circle cx="118" cy="108" r="6.5" fill="#ff9db0" opacity=".6"/>' +
+    '<circle cx="86" cy="110" r="3.8" fill="#3a2140"/><circle cx="114" cy="110" r="3.8" fill="#3a2140"/>' +
+    '<ellipse cx="100" cy="124" rx="5" ry="3.6" fill="#3a2140"/>' +
+    '<path d="M100 128 Q92 136 86 130 M100 128 Q108 136 114 130" fill="none" stroke="#3a2140" stroke-width="4" stroke-linecap="round"/>' +
+    '<path d="M84 162 l0 14 M116 162 l0 14" fill="none" stroke="#3a2140" stroke-width="5" stroke-linecap="round"/>' +
+    '<rect x="48" y="178" width="104" height="30" rx="12" fill="#ffc94d" stroke="#3a2140" stroke-width="5"/>' +
+    '<circle cx="100" cy="193" r="8" fill="#fff1dc" stroke="#3a2140" stroke-width="4"/>' +
+    '<path d="M100 193 l5 -4" fill="none" stroke="#3a2140" stroke-width="4" stroke-linecap="round"/>' +
+    '</svg>',
+  scale_cat:
+    '<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">' +
+    '<ellipse cx="100" cy="116" rx="50" ry="47" fill="#b79be0" stroke="#3a2140" stroke-width="5"/>' +
+    '<path d="M74 80 L66 56 L90 76 Z" fill="#f7b7c9" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<path d="M126 80 L134 56 L110 76 Z" fill="#f7b7c9" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<path d="M100 120 Q84 145 90 162 L110 162 Q116 145 100 120 Z" fill="#fff1dc"/>' +
+    '<circle cx="82" cy="108" r="6.5" fill="#ff9db0" opacity=".6"/><circle cx="118" cy="108" r="6.5" fill="#ff9db0" opacity=".6"/>' +
+    '<circle cx="86" cy="110" r="3.8" fill="#3a2140"/><circle cx="114" cy="110" r="3.8" fill="#3a2140"/>' +
+    '<path d="M100 118 l6 -3 l-6 5 l-6 -5 z" fill="#ff6b5c"/>' +
+    '<path d="M100 120 l0 5 M100 125 Q94 130 90 126 M100 125 Q106 130 110 126" fill="none" stroke="#3a2140" stroke-width="4" stroke-linecap="round"/>' +
+    '<path d="M116 118 L144 114 M116 124 L144 128 M84 118 L56 114 M84 124 L56 128" fill="none" stroke="#3a2140" stroke-width="3.5" stroke-linecap="round"/>' +
+    '<path d="M84 162 l0 14 M116 162 l0 14" fill="none" stroke="#3a2140" stroke-width="5" stroke-linecap="round"/>' +
+    '<rect x="48" y="178" width="104" height="30" rx="12" fill="#ffc94d" stroke="#3a2140" stroke-width="5"/>' +
+    '<circle cx="100" cy="193" r="8" fill="#fff1dc" stroke="#3a2140" stroke-width="4"/>' +
+    '<path d="M100 193 l5 -4" fill="none" stroke="#3a2140" stroke-width="4" stroke-linecap="round"/>' +
+    '</svg>',
+  food:
+    '<svg viewBox="0 0 200 170" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M100 66 Q92 54 100 44 M100 66 Q108 54 100 44" fill="none" stroke="#ff9db0" stroke-width="5" stroke-linecap="round"/>' +
+    '<path d="M42 118 Q42 142 100 142 Q158 142 158 118 Z" fill="#1aa892" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<ellipse cx="100" cy="118" rx="60" ry="20" fill="#23c4a8" stroke="#3a2140" stroke-width="5"/>' +
+    '<ellipse cx="100" cy="112" rx="45" ry="13" fill="#e79a5a" stroke="#3a2140" stroke-width="4"/>' +
+    '<circle cx="86" cy="110" r="6" fill="#c9743c"/><circle cx="105" cy="114" r="6" fill="#c9743c"/><circle cx="116" cy="108" r="5" fill="#c9743c"/>' +
+    '</svg>',
+  water:
+    '<svg viewBox="0 0 200 170" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M100 40 Q114 64 100 74 Q86 64 100 40 Z" fill="#63b3ed" stroke="#3a2140" stroke-width="4" stroke-linejoin="round"/>' +
+    '<path d="M42 118 Q42 142 100 142 Q158 142 158 118 Z" fill="#e8b53f" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/>' +
+    '<ellipse cx="100" cy="118" rx="60" ry="20" fill="#ffc94d" stroke="#3a2140" stroke-width="5"/>' +
+    '<ellipse cx="100" cy="114" rx="45" ry="12" fill="#63b3ed" stroke="#3a2140" stroke-width="4"/>' +
+    '</svg>'
+};
+
+function getIllo(key) {
+  var isCat = (F.species === 'Felino');
+  if (key === 'scale')  return isCat ? ILLOS.scale_cat : ILLOS.scale_dog;
+  if (key === 'animal') return isCat ? ILLOS.cat : ILLOS.dog;
+  return ILLOS[key] || '';
+}
+
+function illoBlock(q) {
+  var key = (q && q.illo) ? q.illo : 'animal';
+  var svg = getIllo(key);
+  return svg ? '<div class="illo">' + svg + '</div>' : '';
+}
+
 var QUESTIONS = [
   {id:'_ident', group:'IDENTIFIQUÉMONOS', type:'identification'},
   {id:'_vetesoft', group:'BUSCANDO TU HISTORIA CLÍNICA', type:'vetesoft'},
-
-  // Peso — siempre
-  {id:'weight', group:'PESO', q:'¿Cuánto pesa tu mascota?', type:'weight', placeholder:'Ej: 8.5'},
 
   // Datos del paciente — solo si NO tiene historia
   {id:'species', group:'TU MASCOTA', q:'¿Tu mascota es perro o gato?', type:'2col', onlyIfNotFound:true, options:[
     {emoji:'🐕', label:'Perro', value:'Canino'}, {emoji:'🐈', label:'Gato', value:'Felino'}
   ]},
-  {id:'breed', group:'TU MASCOTA', q:'¿Cuál es su raza?', type:'text', onlyIfNotFound:true, placeholder:'Ej: Golden Retriever, Mestizo', skippable:true},
+
+  // Peso — siempre, después de saber si es perro o gato (ilustración según especie)
+  {id:'weight', group:'PESO', q:'¿Cuánto pesa tu mascota?', type:'weight', illo:'scale', placeholder:'Ej: 8.5'},
+
+  {id:'breed', group:'TU MASCOTA', q:'¿Cuál es su raza?', type:'text', onlyIfNotFound:true, illo:'animal', placeholder:'Ej: Golden Retriever, Mestizo', skippable:true},
   {id:'age', group:'TU MASCOTA', q:'¿Qué edad tiene?', type:'text', onlyIfNotFound:true, placeholder:'Ej: 3 años, 8 meses'},
   {id:'sex', group:'TU MASCOTA', q:'¿Es macho o hembra?', type:'single', onlyIfNotFound:true, options:[
     {label:'♂ Macho', value:'Macho'}, {label:'♀ Hembra', value:'Hembra'}
@@ -228,10 +333,10 @@ var QUESTIONS = [
   {id:'prevTreatmentWhat', group:'MOTIVO DE CONSULTA', q:'¿Qué le diste a tu mascota?', sub:'Medicamento, dosis o remedio casero.', type:'text', onlyServices:GEN_ESP, conditional:'prevTreatment===Si', branch:true, label:'Qué le dio', placeholder:'Ej: media pastilla de X, suero, dieta blanda'},
 
   // ── SÍNTOMAS (solo consulta general) ──
-  {id:'appetite', group:'SÍNTOMAS', q:'¿Cómo está su apetito?', type:'single', onlyServices:GEN_ESP, options:[
+  {id:'appetite', group:'SÍNTOMAS', q:'¿Cómo está su apetito?', type:'single', onlyServices:GEN_ESP, illo:'food', options:[
     {label:'Normal 😊', value:'Normal'}, {label:'Reducido', value:'Reducido'}, {label:'Sin apetito 😟', value:'Sin apetito'}, {label:'Aumentado', value:'Aumentado'}
   ]},
-  {id:'water', group:'SÍNTOMAS', q:'¿Cambios en el consumo de agua?', type:'single', onlyServices:GEN_ESP, options:[
+  {id:'water', group:'SÍNTOMAS', q:'¿Cambios en el consumo de agua?', type:'single', onlyServices:GEN_ESP, illo:'water', options:[
     {label:'Igual que siempre', value:'Normal'}, {label:'Toma más', value:'Toma mucho mas'}, {label:'Toma menos', value:'Toma menos'}, {label:'No toma', value:'No toma'}
   ]},
   {id:'vomit', group:'SÍNTOMAS', q:'¿Ha vomitado?', type:'single', onlyServices:GEN_ESP, options:[
@@ -285,7 +390,7 @@ var QUESTIONS = [
   {id:'allergies', group:'HISTORIAL', q:'¿Alergias conocidas?', type:'single', options:[
     {label:'No', value:'No'}, {label:'Sí', value:'Si'}, {label:'No sé', value:'No se'}
   ]},
-  {id:'diet', group:'HISTORIAL', q:'¿Qué tipo de alimento come?', type:'2col', onlyServices:GEN_ESP, options:[
+  {id:'diet', group:'HISTORIAL', q:'¿Qué tipo de alimento come?', type:'2col', onlyServices:GEN_ESP, illo:'food', options:[
     {emoji:'🥘', label:'Concentrado', value:'Croquetas'}, {emoji:'🍖', label:'Casera', value:'Comida casera'},
     {emoji:'🥩', label:'BARF / crudo', value:'BARF'}, {emoji:'🔀', label:'Mixta', value:'Mixta'}
   ]},
@@ -500,7 +605,7 @@ function buildVsScreen() {
 }
 
 function buildWeightScreen(q, pos) {
-  return '<div class="screen"><div class="group-label">PESO</div><div class="question">'+escHtml(q.q)+'</div>' +
+  return '<div class="screen has-illo">'+illoBlock(q)+'<div class="group-label">PESO</div><div class="question">'+escHtml(q.q)+'</div>' +
     '<div class="weight-hint"><span class="em">⚖️</span><span>Por favor pesá a tu mascota en la báscula de la sala e ingresá el peso.</span></div>' +
     '<div class="weight-input-row"><input class="text-input" type="number" step="0.1" id="inp_weight" value="'+escAttr(F.weight)+'" placeholder="'+escAttr(q.placeholder||'')+'" onkeydown="if(event.key===\'Enter\')nextFromText(\'weight\','+pos+')"><span class="weight-unit">kg</span></div>' +
     '<button class="next-btn" onclick="nextFromText(\'weight\','+pos+')">Siguiente →</button></div>';
@@ -531,7 +636,7 @@ function buildStdScreen(q, pos) {
   if (q.type === 'text') opts += '<div class="text-wrap"><input class="text-input" type="text" id="inp_'+q.id+'" value="'+escAttr(F[q.id]||'')+'" placeholder="'+escAttr(q.placeholder||'')+'" onkeydown="if(event.key===\'Enter\')nextFromText(\''+q.id+'\','+pos+')"></div>';
   if (q.type === 'textarea') opts += '<div class="text-wrap"><textarea class="text-input" id="inp_'+q.id+'" placeholder="'+escAttr(q.placeholder||'')+'">'+escHtml(F[q.id]||'')+'</textarea></div>';
   var showNext = (q.type === 'text' || q.type === 'textarea');
-  return '<div class="screen"><div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+opts+(showNext?'<button class="next-btn" onclick="nextFromText(\''+q.id+'\','+pos+')">Siguiente →</button>':'')+(q.skippable?'<div class="skip-link" onclick="goNext('+pos+')">Omitir →</div>':'')+'</div>';
+  return '<div class="screen has-illo">'+illoBlock(q)+'<div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+opts+(showNext?'<button class="next-btn" onclick="nextFromText(\''+q.id+'\','+pos+')">Siguiente →</button>':'')+(q.skippable?'<div class="skip-link" onclick="goNext('+pos+')">Omitir →</div>':'')+'</div>';
 }
 
 function buildColScreen(q, pos) {
@@ -543,7 +648,7 @@ function buildColScreen(q, pos) {
     opts += '<span>'+escHtml(o.label)+'</span></div>';
   });
   opts += '</div>';
-  return '<div class="screen"><div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+opts+'</div>';
+  return '<div class="screen has-illo">'+illoBlock(q)+'<div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+opts+'</div>';
 }
 
 function submitIdent() {
