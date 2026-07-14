@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recepción — Animal Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#faf7ff;--bg2:#f3eeff;--tx:#1a0a2e;--tm:#6b5c7e;--ts:#b0a4bf;
+  --wh:#fff;--bd:#e8dff5;--p:#7c3aed;--pl:#f5f0ff;--pd:#5b21b6;--ok:#16a34a;
+}
+html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+
+/* PIN */
+.pin-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:1000}
+.pin-box{background:var(--wh);border:1px solid var(--bd);border-radius:16px;padding:34px 28px;max-width:320px;width:90%;text-align:center;box-shadow:0 4px 24px rgba(124,58,237,.12)}
+.pin-box h1{font-size:1.1rem;color:var(--p);margin-bottom:4px}
+.pin-box p{font-size:.82rem;color:var(--tm);margin-bottom:20px}
+.pin-box input{width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:12px;font-size:1.2rem;text-align:center;letter-spacing:6px;outline:none;margin-bottom:12px;font-family:'DM Sans',sans-serif}
+.pin-box input:focus{border-color:var(--p)}
+.pin-box button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--p);color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+.hdr{background:var(--wh);border-bottom:1px solid var(--bd);padding:0 22px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hdr-brand{display:flex;align-items:center;gap:10px}
+.hdr-icon{width:34px;height:34px;border-radius:8px;overflow:hidden;background:var(--p);display:flex;align-items:center;justify-content:center}
+.hdr-icon img{width:100%;height:100%;object-fit:cover}
+.hdr-t{font-size:.95rem;font-weight:700}
+.hdr-s{font-size:.72rem;color:var(--tm)}
+.btn-ref{border:1.5px solid var(--bd);border-radius:8px;padding:6px 14px;color:var(--tm);font-size:.78rem;font-weight:600;cursor:pointer;background:var(--wh);font-family:'DM Sans',sans-serif}
+
+.wrap{max-width:900px;margin:0 auto;padding:18px 16px 60px}
+.card{background:var(--wh);border:1px solid var(--bd);border-radius:14px;padding:18px;margin-bottom:16px}
+.card-t{font-size:.95rem;font-weight:700;margin-bottom:4px}
+.card-sub{font-size:.8rem;color:var(--tm);margin-bottom:14px}
+
+.search-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px}
+.search-row input{border:1.5px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:.87rem;font-family:'DM Sans',sans-serif;outline:none;background:var(--bg)}
+.search-row input:focus{border-color:var(--p);background:var(--wh)}
+.search-row button{padding:10px 18px;border:none;border-radius:9px;background:var(--p);color:#fff;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+@media(max-width:640px){.search-row{grid-template-columns:1fr 1fr}.search-row button{grid-column:1/-1}}
+
+.results{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+.res-item{border:1.5px solid var(--bd);border-radius:10px;padding:11px 13px;cursor:pointer;transition:all .15s}
+.res-item:hover{border-color:var(--p);background:var(--pl)}
+.res-name{font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.res-hc{background:var(--p);color:#fff;border-radius:99px;padding:1px 8px;font-size:.62rem;font-weight:700}
+.res-meta{font-size:.74rem;color:var(--tm);margin-top:2px}
+.res-note{font-size:.8rem;color:var(--tm);text-align:center;padding:10px;background:var(--bg);border-radius:9px;margin-top:10px}
+
+.reg-form{background:var(--pl);border:1.5px solid #d8c9f5;border-radius:12px;padding:14px;margin-top:12px}
+.reg-sel{font-weight:700;font-size:.9rem;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.reg-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.reg-grid label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tm);display:block;margin-bottom:4px}
+.reg-grid select,.reg-grid input{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:9px 10px;font-size:.85rem;font-family:'DM Sans',sans-serif;outline:none;background:var(--wh)}
+@media(max-width:640px){.reg-grid{grid-template-columns:1fr}}
+.reg-actions{display:flex;gap:8px}
+.btn-primary{flex:1;padding:11px;border:none;border-radius:9px;background:var(--p);color:#fff;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-ghost{padding:11px 16px;border:1.5px solid var(--bd);border-radius:9px;background:var(--wh);color:var(--tm);font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+.confirm{background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:16px;text-align:center;margin-top:12px}
+.confirm .em{font-size:2rem}
+.confirm .turno{font-size:2.2rem;font-weight:700;color:var(--pd);letter-spacing:1px;margin:4px 0}
+.confirm .msg{font-size:.82rem;color:var(--tm)}
+
+/* Waiting room list */
+.wr-item{display:flex;align-items:center;gap:12px;border:1px solid var(--bd);border-radius:11px;padding:10px 13px;margin-bottom:7px;border-left:5px solid #94a3b8}
+.wr-turno{font-size:1.05rem;font-weight:700;min-width:56px;font-variant-numeric:tabular-nums}
+.wr-info{flex:1;min-width:0}
+.wr-name{font-weight:600;font-size:.9rem}
+.wr-meta{font-size:.73rem;color:var(--tm);margin-top:1px}
+.badge{font-size:.62rem;font-weight:700;border-radius:99px;padding:2px 9px;white-space:nowrap}
+.badge-ag{background:#ede9fe;color:#6d28d9}
+.badge-esp{background:#eff6ff;color:#2563eb}
+.badge-at{background:#f0fdf4;color:#16a34a}
+.badge-au{background:#fef2f2;color:#dc2626}
+.wr-btn{border:1.5px solid var(--bd);border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:600;cursor:pointer;background:var(--wh);color:var(--tm);font-family:'DM Sans',sans-serif}
+.empty{text-align:center;padding:40px 20px;color:var(--tm);font-size:.85rem}
+.spinner{width:30px;height:30px;border:2.5px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:30px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--tx);color:#fff;border-radius:10px;padding:10px 20px;font-size:.82rem;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="pin-screen" id="pinScreen">
+  <div class="pin-box">
+    <h1>🐾 Recepción</h1>
+    <p>Animal Center · Ingresá el PIN</p>
+    <input type="password" id="pinInput" maxlength="6" placeholder="••••" onkeydown="if(event.key==='Enter')checkPin()">
+    <button onclick="checkPin()">Entrar</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header class="hdr">
+    <div class="hdr-brand">
+      <div class="hdr-icon" id="hdrIcon"><img src="img/paw.jpg" alt="" onerror="this.remove();document.getElementById('hdrIcon').textContent='🐾'"></div>
+      <div><div class="hdr-t">Recepción</div><div class="hdr-s" id="hdrSub">Sala de espera</div></div>
+    </div>
+    <button class="btn-ref" onclick="loadWaitingRoom()">↻ Actualizar</button>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="card-t">Registrar llegada de agendado</div>
+      <div class="card-sub">Buscá al paciente en Vetesoft (validá contra el calendar) y regístralo en la sala.</div>
+      <div class="search-row">
+        <input type="text" id="qOwner" placeholder="Nombre del dueño">
+        <input type="text" id="qPet" placeholder="Nombre de la mascota">
+        <input type="number" id="qCedula" placeholder="Cédula (opcional)">
+        <button onclick="doSearch()">🔍 Buscar</button>
+      </div>
+      <div class="results" id="results"></div>
+      <div id="regArea"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">Sala de espera · hoy</div>
+      <div class="card-sub" id="wrCount">Cargando...</div>
+      <div id="wrList"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
+const RECEP_PIN = '2025';
+let selected = null;
+
+function checkPin() {
+  if (document.getElementById('pinInput').value === RECEP_PIN) {
+    document.getElementById('pinScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadWaitingRoom();
+    setInterval(function(){ if (!selected) loadWaitingRoom(true); }, 60000);
+  } else {
+    showToast('PIN incorrecto');
+  }
+}
+
+function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function serviceColor(s){
+  s=(s||'').toLowerCase();
+  if(s.indexOf('especial')!==-1)return'#f97316';
+  if(s.indexOf('control')!==-1)return'#2563eb';
+  if(s.indexOf('vacun')!==-1)return'#8e3f9e';
+  if(s.indexOf('inyect')!==-1)return'#eab308';
+  if(s.indexOf('general')!==-1)return'#16a34a';
+  return'#94a3b8';
+}
+
+// ── Búsqueda en Vetesoft ─────────────────────────────────────
+function doSearch() {
+  const owner = document.getElementById('qOwner').value.trim();
+  const pet   = document.getElementById('qPet').value.trim();
+  const ced   = document.getElementById('qCedula').value.trim();
+  if (!owner && !pet && !ced) { showToast('Ingresá al menos un dato'); return; }
+  document.getElementById('regArea').innerHTML = '';
+  document.getElementById('results').innerHTML = '<div class="spinner"></div>';
+  const url = API_URL + '?action=search&petName=' + encodeURIComponent(pet) +
+              '&ownerName=' + encodeURIComponent(owner) + '&cedula=' + encodeURIComponent(ced);
+  fetch(url).then(r=>r.json()).then(function(res){
+    if (!res || !res.ok || !res.results || !res.results.length) {
+      document.getElementById('results').innerHTML = '<div class="res-note">No se encontraron coincidencias en Vetesoft. Verificá los datos o probá solo con el nombre de la mascota.</div>';
+      return;
+    }
+    let html = '';
+    res.results.forEach(function(r, i){
+      window['_r'+i] = r;
+      const hc = r.registro ? '<span class="res-hc">HC '+esc(r.registro)+'</span>' : '';
+      html += '<div class="res-item" onclick="pickResult(_r'+i+')"><div class="res-name">'+esc(r.petName||'')+hc+'</div>'+
+              '<div class="res-meta">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+' | 👤 '+esc(r.owner||'')+(r.documento?' · CC '+esc(r.documento):'')+'</div></div>';
+    });
+    document.getElementById('results').innerHTML = html;
+  }).catch(function(){
+    document.getElementById('results').innerHTML = '<div class="res-note">Error de conexión con Vetesoft.</div>';
+  });
+}
+
+// ── Seleccionar paciente → formulario de registro ────────────
+function pickResult(r) {
+  selected = r;
+  document.getElementById('results').innerHTML = '';
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('regArea').innerHTML =
+    '<div class="reg-form">'+
+      '<div class="reg-sel">✅ '+esc(r.petName||'')+' — '+esc(r.owner||'')+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
+      '<div class="reg-grid">'+
+        '<div><label>Servicio</label><select id="regService">'+
+          '<option value="Consulta especializada">Consulta especializada</option>'+
+          '<option value="Control">Control</option>'+
+          '<option value="Consulta general">Consulta general</option>'+
+          '<option value="Vacunación">Vacunación</option>'+
+          '<option value="Inyectología">Inyectología</option>'+
+        '</select></div>'+
+        '<div><label>Especialidad / Doctor</label><input type="text" id="regSpec" placeholder="Ej: Cardiología"></div>'+
+        '<div><label>Hora de la cita</label><input type="time" id="regHora" value="'+hh+'"></div>'+
+      '</div>'+
+      '<div class="reg-actions">'+
+        '<button class="btn-primary" onclick="doRegister()">Registrar como agendado →</button>'+
+        '<button class="btn-ghost" onclick="cancelReg()">Cancelar</button>'+
+      '</div>'+
+    '</div>';
+}
+
+function cancelReg(){ selected=null; document.getElementById('regArea').innerHTML=''; }
+
+// ── Registrar llegada ────────────────────────────────────────
+function doRegister() {
+  if (!selected) return;
+  const payload = {
+    action: 'registerArrival',
+    data: {
+      vetesoftId: selected.id ? String(selected.id) : '',
+      vetesoftHc: selected.registro || '',
+      petName: selected.petName || '',
+      species: selected.species || '',
+      breed: selected.breed || '',
+      owner: selected.owner || '',
+      service: document.getElementById('regService').value,
+      specialty: document.getElementById('regSpec').value.trim(),
+      horaCita: document.getElementById('regHora').value
+    }
+  };
+  document.getElementById('regArea').innerHTML = '<div class="spinner"></div>';
+  fetch(API_URL, { method:'POST', body: JSON.stringify(payload) })
+    .then(r=>r.json()).then(function(res){
+      if (res && res.ok) {
+        document.getElementById('regArea').innerHTML =
+          '<div class="confirm"><div class="em">🎫</div><div class="turno">'+esc(res.turno)+'</div>'+
+          '<div class="msg">Registrado en la sala de espera'+(res.linked?' y enlazado con su anamnesis':'')+'. El médico ya lo ve.</div></div>';
+        document.getElementById('qOwner').value=''; document.getElementById('qPet').value=''; document.getElementById('qCedula').value='';
+        selected = null;
+        loadWaitingRoom(true);
+        setTimeout(function(){ document.getElementById('regArea').innerHTML=''; }, 6000);
+      } else {
+        document.getElementById('regArea').innerHTML = '<div class="res-note">Error al registrar. Intentá de nuevo.</div>';
+      }
+    }).catch(function(){
+      document.getElementById('regArea').innerHTML = '<div class="res-note">Error de conexión.</div>';
+    });
+}
+
+// ── Sala de espera de hoy ────────────────────────────────────
+function loadWaitingRoom(silent) {
+  if (!silent) document.getElementById('wrList').innerHTML = '<div class="spinner"></div>';
+  fetch(API_URL + '?action=records').then(r=>r.json()).then(function(res){
+    if (!res || !res.ok) { document.getElementById('wrList').innerHTML = '<div class="empty">Error al cargar.</div>'; return; }
+    const today = new Date();
+    const list = (res.records||[]).filter(function(r){
+      const d = new Date(r.timestamp);
+      return !isNaN(d) && d.toDateString() === today.toDateString() && r.estadoTurno !== 'atendido';
+    });
+    document.getElementById('wrCount').textContent = list.length + ' en sala de espera';
+    if (!list.length) { document.getElementById('wrList').innerHTML = '<div class="empty">Nadie en sala de espera todavía.</div>'; return; }
+    let html = '';
+    list.forEach(function(r){
+      const color = serviceColor(r.service);
+      const ag = r.agendado === 'si' ? '<span class="badge badge-ag">Agendado</span>' : '';
+      let estBadge = '';
+      if (r.estadoTurno === 'llamando') estBadge = '<span class="badge badge-esp">Llamando</span>';
+      else if (r.estadoTurno === 'ausente') estBadge = '<span class="badge badge-au">Ausente</span>';
+      const ausente = r.estadoTurno === 'ausente';
+      html += '<div class="wr-item" style="border-left-color:'+color+'">'+
+        '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
+        '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+' '+ag+' '+estBadge+'</div>'+
+        '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.horaCita?' · 🕐 '+esc(r.horaCita):'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
+        '<button class="wr-btn" onclick="markAusente('+r.rowIndex+','+(ausente?"'esperando'":"'ausente'")+')">'+(ausente?'Reactivar':'Ausente')+'</button>'+
+        '</div>';
+    });
+    document.getElementById('wrList').innerHTML = html;
+  }).catch(function(){ document.getElementById('wrList').innerHTML = '<div class="empty">Error de conexión.</div>'; });
+}
+
+function markAusente(rowIndex, estado) {
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: estado }) })
+    .then(r=>r.json()).then(function(res){
+      if (res && res.ok) { showToast('Actualizado'); loadWaitingRoom(true); }
+      else showToast('Error al actualizar');
+    }).catch(function(){ showToast('Error de conexión'); });
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
