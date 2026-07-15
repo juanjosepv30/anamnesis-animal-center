@@ -287,18 +287,44 @@ function horaToDate(h) {
 }
 
 // ── La regla híbrida ─────────────────────────────────────────
-// En cualquier fila: si hay una cita programada que ya llegó (o llega
-// en <=15 min), esa va primero — ordenadas por hora. Si no hay ninguna
-// próxima, entra el espontáneo que más lleva esperando (llena el hueco).
-function pickNext(list, filaKey) {
+// Inyectología es el ÚNICO servicio rápido (~3 min). Vacunación NO lo es
+// (carnet, preguntas, historia si es nueva, revisión), así que va a la
+// cola normal como cualquier consulta.
+function esInyeccion(r) {
+  return (r.service || '').toLowerCase().indexOf('inyect') !== -1;
+}
+function porLlegada(a, b) { return new Date(a.timestamp) - new Date(b.timestamp); }
+
+// Orden de decisión:
+//   1. Cita programada cuya hora ya llegó (o llega en ≤15 min)
+//   2. Intercalado: 1 inyectología por cada 2 pacientes largos
+//   3. Orden de llegada
+function pickNext(list, filaKey, yaLlamados) {
   if (!list.length) return null;
+
+  // 1. Las citas programadas mandan a su hora
   const soon = new Date(Date.now() + 15*60000);
   const prog = list.filter(r => r.agendado === 'si' && r.horaCita)
     .map(r => ({ r: r, t: horaToDate(r.horaCita) }))
     .filter(x => x.t && x.t <= soon)
     .sort((a,b) => a.t - b.t);
   if (prog.length) return prog[0].r;
-  return list.slice().sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp))[0];
+
+  // 2. Intercalado (solo en Generales, que es donde conviven los dos tipos).
+  //    Mantiene la proporción 1 inyectología cada 2 largos: así las
+  //    inyecciones no esperan 80 min, y las consultas NUNCA se quedan
+  //    varadas aunque lleguen inyecciones sin parar.
+  if (filaKey === 'generales' && yaLlamados) {
+    const inyEsperando = list.filter(esInyeccion).sort(porLlegada);
+    if (inyEsperando.length) {
+      const inyLlamadas   = yaLlamados.filter(esInyeccion).length;
+      const largosLlamados = yaLlamados.length - inyLlamadas;
+      if (inyLlamadas < Math.floor(largosLlamados / 2)) return inyEsperando[0];
+    }
+  }
+
+  // 3. El que más lleva esperando
+  return list.slice().sort(porLlegada)[0];
 }
 
 function setView(v) {
@@ -346,7 +372,10 @@ function renderSala() {
     const mine     = hoy.filter(r => recordFila(r) === f.key);
     const esperando= mine.filter(r => (r.estadoTurno || 'esperando') === 'esperando');
     const llamando = mine.filter(r => r.estadoTurno === 'llamando');
-    const next     = pickNext(esperando, f.key);
+    // Los que ya pasaron hoy por esta fila: sirven para mantener la
+    // proporción del intercalado a lo largo del día.
+    const yaLlamados = mine.filter(r => r.estadoTurno === 'llamando' || r.estadoTurno === 'atendido');
+    const next     = pickNext(esperando, f.key, yaLlamados);
 
     const isCol = !!collapsed[f.key];
     let body = '';
