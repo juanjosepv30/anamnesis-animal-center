@@ -281,23 +281,41 @@ function getMedicosSheet() {
   return sh;
 }
 
+// Normaliza para comparar sin depender de acentos ni mayúsculas
+// ("Vacunación" y "vacunacion" tienen que coincidir igual).
+function normEsp(s) {
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
 // ¿A qué teléfonos hay que avisarle por este paciente?
 function getDoctorPhones(service, specialty) {
   try {
     var rows = getMedicosSheet().getDataRange().getValues();
-    var s = (service || '').toLowerCase();
-    var target;
-    if (s.indexOf('especial') !== -1)                                  target = (specialty || '').toLowerCase();
-    else if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1)  target = 'vacunación';
-    else                                                               target = 'general';  // general, control sin cita, viajero
+    var s = normEsp(service);
+    var targets;
 
-    var phones = [];
+    if (s.indexOf('especial') !== -1) {
+      targets = [normEsp(specialty)];
+    } else if (s.indexOf('vacun') !== -1) {
+      // Las vacunas avisan a vacunación Y a los médicos generales.
+      targets = ['vacunacion', 'general'];
+    } else if (s.indexOf('inyect') !== -1) {
+      targets = ['vacunacion'];
+    } else {
+      targets = ['general'];   // consulta general, control sin cita, viajero
+    }
+
+    var phones = [], seen = {};
     for (var i = 1; i < rows.length; i++) {
-      var esp    = String(rows[i][1] || '').toLowerCase();
+      var esp    = normEsp(rows[i][1]);
       var tel    = String(rows[i][2] || '').replace(/[^0-9]/g, '');
-      var avisar = String(rows[i][3] || '').toLowerCase();
+      var avisar = normEsp(rows[i][3]);
       if (!tel || avisar !== 'si') continue;
-      if (esp === target || (target === 'vacunación' && esp === 'vacunacion')) phones.push(tel);
+      if (targets.indexOf(esp) === -1) continue;
+      if (seen[tel]) continue;          // sin repetir si un médico calza dos veces
+      seen[tel] = true;
+      phones.push(tel);
     }
     return phones;
   } catch (err) {
