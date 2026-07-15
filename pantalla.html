@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sala de espera — Animal Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f3e7f7;--wh:#fff;--tx:#3a2140;--tm:#7d6d86;--ts:#b8a8c2;
+  --p:#8e3f9e;--bd:#e8daf0;
+}
+html,body{height:100%;font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);overflow:hidden}
+body{display:flex;flex-direction:column}
+
+/* Encabezado */
+.hdr{background:var(--wh);border-bottom:3px solid var(--bd);padding:14px 34px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hdr-l{display:flex;align-items:center;gap:16px}
+.hdr-logo{height:52px;object-fit:contain}
+.hdr-t{font-size:1.5rem;font-weight:900;color:var(--p)}
+.clock{font-size:2rem;font-weight:900;color:var(--tx);font-variant-numeric:tabular-nums}
+
+/* Zona principal */
+.main{flex:1;display:flex;gap:22px;padding:22px 34px;min-height:0}
+.calling-zone{flex:3;display:flex;flex-direction:column;min-width:0}
+.side{flex:1;display:flex;flex-direction:column;min-width:260px}
+.zone-t{font-size:1.05rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--tm);margin-bottom:14px;flex-shrink:0}
+
+.cards{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));grid-auto-rows:min-content;gap:18px;overflow:hidden;align-content:start}
+.card{background:var(--wh);border-radius:24px;padding:26px 30px;border-left:16px solid var(--p);box-shadow:0 8px 30px rgba(58,33,64,.10);display:flex;align-items:center;justify-content:space-between;gap:20px}
+.card.nuevo{animation:pop 1.6s ease-in-out 3}
+@keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+.c-turno{font-size:5rem;font-weight:900;line-height:.95;letter-spacing:-2px;font-variant-numeric:tabular-nums}
+.c-pet{font-size:1.7rem;font-weight:800;color:var(--tx);margin-top:4px}
+.c-room-lbl{font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--ts)}
+.c-room{font-size:2.3rem;font-weight:900;line-height:1.1;text-align:right}
+
+/* Próximos */
+.next-list{flex:1;background:var(--wh);border-radius:20px;padding:18px;overflow:hidden}
+.n-item{display:flex;align-items:center;gap:14px;padding:12px 6px;border-bottom:2px solid var(--bd)}
+.n-item:last-child{border-bottom:none}
+.n-turno{font-size:1.9rem;font-weight:900;min-width:96px;font-variant-numeric:tabular-nums}
+.n-pet{font-size:1.15rem;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.n-svc{font-size:.85rem;color:var(--tm);font-weight:700}
+
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ts);text-align:center}
+.empty-em{font-size:4.5rem;margin-bottom:10px}
+.empty-t{font-size:1.5rem;font-weight:800}
+
+/* Aviso de sonido */
+.sound-hint{position:fixed;inset:0;background:rgba(58,33,64,.82);display:flex;align-items:center;justify-content:center;z-index:99;cursor:pointer}
+.sound-box{background:var(--wh);border-radius:24px;padding:44px 54px;text-align:center;max-width:460px}
+.sound-box .em{font-size:4rem}
+.sound-box h2{font-size:1.6rem;color:var(--p);margin:10px 0 8px}
+.sound-box p{font-size:1rem;color:var(--tm);line-height:1.5}
+.sound-box .btn{margin-top:20px;background:var(--p);color:#fff;border:none;border-radius:14px;padding:16px 34px;font-size:1.1rem;font-weight:900;font-family:'Nunito',sans-serif;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="sound-hint" id="soundHint" onclick="activar()">
+  <div class="sound-box">
+    <div class="em">📺</div>
+    <h2>Pantalla de sala de espera</h2>
+    <p>Tocá para activar el sonido de los llamados y pasar a pantalla completa.</p>
+    <button class="btn">Activar</button>
+  </div>
+</div>
+
+<div class="hdr">
+  <div class="hdr-l">
+    <img class="hdr-logo" src="img/logo.png" alt="Animal Center" onerror="this.style.display='none'">
+    <div class="hdr-t">Sala de espera</div>
+  </div>
+  <div class="clock" id="clock">--:--</div>
+</div>
+
+<div class="main">
+  <div class="calling-zone">
+    <div class="zone-t">🔔 Llamando ahora</div>
+    <div class="cards" id="cards"></div>
+  </div>
+  <div class="side">
+    <div class="zone-t">Próximos turnos</div>
+    <div class="next-list" id="nextList"></div>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
+let vistos = {};          // turnos ya anunciados, para no repetir el sonido
+let audioCtx = null;
+let primeraCarga = true;
+
+function activar() {
+  document.getElementById('soundHint').style.display = 'none';
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  var el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen().catch(function(){});
+  cargar();
+}
+
+// Campanita generada por código (sin archivos externos)
+function ding() {
+  if (!audioCtx) return;
+  try {
+    [880, 1174].forEach(function(freq, i){
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      o.connect(g); g.connect(audioCtx.destination);
+      var t = audioCtx.currentTime + i * 0.18;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+      o.start(t); o.stop(t + 0.55);
+    });
+  } catch(e) {}
+}
+
+function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function serviceColor(s){
+  s=(s||'').toLowerCase();
+  if(s.indexOf('especial')!==-1)return'#f97316';
+  if(s.indexOf('control')!==-1)return'#2563eb';
+  if(s.indexOf('vacun')!==-1)return'#8e3f9e';
+  if(s.indexOf('inyect')!==-1)return'#eab308';
+  if(s.indexOf('viajer')!==-1)return'#0891b2';
+  if(s.indexOf('general')!==-1)return'#16a34a';
+  return'#94a3b8';
+}
+
+function reloj(){
+  var n = new Date();
+  document.getElementById('clock').textContent =
+    String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+}
+
+function esHoy(ts){
+  var d = new Date(ts);
+  return !isNaN(d) && d.toDateString() === new Date().toDateString();
+}
+
+function cargar(){
+  fetch(API_URL + '?action=records')
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (!res || !res.ok) return;
+      var hoy = (res.records || []).filter(function(r){ return esHoy(r.timestamp); });
+      pintar(
+        hoy.filter(function(r){ return r.estadoTurno === 'llamando'; }),
+        hoy.filter(function(r){ return (r.estadoTurno || 'esperando') === 'esperando'; })
+      );
+    })
+    .catch(function(){});
+}
+
+function pintar(llamando, esperando){
+  // ── Llamando ahora ──
+  var cont = document.getElementById('cards');
+  if (!llamando.length) {
+    cont.innerHTML = '<div class="empty"><div class="empty-em">🐾</div>'+
+      '<div class="empty-t">Esperá a ser llamado</div></div>';
+  } else {
+    var html = '';
+    llamando.forEach(function(r){
+      var color = serviceColor(r.service);
+      var nuevo = !vistos[r.turno] && !primeraCarga;
+      html += '<div class="card'+(nuevo?' nuevo':'')+'" style="border-left-color:'+color+'">'+
+        '<div><div class="c-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
+        '<div class="c-pet">'+esc(r.petName||'')+'</div></div>'+
+        '<div><div class="c-room-lbl">Consultorio</div>'+
+        '<div class="c-room" style="color:'+color+'">'+esc(r.consultorio||'—')+'</div></div>'+
+      '</div>';
+      if (nuevo) ding();
+    });
+    cont.innerHTML = html;
+  }
+
+  // Marcamos como vistos los que están llamando ahora
+  var actuales = {};
+  llamando.forEach(function(r){ actuales[r.turno] = true; });
+  vistos = actuales;
+  primeraCarga = false;
+
+  // ── Próximos ──
+  var lista = document.getElementById('nextList');
+  var prox = esperando
+    .sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); })
+    .slice(0, 8);
+  if (!prox.length) {
+    lista.innerHTML = '<div class="empty"><div class="empty-t" style="font-size:1.1rem">Nadie en espera</div></div>';
+  } else {
+    var h = '';
+    prox.forEach(function(r){
+      var color = serviceColor(r.service);
+      h += '<div class="n-item"><div class="n-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
+        '<div style="min-width:0"><div class="n-pet">'+esc(r.petName||'')+'</div>'+
+        '<div class="n-svc">'+esc(r.service||'')+'</div></div></div>';
+    });
+    lista.innerHTML = h;
+  }
+}
+
+reloj();
+setInterval(reloj, 20000);
+setInterval(cargar, 8000);   // refresco rápido: es una pantalla en vivo
+cargar();
+</script>
+</body>
+</html>
