@@ -272,6 +272,7 @@ function getMedicosSheet() {
       ['Dr. Wilmer Rodríguez',     'Nefrología',        '', 'si'],
       ['Dr. Wilmer Páez',          'Ortopedia',         '', 'si'],
       ['Dr. Jhoiner Barbosa',      'Oncología',         '', 'si'],
+      ['Dr. Freddy Vera',          'Viajero',           '', 'si'],
       ['Médico general 1',         'General',           '', 'si'],
       ['Médico general 2',         'General',           '', 'si'],
       ['Vacunación',               'Vacunación',        '', 'si']
@@ -292,18 +293,25 @@ function normEsp(s) {
 function getDoctorPhones(service, specialty) {
   try {
     var rows = getMedicosSheet().getDataRange().getValues();
-    var s = normEsp(service);
+    var s  = normEsp(service);
+    var sp = normEsp(specialty);
     var targets;
 
     if (s.indexOf('especial') !== -1) {
-      targets = [normEsp(specialty)];
-    } else if (s.indexOf('vacun') !== -1) {
-      // Las vacunas avisan a vacunación Y a los médicos generales.
+      targets = [sp];
+    } else if (s.indexOf('control') !== -1) {
+      // Control CON especialidad → lo atiende ese especialista.
+      // Control sin especialidad → es un control general.
+      targets = sp ? [sp] : ['general'];
+    } else if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1) {
+      // Vacunación e inyectología: avisan a vacunación Y a los generales.
       targets = ['vacunacion', 'general'];
-    } else if (s.indexOf('inyect') !== -1) {
-      targets = ['vacunacion'];
+    } else if (s.indexOf('viajer') !== -1) {
+      // Viajero: avisa a los generales, pero también al Dr. Freddy,
+      // que es el especialista en trámites de viaje (fila "Viajero").
+      targets = ['viajero', 'general'];
     } else {
-      targets = ['general'];   // consulta general, control sin cita, viajero
+      targets = ['general'];   // consulta general
     }
 
     var phones = [], seen = {};

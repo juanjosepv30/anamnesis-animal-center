@@ -390,8 +390,18 @@ var QUESTIONS = [
     {label:'Terrestre', value:'Terrestre'}, {label:'No sé todavía', value:'No se'}
   ]},
 
-  // Selector de especialidad — solo especializada
-  {id:'specialty', group:'ESPECIALIDAD', q:'¿Con qué especialista?', sub:'Selecciona la especialidad de tu cita.', type:'specialty-picker', onlyServices:['Consulta especializada']},
+  // ¿El control es con especialista o con médico general?
+  {id:'ctrl_tipo', group:'CONTROL', q:'¿Tu control es con un especialista?', type:'single', onlyServices:['Control'], branch:true, label:'Tipo de control', options:[
+    {label:'🩺 Con un médico general', value:'General'},
+    {label:'⚕️ Con un especialista', value:'Especialista'}
+  ]},
+
+  // Selector de especialidad — para especializada, y para control con especialista
+  {id:'specialty', group:'ESPECIALIDAD', q:'¿Con qué especialista?', sub:'Selecciona la especialidad de tu cita.', type:'specialty-picker',
+   showIf: function(){
+     return F.service === 'Consulta especializada' ||
+            (F.service === 'Control' && F.ctrl_tipo === 'Especialista');
+   }},
 
   // Motivo — general + especializada
   {id:'complaint', group:'MOTIVO DE CONSULTA', q:'¿Por qué lo trae hoy a consulta?', sub:'Cuéntanos qué notas diferente en tu mascota.', type:'textarea', onlyServices:GEN_ESP, placeholder:'Ej: Lleva 2 días sin comer, vomitó varias veces...'},
@@ -617,6 +627,7 @@ function buildActiveIndices() {
   for (var i = 0; i < QUESTIONS.length; i++) {
     var q = QUESTIONS[i];
     if (q.onlyIfNotFound && vsFound) continue;
+    if (q.showIf && !q.showIf()) continue;
     if (q.onlyServices && q.onlyServices.indexOf(F.service) === -1) continue;
     if (q.onlySpecialty && F.specialty !== q.onlySpecialty) continue;
     if (q.conditional) {

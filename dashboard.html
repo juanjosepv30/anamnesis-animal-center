@@ -252,13 +252,14 @@ const FILAS = [
 ];
 
 // A qué fila pertenece cada paciente.
-// Control CON cita → especialista; control SIN cita → general.
+// Control CON especialidad → lo atiende el especialista de esa área.
+// Control sin especialidad → control general.
 function recordFila(r) {
   const s = (r.service || '').toLowerCase();
   if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1) return 'rapidos';
   if (s.indexOf('especial') !== -1) return 'especializados';
-  if (s.indexOf('control') !== -1) return (r.agendado === 'si') ? 'especializados' : 'generales';
-  return 'generales';
+  if (s.indexOf('control') !== -1) return (r.specialty || r.agendado === 'si') ? 'especializados' : 'generales';
+  return 'generales';   // consulta general y viajero
 }
 
 // Normaliza la hora de la cita venga como "10:30" o como fecha de Sheets.
