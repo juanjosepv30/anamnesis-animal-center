@@ -75,6 +75,10 @@ function doGet(e) {
     return json(getRecords());
   }
 
+  if (action === 'medicos') {
+    return json(getMedicos());
+  }
+
   if (action === 'search') {
     const petName   = e.parameter.petName   || '';
     const ownerName = e.parameter.ownerName || '';
@@ -324,6 +328,32 @@ function getMedicosSheet() {
 function normEsp(s) {
   return String(s || '').toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+// Directorio para el dashboard: quién es cada médico y qué atiende.
+// Un médico puede cubrir varias especialidades (Wilmer Páez hace
+// Cardiología y Ortopedia), así que agrupamos por nombre.
+// OJO: acá NO va el teléfono. El dashboard es una página pública.
+function getMedicos() {
+  try {
+    var rows = getMedicosSheet().getDataRange().getValues();
+    var porNombre = {}, orden = [];
+    for (var i = 1; i < rows.length; i++) {
+      var nombre = String(rows[i][0] || '').trim();
+      var esp    = String(rows[i][1] || '').trim();
+      if (!nombre || !esp) continue;
+      if (!porNombre[nombre]) { porNombre[nombre] = []; orden.push(nombre); }
+      if (porNombre[nombre].indexOf(esp) === -1) porNombre[nombre].push(esp);
+    }
+    return {
+      ok: true,
+      medicos: orden.map(function(n){
+        return { medico: n, especialidades: porNombre[n] };
+      })
+    };
+  } catch (err) {
+    return { ok: false, error: String(err), medicos: [] };
+  }
 }
 
 // ¿A qué teléfonos hay que avisarle por este paciente?

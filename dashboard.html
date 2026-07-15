@@ -187,10 +187,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <input type="text" id="searchInput" placeholder="Buscar por mascota o propietario..." oninput="renderAll()">
     </div>
     <input type="date" id="dateFilter" class="date-filter" style="display:none" onchange="renderAll()">
-    <select id="miFila" class="date-filter" onchange="setMiFila(this.value)" title="El sistema te dice a quién llamar según tu fila">
-      <option value="">👤 Atiendo: todas</option>
-      <option value="generales">Soy médico general</option>
-      <option value="especializados">Soy especialista</option>
+    <select id="miMedico" class="date-filter" onchange="setMiMedico(this.value)" title="Ves solo los pacientes que te corresponden">
+      <option value="">👤 ¿Quién eres?</option>
     </select>
   </div>
   <div class="srch-inner legend" style="margin-top:8px">
@@ -225,6 +223,7 @@ function loadRecords(silent) {
         allRecords = res.records || [];
         renderAll();
         updateCounts();
+        deducirMedico();    // si vino del WhatsApp, ya sabemos quién es
         abrirDesdeLink();   // si vino desde la notificación, abre esa ficha
         const now = new Date();
         document.getElementById('lastUpdated').textContent =
@@ -354,25 +353,105 @@ function toggleFila(key) {
   renderSala();
 }
 
-// Qué fila atiende este médico. Si la define, solo esa fila muestra el
-// botón de Llamar: el sistema le dice a quién sigue y no hay que elegir.
-let miFila = '';
-try { miFila = localStorage.getItem('ac_mi_fila') || ''; } catch (e) {}
+// ── Identidad del médico ─────────────────────────────────────
+// El directorio vive en la pestaña "Medicos" de la hoja: la misma que
+// decide a quién le llega el WhatsApp. Un médico puede cubrir varias
+// especialidades (Wilmer Páez hace Cardiología y Ortopedia), por eso la
+// identidad es el MÉDICO y no la especialidad.
+let medicos = [];
+let miMedico = '';
+try { miMedico = localStorage.getItem('ac_medico') || ''; } catch (e) {}
 
-function setMiFila(v) {
-  miFila = v;
-  try { localStorage.setItem('ac_mi_fila', v); } catch (e) {}
+function normEsp(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+function misEspecialidades() {
+  const m = medicos.find(x => x.medico === miMedico);
+  return m ? m.especialidades.map(normEsp) : [];
+}
+
+// Quién debe atender este paciente. Es el MISMO criterio que usa
+// getDoctorPhones en el backend para decidir a quién le vibra el celular.
+// Si cambia allá, tiene que cambiar acá: el médico ve exactamente los
+// pacientes por los que se le avisa, ni uno más ni uno menos.
+function destinatarios(r) {
+  const s = normEsp(r.service), sp = normEsp(r.specialty);
+  if (s.indexOf('especial') !== -1) return [sp];
+  if (s.indexOf('control')  !== -1) return sp ? [sp] : ['general'];
+  if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1) return ['vacunacion', 'general'];
+  if (s.indexOf('viajer')   !== -1) return ['viajero', 'general'];
+  return ['general'];
+}
+
+function atiendo(r) {
+  const mis = misEspecialidades();
+  if (!mis.length) return true;            // sin identidad, ve todo
+  return destinatarios(r).some(t => t && mis.indexOf(t) !== -1);
+}
+
+// Qué filas puede llegar a tener este médico. Freddy Vera hace Nutrición
+// (especialistas) y Viajero (generales), así que ve las dos.
+function misFilas() {
+  const mis = misEspecialidades();
+  if (!mis.length) return FILAS.map(f => f.key);
+  const set = {};
+  mis.forEach(function(e){
+    if (e === 'general' || e === 'vacunacion' || e === 'viajero') set.generales = 1;
+    else set.especializados = 1;
+  });
+  return FILAS.map(f => f.key).filter(k => set[k]);
+}
+
+function setMiMedico(v) {
+  miMedico = v;
+  try { localStorage.setItem('ac_medico', v); } catch (e) {}
   renderSala();
+  updateCounts();
+}
+
+function cargarMedicos() {
+  return fetch(API_URL + '?action=medicos')
+    .then(r => r.json())
+    .then(function(res){
+      if (!res || !res.ok) return;
+      medicos = res.medicos || [];
+      const sel = document.getElementById('miMedico');
+      sel.innerHTML = '<option value="">👤 ¿Quién eres?</option>' +
+        medicos.map(m => '<option value="'+esc(m.medico)+'">'+
+          esc(m.medico)+' — '+esc(m.especialidades.join(', '))+'</option>').join('');
+      if (miMedico) sel.value = miMedico;
+    })
+    .catch(function(){});
+}
+
+// Si entró desde el WhatsApp (…?t=E-04) ya sabemos por qué paciente le
+// avisamos, y por lo tanto quién es. Solo lo damos por hecho cuando hay
+// UN único médico posible: "general" lo cubren varios, ahí que elija.
+function deducirMedico() {
+  if (miMedico) return;
+  let t = null;
+  try { t = new URLSearchParams(location.search).get('t'); } catch (e) {}
+  if (!t) return;
+  const rec = allRecords.find(x => String(x.turno||'').toUpperCase() === String(t).toUpperCase());
+  if (!rec) return;
+  const tgt = destinatarios(rec);
+  const cand = medicos.filter(m => m.especialidades.map(normEsp).some(e => tgt.indexOf(e) !== -1));
+  if (cand.length === 1) {
+    setMiMedico(cand[0].medico);
+    document.getElementById('miMedico').value = cand[0].medico;
+    showToast('Abriste como ' + cand[0].medico);
+  }
 }
 
 // ── Render de la sala de espera ──────────────────────────────
 function renderSala() {
   const today = new Date();
-  const hoy = allRecords.filter(r => isSameDay(r.timestamp, today));
+  // Solo los pacientes que le corresponden a este médico.
+  const hoy = allRecords.filter(r => isSameDay(r.timestamp, today) && atiendo(r));
 
-  // Si el médico dijo qué atiende, mostramos SOLO su fila.
-  // Con "Atiendo: todas" se ven las dos.
-  const filasVisibles = miFila ? FILAS.filter(f => f.key === miFila) : FILAS;
+  const verFilas = misFilas();
+  const filasVisibles = FILAS.filter(f => verFilas.indexOf(f.key) !== -1);
   let html = '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
 
   filasVisibles.forEach(function(f) {
@@ -849,12 +928,11 @@ function chequearCambios() {
     .catch(function(){});
 }
 
-// Restaura la fila que atiende este médico (queda guardada en su equipo)
-if (miFila) document.getElementById('miFila').value = miFila;
-
 setInterval(chequearCambios, 5000);
 setInterval(function(){ if (!document.querySelector('.rec.open')) loadRecords(true); }, 120000); // red de seguridad
-loadRecords();
+
+// El directorio primero: sin él no sabemos qué le toca a cada médico.
+cargarMedicos().then(loadRecords);
 </script>
 </body>
 </html>
