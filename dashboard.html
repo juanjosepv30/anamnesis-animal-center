@@ -110,6 +110,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 /* ── Sala de espera (colas) ── */
 .filas{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.filas.una{grid-template-columns:1fr;max-width:520px;margin:0 auto}
 @media(max-width:900px){.filas{grid-template-columns:1fr}}
 .fila{background:var(--wh);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
 /* Encabezado neutro a propósito: el color pertenece al servicio, no a la fila */
@@ -147,7 +148,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .q-item.q-click{display:flex;align-items:center;gap:9px}
 .next-motivo{font-size:.72rem;color:var(--tm);font-style:italic;margin-top:6px;line-height:1.35}
 .q-link{font-size:.68rem;font-weight:700;color:var(--p);margin-top:7px}
-.no-call{font-size:.7rem;color:var(--ts);text-align:center;padding:8px 0 2px;font-weight:600;font-style:italic}
 .mini{font-size:.6rem;font-weight:700;border-radius:99px;padding:1px 7px;white-space:nowrap}
 .mini-ag{background:#ede9fe;color:#6d28d9}
 .mini-esp{background:#e0f2fe;color:#0369a1}
@@ -369,9 +369,13 @@ function setMiFila(v) {
 function renderSala() {
   const today = new Date();
   const hoy = allRecords.filter(r => isSameDay(r.timestamp, today));
-  let html = '<div class="filas">';
 
-  FILAS.forEach(function(f) {
+  // Si el médico dijo qué atiende, mostramos SOLO su fila.
+  // Con "Atiendo: todas" se ven las dos.
+  const filasVisibles = miFila ? FILAS.filter(f => f.key === miFila) : FILAS;
+  let html = '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
+
+  filasVisibles.forEach(function(f) {
     const mine     = hoy.filter(r => recordFila(r) === f.key);
     const esperando= mine.filter(r => (r.estadoTurno || 'esperando') === 'esperando');
     const llamando = mine.filter(r => r.estadoTurno === 'llamando');
@@ -405,8 +409,6 @@ function renderSala() {
     });
 
     // Siguiente a llamar — semi-desplegado, clickeable para ver la anamnesis
-    // Solo la fila que atiende este médico habilita el botón de llamar.
-    const puedeLlamar = (!miFila || miFila === f.key);
     if (next) {
       const nc = serviceColor(next.service);
       const hora = fmtHora(next.horaCita);
@@ -424,12 +426,9 @@ function renderSala() {
           (next.complaint ? '<div class="next-motivo">“'+esc(String(next.complaint).slice(0,90))+(String(next.complaint).length>90?'…':'')+'”</div>' : '')+
           '<div class="q-link">Ver anamnesis completa →</div>'+
         '</div>'+
-        (puedeLlamar
-          ? '<div class="next-ctrls"><select id="room-'+f.key+'">'+opts+'</select>'+
-            '<button class="btn-call" style="background:'+nc+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
-            '</div>'
-          : '<div class="no-call">Esta fila no es la tuya</div>')+
-        '</div>';
+        '<div class="next-ctrls"><select id="room-'+f.key+'">'+opts+'</select>'+
+        '<button class="btn-call" style="background:'+nc+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
+        '</div></div>';
     } else {
       body += '<div class="q-empty">Nadie esperando</div>';
     }
