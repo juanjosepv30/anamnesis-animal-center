@@ -112,9 +112,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .filas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:start}
 @media(max-width:900px){.filas{grid-template-columns:1fr}}
 .fila{background:var(--wh);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
-.fila-hd{padding:11px 14px;color:#fff;display:flex;align-items:center;justify-content:space-between}
+.fila-hd{padding:11px 14px;color:#fff;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;gap:8px}
+.fila-hd:hover{filter:brightness(1.07)}
 .fila-t{font-size:.88rem;font-weight:700}
-.fila-n{font-size:.72rem;opacity:.9;background:rgba(255,255,255,.22);border-radius:99px;padding:2px 9px}
+.fila-hd-r{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.fila-n{font-size:.72rem;opacity:.95;background:rgba(255,255,255,.22);border-radius:99px;padding:2px 9px;white-space:nowrap}
+.fila-cv{font-size:.7rem;opacity:.9;width:12px;text-align:center}
 .fila-bd{padding:12px 13px}
 .next-box{border:1.5px dashed var(--bd);border-radius:11px;padding:11px;margin-bottom:11px;background:var(--bg)}
 .next-lbl{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ts);margin-bottom:5px}
@@ -301,6 +304,17 @@ function isSameDay(ts, ref) {
   return !isNaN(d) && d.toDateString() === ref.toDateString();
 }
 
+// Filas plegadas — se recuerda por médico (queda guardado en el navegador),
+// así el especialista deja colapsadas las que no le tocan.
+let collapsed = {};
+try { collapsed = JSON.parse(localStorage.getItem('ac_filas_col') || '{}'); } catch (e) { collapsed = {}; }
+
+function toggleFila(key) {
+  collapsed[key] = !collapsed[key];
+  try { localStorage.setItem('ac_filas_col', JSON.stringify(collapsed)); } catch (e) {}
+  renderSala();
+}
+
 // ── Render de la sala de espera ──────────────────────────────
 function renderSala() {
   const today = new Date();
@@ -313,13 +327,20 @@ function renderSala() {
     const llamando = mine.filter(r => r.estadoTurno === 'llamando');
     const next     = pickNext(esperando, f.key);
 
-    html += '<div class="fila"><div class="fila-hd" style="background:'+f.color+'">'+
+    const isCol = !!collapsed[f.key];
+    let body = '';
+
+    html += '<div class="fila"><div class="fila-hd" style="background:'+f.color+'" onclick="toggleFila(\''+f.key+'\')">'+
             '<span class="fila-t">'+f.label+'</span>'+
-            '<span class="fila-n">'+esperando.length+' en espera</span></div><div class="fila-bd">';
+            '<span class="fila-hd-r">'+
+              (llamando.length ? '<span class="fila-n">🔔 '+llamando.length+'</span>' : '')+
+              '<span class="fila-n">'+esperando.length+' en espera</span>'+
+              '<span class="fila-cv">'+(isCol ? '▸' : '▾')+'</span>'+
+            '</span></div>';
 
     // Turnos que se están llamando ahora
     llamando.forEach(function(r) {
-      html += '<div class="calling"><div class="calling-top">'+
+      body += '<div class="calling"><div class="calling-top">'+
         '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
           '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
           '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
@@ -336,7 +357,7 @@ function renderSala() {
         : '<span class="mini mini-esp">Espontáneo</span>';
       let opts = '';
       roomsFor(f.key).forEach(function(rm){ opts += '<option value="'+rm+'">'+rm+'</option>'; });
-      html += '<div class="next-box"><div class="next-lbl">Siguiente</div>'+
+      body += '<div class="next-box"><div class="next-lbl">Siguiente</div>'+
         '<div class="q-click" onclick="goToAnamnesis('+next.rowIndex+')">'+
           '<div class="next-turno" style="color:'+nc+'">'+esc(next.turno||'—')+'</div>'+
           '<div class="next-pet">'+esc(next.petName||'Sin nombre')+' '+ag+'</div>'+
@@ -349,7 +370,7 @@ function renderSala() {
         '<button class="btn-call" style="background:'+f.color+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
         '</div></div>';
     } else {
-      html += '<div class="q-empty">Nadie esperando</div>';
+      body += '<div class="q-empty">Nadie esperando</div>';
     }
 
     // Resto de la cola — colapsados, clickeables
@@ -358,13 +379,15 @@ function renderSala() {
       const rc = serviceColor(r.service);
       const hora = fmtHora(r.horaCita);
       const ag = r.agendado === 'si' ? '<span class="mini mini-ag">'+(hora||'Agendado')+'</span>' : '';
-      html += '<div class="q-item q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
+      body += '<div class="q-item q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
         '<div class="q-turno" style="color:'+rc+'">'+esc(r.turno||'—')+'</div>'+
         '<div class="q-info"><div class="q-pet">'+esc(r.petName||'')+' '+ag+'</div>'+
         '<div class="q-meta">'+esc(r.service||'')+' · '+fmtTime(r.timestamp)+'</div></div></div>';
     });
 
-    html += '</div></div>';
+    // Si la fila está plegada, no mostramos el cuerpo (solo el encabezado).
+    if (!isCol) html += '<div class="fila-bd">' + body + '</div>';
+    html += '</div>';
   });
 
   html += '</div>';
