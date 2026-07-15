@@ -1,0 +1,169 @@
+══════════════════════════════════════════════════════════════
+  SISTEMA ANAMNESIS PRE-CONSULTA — ANIMAL CENTER
+  Instrucciones de instalación paso a paso
+══════════════════════════════════════════════════════════════
+
+ARCHIVOS EN ESTA CARPETA:
+  - Code.gs      → Código del servidor (Google Apps Script)
+  - form.html    → Formulario que llenan los clientes
+  - dashboard.html → Panel de control para los médicos
+  - INSTRUCCIONES.txt → Este archivo
+
+──────────────────────────────────────────────────────────────
+PASO 1: CREAR EL PROYECTO EN GOOGLE APPS SCRIPT
+──────────────────────────────────────────────────────────────
+
+1. Abrí Google Drive (drive.google.com)
+2. Creá una nueva Hoja de cálculo (Google Sheets)
+   → Poné el nombre: "Anamnesis Animal Center"
+3. En la hoja, andá al menú: Extensiones → Apps Script
+4. Se va a abrir el editor de Apps Script en una pestaña nueva
+
+
+──────────────────────────────────────────────────────────────
+PASO 2: PEGAR EL CÓDIGO
+──────────────────────────────────────────────────────────────
+
+En el editor de Apps Script vas a ver tres secciones (archivos):
+
+A) Archivo principal (Code.gs):
+   - Borrá TODO el contenido que viene por defecto
+   - Copiá el contenido del archivo Code.gs y pegalo
+   - Guardá con Ctrl+S
+
+B) Crear form.html:
+   - Click en el "+" al lado de "Archivos" → seleccioná "HTML"
+   - Nombralo exactamente: form  (sin .html, lo agrega solo)
+   - Borrá el contenido que viene por defecto
+   - Copiá el contenido del archivo form.html y pegalo
+   - Guardá con Ctrl+S
+
+C) Crear dashboard.html:
+   - Click en "+" → "HTML"
+   - Nombralo exactamente: dashboard
+   - Copiá el contenido del archivo dashboard.html y pegalo
+   - Guardá con Ctrl+S
+
+Al final deberías ver 3 archivos en el panel izquierdo:
+   ✓ Code.gs
+   ✓ form.html
+   ✓ dashboard.html
+
+
+──────────────────────────────────────────────────────────────
+PASO 3: DESPLEGAR COMO APLICACIÓN WEB
+──────────────────────────────────────────────────────────────
+
+1. Click en el botón azul "Implementar" (arriba a la derecha)
+2. Seleccioná "Nueva implementación"
+3. En el panel que aparece:
+   - Tipo: Aplicación web
+   - Descripción: Anamnesis Pre-consulta
+   - Ejecutar como: Yo (tu cuenta de Google)
+   - Quién tiene acceso: Cualquier usuario
+
+   ⚠️ IMPORTANTE: "Cualquier usuario" es necesario para que los
+   clientes puedan llenar el formulario sin necesitar cuenta.
+
+4. Click en "Implementar"
+5. Google te va a pedir que autorices los permisos → Aceptá todo
+6. TE VA A DAR UNA URL — cópiala y guardala, esa es la URL del sistema
+
+
+──────────────────────────────────────────────────────────────
+PASO 4: VERIFICAR QUE FUNCIONA
+──────────────────────────────────────────────────────────────
+
+Con la URL que copiaste en el paso anterior:
+
+- Formulario (para clientes):
+  https://script.google.com/macros/s/XXXXXXX/exec
+
+- Dashboard médicos (PIN: 2025):
+  https://script.google.com/macros/s/XXXXXXX/exec?page=dashboard&pin=2025
+
+Probá llenar el formulario y verificá que el registro aparece
+en el dashboard Y en la hoja de Google Sheets.
+
+
+──────────────────────────────────────────────────────────────
+PASO 5: GENERAR EL CÓDIGO QR
+──────────────────────────────────────────────────────────────
+
+1. Andá a: https://www.qr-code-generator.com
+   (o cualquier generador de QR gratuito)
+2. Pegá la URL del formulario:
+   https://script.google.com/macros/s/XXXXXXX/exec
+3. Descargá el QR en PNG o PDF
+4. Imprimilo y ponelo en la sala de espera
+
+Podés agregar un texto debajo del QR como:
+"Escaneá este código para completar tu ficha de pre-consulta"
+
+
+──────────────────────────────────────────────────────────────
+PASO 6: GUARDAR LA URL DEL DASHBOARD
+──────────────────────────────────────────────────────────────
+
+Compartí esta URL con los médicos (por WhatsApp o correo):
+
+  https://script.google.com/macros/s/XXXXXXX/exec?page=dashboard&pin=2025
+
+PIN actual: 2025
+(Para cambiar el PIN, editá la línea en Code.gs:
+ const DASHBOARD_PIN = '2025';
+ Cambiá el número y volvé a implementar)
+
+
+──────────────────────────────────────────────────────────────
+CÓMO USAR EL DASHBOARD (para los médicos)
+──────────────────────────────────────────────────────────────
+
+- Los registros aparecen ordenados del más reciente al más antiguo
+- Click en un registro para expandirlo y ver todos los detalles
+- Botón "📋 Copiar anamnesis" → copia el texto formateado al portapapeles
+  → Podés pegarlo directamente en Vetesoft (Historia Clínica)
+- Botón "✅ Marcar como revisado" → el registro se pone gris
+  para que los demás médicos sepan que ya fue atendido
+- Barra de búsqueda: buscá por nombre de mascota o propietario
+- El dashboard se actualiza automáticamente cada 60 segundos
+- Botón "↻ Actualizar" para refrescar manualmente
+
+
+──────────────────────────────────────────────────────────────
+ACTUALIZAR EL SISTEMA DESPUÉS DE CAMBIOS
+──────────────────────────────────────────────────────────────
+
+Si modificás algo en el código:
+1. Guardá los cambios en el editor de Apps Script
+2. Click en "Implementar" → "Gestionar implementaciones"
+3. Click en el ícono del lápiz (editar)
+4. En "Versión" seleccioná "Nueva versión"
+5. Click en "Implementar"
+
+⚠️ Si creás una NUEVA implementación en vez de editar la
+existente, la URL cambia y tendrás que actualizar el QR.
+
+
+──────────────────────────────────────────────────────────────
+SOLUCIÓN DE PROBLEMAS
+──────────────────────────────────────────────────────────────
+
+❌ El formulario no carga:
+   → Verificá que "Quién tiene acceso" sea "Cualquier usuario"
+
+❌ "No se puede guardar el registro":
+   → Verificá que el script tenga permisos sobre la hoja
+   → En Apps Script: Ejecutar → getSheet (para forzar autorización)
+
+❌ El dashboard no carga los registros:
+   → La hoja puede estar vacía (sin formularios enviados todavía)
+   → Verificá que el nombre de la hoja en la planilla sea "Anamnesis"
+
+❌ Error de autorización:
+   → En el editor de Apps Script: Ejecutar → Ejecutar función → doGet
+   → Aceptá los permisos que aparezcan
+
+══════════════════════════════════════════════════════════════
+¿Dudas? Contactar al desarrollador.
+══════════════════════════════════════════════════════════════
