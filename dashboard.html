@@ -58,6 +58,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .rec-name{font-size:.93rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .rv-badge{font-size:.62rem;background:var(--bg2);color:var(--ts);border-radius:99px;padding:2px 8px;font-weight:600}
 .hc-badge{font-size:.62rem;background:var(--p);color:#fff;border-radius:99px;padding:2px 9px;font-weight:700;letter-spacing:.2px}
+.turno-badge{font-size:.7rem;color:#fff;border-radius:7px;padding:2px 9px;font-weight:700;letter-spacing:.3px;font-variant-numeric:tabular-nums}
 .rec-meta{font-size:.74rem;color:var(--tm);margin-top:3px;display:flex;flex-wrap:wrap;gap:8px}
 .rec-service{background:var(--bg2);color:var(--p);border-radius:6px;padding:3px 9px;font-size:.68rem;font-weight:600;flex-shrink:0}
 .rec-time{font-size:.7rem;color:var(--ts);flex-shrink:0;text-align:right;line-height:1.4}
@@ -134,6 +135,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .q-pet{font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .q-meta{font-size:.68rem;color:var(--tm)}
 .q-empty{font-size:.78rem;color:var(--ts);text-align:center;padding:14px 0}
+.q-click{cursor:pointer;flex:1;min-width:0;border-radius:8px;transition:opacity .15s}
+.q-click:hover{opacity:.72}
+.q-item.q-click{display:flex;align-items:center;gap:9px}
+.next-motivo{font-size:.72rem;color:var(--tm);font-style:italic;margin-top:6px;line-height:1.35}
+.q-link{font-size:.68rem;font-weight:700;color:var(--p);margin-top:7px}
 .mini{font-size:.6rem;font-weight:700;border-radius:99px;padding:1px 7px;white-space:nowrap}
 .mini-ag{background:#ede9fe;color:#6d28d9}
 .mini-esp{background:#e0f2fe;color:#0369a1}
@@ -165,7 +171,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
   <div class="srch-inner">
     <div class="filter-btns">
       <button class="fbtn active" id="f-sala" onclick="setView('sala')">🔔 Sala de espera</button>
-      <button class="fbtn" id="f-pending" onclick="setView('pending')">📋 Pendientes de hoy</button>
+      <button class="fbtn" id="f-pending" onclick="setView('pending')">📋 Anamnesis</button>
       <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Revisadas</button>
     </div>
     <div class="srch-wrap">
@@ -224,13 +230,22 @@ function showError(msg) {
 }
 
 // ── Sala de espera: filas y consultorios ─────────────────────
+// Los 8 consultorios son flexibles: sirven para especialidad Y para
+// consulta general. Los 2 de vacunación son aparte (a veces se usan
+// para inyectología o consulta), por eso también están disponibles.
+const ROOMS_MAIN = ['Boom Boom','Piel','Ojitos','Meaw Meaw','Viajero','Gastro','General','Neonatos'];
+const ROOMS_VAC  = ['Vacunación 1','Vacunación 2'];
+
+function roomsFor(filaKey) {
+  return (filaKey === 'rapidos')
+    ? ROOMS_VAC.concat(ROOMS_MAIN)   // vacunación primero, pero puede usar cualquiera
+    : ROOMS_MAIN.concat(ROOMS_VAC);  // consultorios primero, pero puede usar los de vacunación
+}
+
 const FILAS = [
-  {key:'generales',      label:'Generales',   color:'#16a34a',
-   rooms:['Consultorio 1','Consultorio 2','Consultorio 3']},
-  {key:'especializados', label:'Especialistas', color:'#f97316',
-   rooms:['Consultorio 4','Consultorio 5','Consultorio 6','Consultorio 7','Consultorio 8']},
-  {key:'rapidos',        label:'Vacunación / Inyectología', color:'#8e3f9e',
-   rooms:['Vacunación 1','Vacunación 2']}
+  {key:'generales',      label:'Generales',                 color:'#16a34a'},
+  {key:'especializados', label:'Especialistas',             color:'#f97316'},
+  {key:'rapidos',        label:'Vacunación / Inyectología', color:'#8e3f9e'}
 ];
 
 // A qué fila pertenece cada paciente.
@@ -259,19 +274,17 @@ function horaToDate(h) {
 }
 
 // ── La regla híbrida ─────────────────────────────────────────
-// En especialistas: si hay una cita programada que ya llegó (o llega
-// en <=15 min), esa va primero. Si no, entra el espontáneo que más
-// lleva esperando (llena el hueco). En las demás filas: orden de llegada.
+// En cualquier fila: si hay una cita programada que ya llegó (o llega
+// en <=15 min), esa va primero — ordenadas por hora. Si no hay ninguna
+// próxima, entra el espontáneo que más lleva esperando (llena el hueco).
 function pickNext(list, filaKey) {
   if (!list.length) return null;
-  if (filaKey === 'especializados') {
-    const soon = new Date(Date.now() + 15*60000);
-    const prog = list.filter(r => r.agendado === 'si' && r.horaCita)
-      .map(r => ({ r: r, t: horaToDate(r.horaCita) }))
-      .filter(x => x.t && x.t <= soon)
-      .sort((a,b) => a.t - b.t);
-    if (prog.length) return prog[0].r;
-  }
+  const soon = new Date(Date.now() + 15*60000);
+  const prog = list.filter(r => r.agendado === 'si' && r.horaCita)
+    .map(r => ({ r: r, t: horaToDate(r.horaCita) }))
+    .filter(x => x.t && x.t <= soon)
+    .sort((a,b) => a.t - b.t);
+  if (prog.length) return prog[0].r;
   return list.slice().sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp))[0];
 }
 
@@ -306,26 +319,32 @@ function renderSala() {
 
     // Turnos que se están llamando ahora
     llamando.forEach(function(r) {
-      html += '<div class="calling"><div class="calling-top"><div>'+
-        '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
-        '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
+      html += '<div class="calling"><div class="calling-top">'+
+        '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
+          '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
+          '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
         '</div><button class="btn-done" onclick="markAtendido('+r.rowIndex+')">✓ Atendido</button>'+
         '</div></div>';
     });
 
-    // Siguiente a llamar
+    // Siguiente a llamar — semi-desplegado, clickeable para ver la anamnesis
     if (next) {
+      const nc = serviceColor(next.service);
       const hora = fmtHora(next.horaCita);
       const ag = next.agendado === 'si'
         ? '<span class="mini mini-ag">Agendado'+(hora?' '+hora:'')+'</span>'
         : '<span class="mini mini-esp">Espontáneo</span>';
       let opts = '';
-      f.rooms.forEach(function(rm){ opts += '<option value="'+rm+'">'+rm+'</option>'; });
+      roomsFor(f.key).forEach(function(rm){ opts += '<option value="'+rm+'">'+rm+'</option>'; });
       html += '<div class="next-box"><div class="next-lbl">Siguiente</div>'+
-        '<div class="next-turno" style="color:'+f.color+'">'+esc(next.turno||'—')+'</div>'+
-        '<div class="next-pet">'+esc(next.petName||'Sin nombre')+' '+ag+'</div>'+
-        '<div class="next-meta">👤 '+esc(next.ownerName||'—')+' · '+esc(next.service||'')+
-          (next.specialty?' · '+esc(next.specialty):'')+'</div>'+
+        '<div class="q-click" onclick="goToAnamnesis('+next.rowIndex+')">'+
+          '<div class="next-turno" style="color:'+nc+'">'+esc(next.turno||'—')+'</div>'+
+          '<div class="next-pet">'+esc(next.petName||'Sin nombre')+' '+ag+'</div>'+
+          '<div class="next-meta">👤 '+esc(next.ownerName||'—')+' · '+esc(next.service||'')+
+            (next.specialty?' · '+esc(next.specialty):'')+'</div>'+
+          (next.complaint ? '<div class="next-motivo">“'+esc(String(next.complaint).slice(0,90))+(String(next.complaint).length>90?'…':'')+'”</div>' : '')+
+          '<div class="q-link">Ver anamnesis completa →</div>'+
+        '</div>'+
         '<div class="next-ctrls"><select id="room-'+f.key+'">'+opts+'</select>'+
         '<button class="btn-call" style="background:'+f.color+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
         '</div></div>';
@@ -333,14 +352,16 @@ function renderSala() {
       html += '<div class="q-empty">Nadie esperando</div>';
     }
 
-    // Resto de la cola
+    // Resto de la cola — colapsados, clickeables
     const rest = esperando.filter(r => !next || r.rowIndex !== next.rowIndex);
     rest.forEach(function(r) {
+      const rc = serviceColor(r.service);
       const hora = fmtHora(r.horaCita);
       const ag = r.agendado === 'si' ? '<span class="mini mini-ag">'+(hora||'Agendado')+'</span>' : '';
-      html += '<div class="q-item"><div class="q-turno" style="color:'+f.color+'">'+esc(r.turno||'—')+'</div>'+
+      html += '<div class="q-item q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
+        '<div class="q-turno" style="color:'+rc+'">'+esc(r.turno||'—')+'</div>'+
         '<div class="q-info"><div class="q-pet">'+esc(r.petName||'')+' '+ag+'</div>'+
-        '<div class="q-meta">'+esc(r.ownerName||'')+' · '+fmtTime(r.timestamp)+'</div></div></div>';
+        '<div class="q-meta">'+esc(r.service||'')+' · '+fmtTime(r.timestamp)+'</div></div></div>';
     });
 
     html += '</div></div>';
@@ -348,6 +369,23 @@ function renderSala() {
 
   html += '</div>';
   document.getElementById('mainCnt').innerHTML = html;
+}
+
+// Desde la sala de espera → abre la anamnesis de ese paciente.
+function goToAnamnesis(rowIndex) {
+  const rec = allRecords.find(x => x.rowIndex === rowIndex);
+  setView('pending');
+  setTimeout(function(){
+    const el = document.getElementById('rec-' + rowIndex);
+    if (el) {
+      el.classList.add('open');
+      el.scrollIntoView({ behavior:'smooth', block:'center' });
+      if (rec && !rec.complaint && !rec.detail)
+        showToast('El cliente todavía no llenó su anamnesis');
+    } else {
+      showToast('No se encontró la anamnesis de ese turno');
+    }
+  }, 80);
 }
 
 function callNext(rowIndex, filaKey) {
@@ -471,8 +509,10 @@ function buildCard(r) {
     <div class="rec-emoji">${em}</div>
     <div class="rec-info">
       <div class="rec-name">
+        ${r.turno ? '<span class="turno-badge" style="background:'+color+'">'+esc(r.turno)+'</span>' : ''}
         ${esc(r.petName||'Sin nombre')}
         ${r.vetesoftHc ? '<span class="hc-badge">HC '+esc(r.vetesoftHc)+'</span>' : ''}
+        ${r.agendado === 'si' ? '<span class="mini mini-ag">Agendado</span>' : ''}
         ${reviewed ? '<span class="rv-badge">✓ Revisado</span>' : ''}
       </div>
       <div class="rec-meta">
