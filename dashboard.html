@@ -143,6 +143,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .q-item.q-click{display:flex;align-items:center;gap:9px}
 .next-motivo{font-size:.72rem;color:var(--tm);font-style:italic;margin-top:6px;line-height:1.35}
 .q-link{font-size:.68rem;font-weight:700;color:var(--p);margin-top:7px}
+.no-call{font-size:.7rem;color:var(--ts);text-align:center;padding:8px 0 2px;font-weight:600;font-style:italic}
 .mini{font-size:.6rem;font-weight:700;border-radius:99px;padding:1px 7px;white-space:nowrap}
 .mini-ag{background:#ede9fe;color:#6d28d9}
 .mini-esp{background:#e0f2fe;color:#0369a1}
@@ -182,6 +183,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <input type="text" id="searchInput" placeholder="Buscar por mascota o propietario..." oninput="renderAll()">
     </div>
     <input type="date" id="dateFilter" class="date-filter" style="display:none" onchange="renderAll()">
+    <select id="miFila" class="date-filter" onchange="setMiFila(this.value)" title="El sistema te dice a quién llamar según tu fila">
+      <option value="">👤 Atiendo: todas</option>
+      <option value="generales">🟢 Soy médico general</option>
+      <option value="especializados">🟠 Soy especialista</option>
+      <option value="rapidos">🟣 Vacunación / Inyectología</option>
+    </select>
   </div>
   <div class="srch-inner legend" style="margin-top:8px">
     <span class="lg"><span class="lg-dot" style="background:#16a34a"></span>General</span>
@@ -316,6 +323,17 @@ function toggleFila(key) {
   renderSala();
 }
 
+// Qué fila atiende este médico. Si la define, solo esa fila muestra el
+// botón de Llamar: el sistema le dice a quién sigue y no hay que elegir.
+let miFila = '';
+try { miFila = localStorage.getItem('ac_mi_fila') || ''; } catch (e) {}
+
+function setMiFila(v) {
+  miFila = v;
+  try { localStorage.setItem('ac_mi_fila', v); } catch (e) {}
+  renderSala();
+}
+
 // ── Render de la sala de espera ──────────────────────────────
 function renderSala() {
   const today = new Date();
@@ -350,6 +368,8 @@ function renderSala() {
     });
 
     // Siguiente a llamar — semi-desplegado, clickeable para ver la anamnesis
+    // Solo la fila que atiende este médico habilita el botón de llamar.
+    const puedeLlamar = (!miFila || miFila === f.key);
     if (next) {
       const nc = serviceColor(next.service);
       const hora = fmtHora(next.horaCita);
@@ -367,15 +387,20 @@ function renderSala() {
           (next.complaint ? '<div class="next-motivo">“'+esc(String(next.complaint).slice(0,90))+(String(next.complaint).length>90?'…':'')+'”</div>' : '')+
           '<div class="q-link">Ver anamnesis completa →</div>'+
         '</div>'+
-        '<div class="next-ctrls"><select id="room-'+f.key+'">'+opts+'</select>'+
-        '<button class="btn-call" style="background:'+f.color+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
-        '</div></div>';
+        (puedeLlamar
+          ? '<div class="next-ctrls"><select id="room-'+f.key+'">'+opts+'</select>'+
+            '<button class="btn-call" style="background:'+f.color+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
+            '</div>'
+          : '<div class="no-call">Esta fila no es la tuya</div>')+
+        '</div>';
     } else {
       body += '<div class="q-empty">Nadie esperando</div>';
     }
 
-    // Resto de la cola — colapsados, clickeables
-    const rest = esperando.filter(r => !next || r.rowIndex !== next.rowIndex);
+    // Resto de la cola — del más viejo (arriba) al más nuevo (abajo)
+    const rest = esperando
+      .filter(r => !next || r.rowIndex !== next.rowIndex)
+      .sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
     rest.forEach(function(r) {
       const rc = serviceColor(r.service);
       const hora = fmtHora(r.horaCita);
@@ -731,11 +756,33 @@ function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Auto-actualización silenciosa cada 60s, PERO se pausa si hay una
-// tarjeta abierta para no sacar al médico de lo que está leyendo.
-setInterval(function(){
-  if (!document.querySelector('.rec.open')) loadRecords(true);
-}, 60000);
+// ── Actualización casi instantánea ───────────────────────────
+// Cada 5s preguntamos SOLO un número ("¿cambió algo?"), que no lee la
+// hoja y casi no consume cuota. Si cambió, ahí sí bajamos los datos.
+// Así una anamnesis nueva aparece en segundos, no en un minuto.
+let ultimaVersion = null;
+
+function chequearCambios() {
+  // No interrumpimos al médico si está leyendo una ficha abierta.
+  if (document.querySelector('.rec.open')) return;
+  fetch(API_URL + '?action=version')
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (!res || !res.ok) return;
+      if (ultimaVersion === null) { ultimaVersion = res.v; return; }
+      if (res.v !== ultimaVersion) {
+        ultimaVersion = res.v;
+        loadRecords(true);          // silencioso: sin spinner
+      }
+    })
+    .catch(function(){});
+}
+
+// Restaura la fila que atiende este médico (queda guardada en su equipo)
+if (miFila) document.getElementById('miFila').value = miFila;
+
+setInterval(chequearCambios, 5000);
+setInterval(function(){ if (!document.querySelector('.rec.open')) loadRecords(true); }, 120000); // red de seguridad
 loadRecords();
 </script>
 </body>

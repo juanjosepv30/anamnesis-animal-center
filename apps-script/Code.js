@@ -41,9 +41,34 @@ function doOptions(e) {
     .setMimeType(MimeType.TEXT);
 }
 
+// ── Contador de versión de los datos ─────────────────────────
+// Se incrementa con cada cambio. El dashboard lo consulta cada pocos
+// segundos (es una lectura de un número, no de la hoja entera) y solo
+// descarga los registros cuando de verdad cambió algo.
+function bumpVersion() {
+  try {
+    var p = PropertiesService.getScriptProperties();
+    var v = parseInt(p.getProperty('DATA_VERSION') || '0', 10) + 1;
+    p.setProperty('DATA_VERSION', String(v));
+    return v;
+  } catch (e) { return 0; }
+}
+
+function getVersion() {
+  try {
+    var v = PropertiesService.getScriptProperties().getProperty('DATA_VERSION') || '0';
+    return { ok: true, v: parseInt(v, 10) };
+  } catch (e) { return { ok: true, v: 0 }; }
+}
+
 // ── GET router ───────────────────────────────────────────────
 function doGet(e) {
   const action = e.parameter.action || '';
+
+  // Consulta barata: ¿cambió algo? (no lee la hoja)
+  if (action === 'version') {
+    return json(getVersion());
+  }
 
   if (action === 'records') {
     return json(getRecords());
@@ -609,6 +634,7 @@ function submitForm(data) {
       sheet.getRange(existing, COL.PET_NAME + 1, 1, vals.length).setValues([vals]);
       var t   = sheet.getRange(existing, COL.TURNO + 1).getValue();
       var eid = sheet.getRange(existing, COL.ID + 1).getValue();
+      bumpVersion();
       return { ok: true, id: eid, turno: t, linked: true };
     }
 
@@ -618,6 +644,7 @@ function submitForm(data) {
     var row = [now.toISOString(), id].concat(anamnesisValues(data))
               .concat([turno, 'esperando', 'no', '', '']);
     sheet.appendRow(row);
+    bumpVersion();
     // Espontáneo: recepción no lo reportó, así que este es el primer aviso.
     notifyNewPatient(data, turno);
     return { ok: true, id: id, turno: turno, linked: false };
@@ -645,6 +672,7 @@ function registerArrival(data) {
       if (data.specialty) sheet.getRange(existing, COL.SPECIALTY + 1).setValue(data.specialty);
       var tc = sheet.getRange(existing, COL.TURNO + 1);
       if (!tc.getValue()) tc.setValue(assignTurno(sheet, data.service));
+      bumpVersion();
       return { ok: true, turno: tc.getValue(), linked: true };
     }
 
@@ -663,6 +691,7 @@ function registerArrival(data) {
     row[COL.TURNO] = turno; row[COL.ESTADO] = 'esperando'; row[COL.AGENDADO] = 'si';
     row[COL.HORA_CITA] = data.horaCita || ''; row[COL.CONSULTORIO] = '';
     sheet.appendRow(row);
+    bumpVersion();
     // Recepción confirmó un agendado: avisamos al médico de una vez.
     notifyNewPatient(data, turno);
     return { ok: true, turno: turno, linked: false };
@@ -680,6 +709,7 @@ function updateTurno(rowIndex, estado, consultorio) {
     if (estado) sheet.getRange(rowIndex, COL.ESTADO + 1).setValue(estado);
     if (consultorio !== undefined && consultorio !== null && consultorio !== '')
       sheet.getRange(rowIndex, COL.CONSULTORIO + 1).setValue(consultorio);
+    bumpVersion();
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };
@@ -753,6 +783,7 @@ function markReviewed(rowIndex) {
   try {
     const sheet = getSheet();
     sheet.getRange(rowIndex, COL.STATUS + 1).setValue('revisado');
+    bumpVersion();
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };
