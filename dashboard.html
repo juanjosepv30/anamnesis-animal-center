@@ -112,11 +112,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .filas{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
 @media(max-width:900px){.filas{grid-template-columns:1fr}}
 .fila{background:var(--wh);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
-.fila-hd{padding:11px 14px;color:#fff;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;gap:8px}
-.fila-hd:hover{filter:brightness(1.07)}
+/* Encabezado neutro a propósito: el color pertenece al servicio, no a la fila */
+.fila-hd{padding:11px 14px;background:var(--tx);color:#fff;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;gap:8px}
+.fila-hd:hover{filter:brightness(1.35)}
 .fila-t{font-size:.88rem;font-weight:700}
 .fila-hd-r{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.fila-n{font-size:.72rem;opacity:.95;background:rgba(255,255,255,.22);border-radius:99px;padding:2px 9px;white-space:nowrap}
+.fila-n{font-size:.72rem;opacity:.95;background:rgba(255,255,255,.2);border-radius:99px;padding:2px 9px;white-space:nowrap}
 .fila-cv{font-size:.7rem;opacity:.9;width:12px;text-align:center}
 .fila-bd{padding:12px 13px}
 .next-box{border:1.5px dashed var(--bd);border-radius:11px;padding:11px;margin-bottom:11px;background:var(--bg)}
@@ -185,8 +186,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <input type="date" id="dateFilter" class="date-filter" style="display:none" onchange="renderAll()">
     <select id="miFila" class="date-filter" onchange="setMiFila(this.value)" title="El sistema te dice a quién llamar según tu fila">
       <option value="">👤 Atiendo: todas</option>
-      <option value="generales">🟢 Soy médico general</option>
-      <option value="especializados">🟠 Soy especialista</option>
+      <option value="generales">Soy médico general</option>
+      <option value="especializados">Soy especialista</option>
     </select>
   </div>
   <div class="srch-inner legend" style="margin-top:8px">
@@ -253,9 +254,11 @@ function roomsFor(filaKey) {
 
 // Solo DOS filas: el médico general atiende consulta general, controles
 // generales, vacunación, inyectología y viajero. El especialista, lo suyo.
+// Las filas NO llevan color: el color identifica al SERVICIO, y dentro de
+// cada fila conviven varios servicios. Pintar la fila solo confundiría.
 const FILAS = [
-  {key:'generales',      label:'Generales',     color:'#16a34a'},
-  {key:'especializados', label:'Especialistas', color:'#f97316'}
+  {key:'generales',      label:'Generales'},
+  {key:'especializados', label:'Especialistas'}
 ];
 
 // A qué fila pertenece cada paciente.
@@ -348,7 +351,7 @@ function renderSala() {
     const isCol = !!collapsed[f.key];
     let body = '';
 
-    html += '<div class="fila"><div class="fila-hd" style="background:'+f.color+'" onclick="toggleFila(\''+f.key+'\')">'+
+    html += '<div class="fila"><div class="fila-hd" onclick="toggleFila(\''+f.key+'\')">'+
             '<span class="fila-t">'+f.label+'</span>'+
             '<span class="fila-hd-r">'+
               (llamando.length ? '<span class="fila-n">🔔 '+llamando.length+'</span>' : '')+
@@ -388,7 +391,7 @@ function renderSala() {
         '</div>'+
         (puedeLlamar
           ? '<div class="next-ctrls"><select id="room-'+f.key+'">'+opts+'</select>'+
-            '<button class="btn-call" style="background:'+f.color+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
+            '<button class="btn-call" style="background:'+nc+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
             '</div>'
           : '<div class="no-call">Esta fila no es la tuya</div>')+
         '</div>';
