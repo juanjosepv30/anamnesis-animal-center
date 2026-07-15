@@ -139,8 +139,10 @@ function waConfig() {
   };
 }
 
-// Envía una plantilla de WhatsApp. `params` llena las variables {{1}}, {{2}}...
-function waSendTemplate(to, templateName, langCode, params) {
+// Envía una plantilla de WhatsApp.
+//   params        → llena las variables {{1}}, {{2}}... del cuerpo
+//   urlBtnParam   → llena la variable del botón de URL (para el link directo)
+function waSendTemplate(to, templateName, langCode, params, urlBtnParam) {
   var cfg = waConfig();
   if (!cfg.token || !cfg.phoneId) {
     return { ok: false, error: 'Faltan WA_TOKEN o WA_PHONE_ID en Propiedades del script' };
@@ -151,12 +153,21 @@ function waSendTemplate(to, templateName, langCode, params) {
     type: 'template',
     template: { name: templateName, language: { code: langCode || 'es' } }
   };
+  var components = [];
   if (params && params.length) {
-    payload.template.components = [{
+    components.push({
       type: 'body',
       parameters: params.map(function(v){ return { type: 'text', text: String(v) }; })
-    }];
+    });
   }
+  if (urlBtnParam) {
+    // Botón de URL dinámica: el sufijo se pega al final del link de la plantilla
+    components.push({
+      type: 'button', sub_type: 'url', index: '0',
+      parameters: [{ type: 'text', text: String(urlBtnParam) }]
+    });
+  }
+  if (components.length) payload.template.components = components;
   try {
     var res = UrlFetchApp.fetch(
       'https://graph.facebook.com/v21.0/' + cfg.phoneId + '/messages', {
@@ -370,8 +381,12 @@ function notifyNewPatient(data, turno) {
 
     // El idioma debe coincidir EXACTO con el de la plantilla en Meta.
     // La creaste como Spanish (COL) → código es_CO.
+    // El último parámetro llena el botón "Ver paciente", que abre el
+    // dashboard directo en la anamnesis de este turno.
     phones.forEach(function(tel) {
-      waSendTemplate(tel, 'nuevo_paciente', 'es_CO', [turno || '—', quien, svc || '—', motivo]);
+      waSendTemplate(tel, 'nuevo_paciente', 'es_CO',
+                     [turno || '—', quien, svc || '—', motivo],
+                     turno || '');
     });
   } catch (err) {
     // Silencioso a propósito: un fallo de WhatsApp no puede tumbar la anamnesis.

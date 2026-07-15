@@ -222,6 +222,7 @@ function loadRecords(silent) {
         allRecords = res.records || [];
         renderAll();
         updateCounts();
+        abrirDesdeLink();   // si vino desde la notificación, abre esa ficha
         const now = new Date();
         document.getElementById('lastUpdated').textContent =
           'Última actualización: ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
@@ -418,6 +419,22 @@ function renderSala() {
 
   html += '</div>';
   document.getElementById('mainCnt').innerHTML = html;
+}
+
+// Al entrar desde la notificación de WhatsApp (…/dashboard.html?t=E-04)
+// abrimos directo la anamnesis de ESE paciente.
+let linkAbierto = false;
+function abrirDesdeLink() {
+  if (linkAbierto) return;
+  linkAbierto = true;
+  var t = null;
+  try { t = new URLSearchParams(location.search).get('t'); } catch (e) {}
+  if (!t) return;
+  var rec = allRecords.find(function(x){
+    return String(x.turno || '').toUpperCase() === String(t).toUpperCase();
+  });
+  if (rec) goToAnamnesis(rec.rowIndex);
+  else showToast('No se encontró el turno ' + t + ' (¿ya fue atendido?)');
 }
 
 // Desde la sala de espera → abre la anamnesis de ese paciente.
