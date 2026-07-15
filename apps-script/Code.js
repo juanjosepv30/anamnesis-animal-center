@@ -721,7 +721,14 @@ function registerArrival(data) {
 function updateTurno(rowIndex, estado, consultorio) {
   try {
     var sheet = getSheet();
-    if (estado) sheet.getRange(rowIndex, COL.ESTADO + 1).setValue(estado);
+    if (estado) {
+      sheet.getRange(rowIndex, COL.ESTADO + 1).setValue(estado);
+      // "Atendido" cierra el caso: sale de la sala Y de anamnesis,
+      // y pasa al módulo de Revisadas. Un solo estado, no dos.
+      if (estado === 'atendido') {
+        sheet.getRange(rowIndex, COL.STATUS + 1).setValue('revisado');
+      }
+    }
     if (consultorio !== undefined && consultorio !== null && consultorio !== '')
       sheet.getRange(rowIndex, COL.CONSULTORIO + 1).setValue(consultorio);
     bumpVersion();

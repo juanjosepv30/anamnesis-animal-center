@@ -109,7 +109,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .toast.show{opacity:1}
 
 /* ── Sala de espera (colas) ── */
-.filas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:start}
+.filas{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
 @media(max-width:900px){.filas{grid-template-columns:1fr}}
 .fila{background:var(--wh);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
 .fila-hd{padding:11px 14px;color:#fff;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;gap:8px}
@@ -187,7 +187,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <option value="">👤 Atiendo: todas</option>
       <option value="generales">🟢 Soy médico general</option>
       <option value="especializados">🟠 Soy especialista</option>
-      <option value="rapidos">🟣 Vacunación / Inyectología</option>
     </select>
   </div>
   <div class="srch-inner legend" style="margin-top:8px">
@@ -248,26 +247,25 @@ const ROOMS_MAIN = ['Boom Boom','Piel','Ojitos','Meaw Meaw','Viajero','Gastro','
 const ROOMS_VAC  = ['Vacunación 1','Vacunación 2'];
 
 function roomsFor(filaKey) {
-  return (filaKey === 'rapidos')
-    ? ROOMS_VAC.concat(ROOMS_MAIN)   // vacunación primero, pero puede usar cualquiera
-    : ROOMS_MAIN.concat(ROOMS_VAC);  // consultorios primero, pero puede usar los de vacunación
+  // Cualquier fila puede usar cualquier consultorio.
+  return ROOMS_MAIN.concat(ROOMS_VAC);
 }
 
+// Solo DOS filas: el médico general atiende consulta general, controles
+// generales, vacunación, inyectología y viajero. El especialista, lo suyo.
 const FILAS = [
-  {key:'generales',      label:'Generales',                 color:'#16a34a'},
-  {key:'especializados', label:'Especialistas',             color:'#f97316'},
-  {key:'rapidos',        label:'Vacunación / Inyectología', color:'#8e3f9e'}
+  {key:'generales',      label:'Generales',     color:'#16a34a'},
+  {key:'especializados', label:'Especialistas', color:'#f97316'}
 ];
 
 // A qué fila pertenece cada paciente.
-// Control CON especialidad → lo atiende el especialista de esa área.
-// Control sin especialidad → control general.
+// Solo va a Especialistas si es consulta especializada o un control
+// con especialidad. Todo lo demás lo atiende el médico general.
 function recordFila(r) {
   const s = (r.service || '').toLowerCase();
-  if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1) return 'rapidos';
   if (s.indexOf('especial') !== -1) return 'especializados';
-  if (s.indexOf('control') !== -1) return (r.specialty || r.agendado === 'si') ? 'especializados' : 'generales';
-  return 'generales';   // consulta general y viajero
+  if (s.indexOf('control') !== -1 && (r.specialty || r.agendado === 'si')) return 'especializados';
+  return 'generales';   // general, control general, vacunación, inyectología, viajero
 }
 
 // Normaliza la hora de la cita venga como "10:30" o como fecha de Sheets.
@@ -473,9 +471,12 @@ function markAtendido(rowIndex) {
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
         const rec = allRecords.find(x => x.rowIndex === rowIndex);
-        if (rec) rec.estadoTurno = 'atendido';
+        // Atendido cierra el caso: sale de la sala y de anamnesis,
+        // y aparece en Revisadas.
+        if (rec) { rec.estadoTurno = 'atendido'; rec.status = 'revisado'; }
         renderSala();
-        showToast('✓ Marcado como atendido');
+        updateCounts();
+        showToast('✓ Atendido · pasó a Revisadas');
       } else showToast('❌ Error');
     }).catch(function(){ showToast('❌ Error de conexión'); });
 }
@@ -495,21 +496,23 @@ function renderAll() {
       // Solo pendientes del día de hoy
       return !isReviewed && isSameDay(r.timestamp, today);
     } else {
-      // Revisadas, opcionalmente filtradas por la fecha elegida
+      // Revisadas: por defecto SOLO las de hoy. Las de otros días
+      // aparecen únicamente si el médico elige una fecha.
       if (!isReviewed) return false;
       if (dfVal) {
         const parts = dfVal.split('-');
         const chosen = new Date(parts[0], parts[1]-1, parts[2]);
         return isSameDay(r.timestamp, chosen);
       }
-      return true;
+      return isSameDay(r.timestamp, today);
     }
   });
 
   if (!records.length) {
     const msg = activeView === 'pending'
       ? 'No hay pacientes pendientes hoy'
-      : 'No hay registros revisados para mostrar';
+      : (dfVal ? 'No hay atendidos en la fecha elegida'
+               : 'Nadie atendido hoy todavía · usá la fecha para ver otros días');
     document.getElementById('mainCnt').innerHTML =
       '<div class="empty"><div class="empty-icon">🐾</div><div class="empty-title">Todo al día</div><div class="empty-sub">' + msg + '</div></div>';
     return;
@@ -583,8 +586,8 @@ function buildCard(r) {
       </div>
       <div class="rec-meta">
         <span>👤 ${esc(r.ownerName||'—')}</span>
-        ${r.ownerPhone ? '<span>· '+esc(r.ownerPhone)+'</span>' : ''}
         ${r.breed ? '<span>· '+esc(r.breed)+'</span>' : ''}
+        ${r.consultorio ? '<span>· 🚪 '+esc(r.consultorio)+'</span>' : ''}
       </div>
     </div>
     <span class="rec-service" style="background:${color}22;color:${color}">${esc(svcShort)}</span>
