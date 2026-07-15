@@ -306,7 +306,8 @@ var ILLOS = {
   ribbon: '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><path d="M60 66 C40 40 48 22 60 22 C72 22 80 40 60 66 Z" fill="none" stroke="#8e3f9e" stroke-width="8"/><path d="M52 58 L36 98 L50 90 L52 74" fill="#8e3f9e" stroke="#3a2140" stroke-width="4" stroke-linejoin="round"/><path d="M68 58 L84 98 L70 90 L68 74" fill="#8e3f9e" stroke="#3a2140" stroke-width="4" stroke-linejoin="round"/></svg>',
   pair: '<svg viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg"><path d="M40 40 Q28 42 30 62 Q40 60 44 52" fill="#e79a5a" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/><path d="M84 40 Q96 42 94 62 Q84 60 80 52" fill="#e79a5a" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/><circle cx="62" cy="70" r="30" fill="#fff1dc" stroke="#3a2140" stroke-width="5"/><circle cx="54" cy="66" r="3.4" fill="#3a2140"/><circle cx="70" cy="66" r="3.4" fill="#3a2140"/><ellipse cx="62" cy="78" rx="4" ry="3" fill="#3a2140"/><path d="M120 44 L112 26 L132 40 Z" fill="#f7b7c9" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/><path d="M172 44 L180 26 L160 40 Z" fill="#f7b7c9" stroke="#3a2140" stroke-width="5" stroke-linejoin="round"/><circle cx="146" cy="70" r="30" fill="#b79be0" stroke="#3a2140" stroke-width="5"/><circle cx="138" cy="66" r="3.4" fill="#3a2140"/><circle cx="154" cy="66" r="3.4" fill="#3a2140"/><path d="M146 74 l4 -2 l-4 4 l-4 -4 z" fill="#ff6b5c"/><path d="M158 70 l16 -2 M158 76 l16 2 M134 70 l-16 -2 M134 76 l-16 2" fill="none" stroke="#3a2140" stroke-width="3" stroke-linecap="round"/></svg>',
   nausea: '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="62" r="34" fill="#d7f5ec" stroke="#3a2140" stroke-width="5"/><path d="M60 28 v-8" fill="none" stroke="#3a2140" stroke-width="4" stroke-linecap="round"/><path d="M42 54 q4 -5 8 0 q4 5 8 0 M62 54 q4 -5 8 0 q4 5 8 0" fill="none" stroke="#3a2140" stroke-width="4" stroke-linecap="round"/><path d="M44 78 q8 -9 16 0 q8 9 16 0" fill="none" stroke="#23c4a8" stroke-width="5" stroke-linecap="round"/></svg>',
-  medal: '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><path d="M46 20 l10 32 M74 20 l-10 32" fill="none" stroke="#63b3ed" stroke-width="7" stroke-linecap="round"/><circle cx="60" cy="68" r="26" fill="#ffc94d" stroke="#3a2140" stroke-width="5"/><circle cx="60" cy="68" r="15" fill="#e8b53f" stroke="#3a2140" stroke-width="3"/><path d="M60 59 l2.6 5.3 l5.8 .8 l-4.2 4.1 l1 5.8 l-5.2 -2.7 l-5.2 2.7 l1 -5.8 l-4.2 -4.1 l5.8 -.8 Z" fill="#fff1dc" stroke="#3a2140" stroke-width="1.5" stroke-linejoin="round"/></svg>'
+  medal: '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><path d="M46 20 l10 32 M74 20 l-10 32" fill="none" stroke="#63b3ed" stroke-width="7" stroke-linecap="round"/><circle cx="60" cy="68" r="26" fill="#ffc94d" stroke="#3a2140" stroke-width="5"/><circle cx="60" cy="68" r="15" fill="#e8b53f" stroke="#3a2140" stroke-width="3"/><path d="M60 59 l2.6 5.3 l5.8 .8 l-4.2 4.1 l1 5.8 l-5.2 -2.7 l-5.2 2.7 l1 -5.8 l-4.2 -4.1 l5.8 -.8 Z" fill="#fff1dc" stroke="#3a2140" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  suitcase: '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><path d="M46 40 v-6 a7 7 0 0 1 7 -7 h14 a7 7 0 0 1 7 7 v6" fill="none" stroke="#3a2140" stroke-width="5" stroke-linecap="round"/><rect x="22" y="40" width="76" height="56" rx="9" fill="#e79a5a" stroke="#3a2140" stroke-width="5"/><path d="M22 60 h76" fill="none" stroke="#3a2140" stroke-width="4"/><rect x="50" y="52" width="20" height="15" rx="3" fill="#ffc94d" stroke="#3a2140" stroke-width="3"/><path d="M38 74 v14 M82 74 v14" fill="none" stroke="#c9743c" stroke-width="4" stroke-linecap="round"/></svg>'
 };
 
 function getIllo(key) {
@@ -327,6 +328,7 @@ var ILLO_MAP = {
   vaccines:'syringe', deworming:'pills', medications:'pills', history:'folder',
   allergies:'allergy', notes:'notepad',
   ctrl_response:'thermometer', ctrl_completed:'calendar', ctrl_sidefx:'pills', ctrl_persist:'arrow',
+  via_destino:'suitcase', via_fecha:'suitcase', via_modo:'suitcase',
   // Cada especialidad mantiene su ícono en TODAS sus preguntas
   sp_card_2:'heart', sp_card_3:'heart', sp_card_4:'heart', sp_card_4b:'heart',
   sp_derm_2:'magnifier', sp_derm_3:'magnifier',
@@ -376,7 +378,16 @@ var QUESTIONS = [
     {label:'⚕️ Consulta especializada', value:'Consulta especializada'},
     {label:'📋 Control / seguimiento', value:'Control'},
     {label:'💉 Vacunación', value:'Vacunación'},
-    {label:'🩹 Inyectología', value:'Inyectología'}
+    {label:'🩹 Inyectología', value:'Inyectología'},
+    {label:'✈️ Viajero / certificado', value:'Viajero'}
+  ]},
+
+  // ── VIAJERO (solo ese servicio) ──
+  {id:'via_destino', group:'VIAJERO', q:'¿A qué destino viaja?', type:'text', onlyServices:['Viajero'], branch:true, label:'Destino', placeholder:'Ej: España, Estados Unidos, Medellín'},
+  {id:'via_fecha', group:'VIAJERO', q:'¿Cuándo viaja?', type:'text', onlyServices:['Viajero'], branch:true, label:'Fecha del viaje', placeholder:'Ej: 15 de agosto'},
+  {id:'via_modo', group:'VIAJERO', q:'¿Cómo viaja tu mascota?', type:'single', onlyServices:['Viajero'], branch:true, label:'Modo de viaje', options:[
+    {label:'En cabina', value:'Cabina'}, {label:'En bodega', value:'Bodega'},
+    {label:'Terrestre', value:'Terrestre'}, {label:'No sé todavía', value:'No se'}
   ]},
 
   // Selector de especialidad — solo especializada
