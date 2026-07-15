@@ -188,7 +188,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     </div>
     <input type="date" id="dateFilter" class="date-filter" style="display:none" onchange="renderAll()">
     <select id="miMedico" class="date-filter" onchange="setMiMedico(this.value)" title="Ves solo los pacientes que te corresponden">
-      <option value="">👤 ¿Quién eres?</option>
+      <option value="">👁 Ver todos los pacientes</option>
     </select>
   </div>
   <div class="srch-inner legend" style="margin-top:8px">
@@ -417,7 +417,7 @@ function cargarMedicos() {
       if (!res || !res.ok) return;
       medicos = res.medicos || [];
       const sel = document.getElementById('miMedico');
-      sel.innerHTML = '<option value="">👤 ¿Quién eres?</option>' +
+      sel.innerHTML = '<option value="">👁 Ver todos los pacientes</option>' +
         medicos.map(m => '<option value="'+esc(m.medico)+'">'+
           esc(m.medico)+' — '+esc(m.especialidades.join(', '))+'</option>').join('');
       if (miMedico) sel.value = miMedico;
