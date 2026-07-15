@@ -107,14 +107,49 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--tx);color:#fff;border-radius:10px;padding:10px 20px;font-size:.82rem;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 
-@media(max-width:520px){.grid2,.grid3{grid-template-columns:1fr 1fr}.filter-btns{display:none}.hdr-brand-sub{display:none}}
+/* ── Sala de espera (colas) ── */
+.filas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:start}
+@media(max-width:900px){.filas{grid-template-columns:1fr}}
+.fila{background:var(--wh);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
+.fila-hd{padding:11px 14px;color:#fff;display:flex;align-items:center;justify-content:space-between}
+.fila-t{font-size:.88rem;font-weight:700}
+.fila-n{font-size:.72rem;opacity:.9;background:rgba(255,255,255,.22);border-radius:99px;padding:2px 9px}
+.fila-bd{padding:12px 13px}
+.next-box{border:1.5px dashed var(--bd);border-radius:11px;padding:11px;margin-bottom:11px;background:var(--bg)}
+.next-lbl{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ts);margin-bottom:5px}
+.next-turno{font-size:1.5rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.next-pet{font-size:.85rem;font-weight:600;margin-top:3px}
+.next-meta{font-size:.72rem;color:var(--tm);margin-top:2px}
+.next-ctrls{display:flex;gap:6px;margin-top:9px}
+.next-ctrls select{flex:1;border:1.5px solid var(--bd);border-radius:8px;padding:7px 8px;font-size:.76rem;font-family:'DM Sans',sans-serif;background:var(--wh);outline:none;min-width:0}
+.btn-call{border:none;border-radius:8px;padding:7px 13px;color:#fff;font-size:.76rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.calling{border:1.5px solid #86efac;background:#f0fdf4;border-radius:11px;padding:10px 12px;margin-bottom:8px}
+.calling-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.calling-t{font-size:1.1rem;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums}
+.calling-m{font-size:.73rem;color:var(--tm);margin-top:2px}
+.btn-done{border:1.5px solid #86efac;background:var(--wh);color:#15803d;border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.q-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;background:var(--bg);margin-bottom:5px}
+.q-turno{font-weight:700;font-size:.82rem;min-width:42px;font-variant-numeric:tabular-nums}
+.q-info{flex:1;min-width:0}
+.q-pet{font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q-meta{font-size:.68rem;color:var(--tm)}
+.q-empty{font-size:.78rem;color:var(--ts);text-align:center;padding:14px 0}
+.mini{font-size:.6rem;font-weight:700;border-radius:99px;padding:1px 7px;white-space:nowrap}
+.mini-ag{background:#ede9fe;color:#6d28d9}
+.mini-esp{background:#e0f2fe;color:#0369a1}
+.date-filter{border:1.5px solid var(--bd);border-radius:9px;padding:8px 12px;font-size:.85rem;font-family:'DM Sans',sans-serif;color:var(--tx);background:var(--wh);outline:none}
+.date-filter:focus{border-color:var(--p)}
+.legend{flex-wrap:wrap;gap:12px;font-size:.72rem;color:var(--tm);font-weight:600}
+.lg{display:flex;align-items:center;gap:5px}
+.lg-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+@media(max-width:520px){.grid2,.grid3{grid-template-columns:1fr 1fr}.hdr-brand-sub{display:none}.legend{gap:8px;font-size:.66rem}}
 </style>
 </head>
 <body>
 
 <header class="hdr">
   <div class="hdr-brand">
-    <div class="hdr-brand-icon">🐾</div>
+    <div class="hdr-brand-icon" id="hdrIcon"><img src="img/paw.jpg" alt="Animal Center" style="width:100%;height:100%;object-fit:cover;border-radius:8px" onerror="this.remove();document.getElementById('hdrIcon').textContent='🐾'"></div>
     <div>
       <div class="hdr-brand-text">Animal Center</div>
       <div class="hdr-brand-sub" id="lastUpdated">Cargando registros...</div>
@@ -128,15 +163,23 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 <div class="srch">
   <div class="srch-inner">
+    <div class="filter-btns">
+      <button class="fbtn active" id="f-sala" onclick="setView('sala')">🔔 Sala de espera</button>
+      <button class="fbtn" id="f-pending" onclick="setView('pending')">📋 Pendientes de hoy</button>
+      <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Revisadas</button>
+    </div>
     <div class="srch-wrap">
       <span class="srch-icon">🔍</span>
       <input type="text" id="searchInput" placeholder="Buscar por mascota o propietario..." oninput="renderAll()">
     </div>
-    <div class="filter-btns">
-      <button class="fbtn active" id="f-all" onclick="setFilter('all')">Todos</button>
-      <button class="fbtn" id="f-pending" onclick="setFilter('pending')">Pendientes</button>
-      <button class="fbtn" id="f-reviewed" onclick="setFilter('reviewed')">Revisados</button>
-    </div>
+    <input type="date" id="dateFilter" class="date-filter" style="display:none" onchange="renderAll()">
+  </div>
+  <div class="srch-inner legend" style="margin-top:8px">
+    <span class="lg"><span class="lg-dot" style="background:#16a34a"></span>General</span>
+    <span class="lg"><span class="lg-dot" style="background:#f97316"></span>Especializada</span>
+    <span class="lg"><span class="lg-dot" style="background:#2563eb"></span>Control</span>
+    <span class="lg"><span class="lg-dot" style="background:#8e3f9e"></span>Vacunación</span>
+    <span class="lg"><span class="lg-dot" style="background:#eab308"></span>Inyectología</span>
   </div>
 </div>
 
@@ -149,11 +192,13 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
 let allRecords = [];
-let activeFilter = 'all';
+let activeView = 'sala';
 
-function loadRecords() {
-  document.getElementById('mainCnt').innerHTML = '<div class="spinner"></div>';
-  document.getElementById('lastUpdated').textContent = 'Actualizando...';
+function loadRecords(silent) {
+  if (!silent) {
+    document.getElementById('mainCnt').innerHTML = '<div class="spinner"></div>';
+    document.getElementById('lastUpdated').textContent = 'Actualizando...';
+  }
   fetch(API_URL + '?action=records')
     .then(function(r){ return r.json(); })
     .then(function(res) {
@@ -178,30 +223,191 @@ function showError(msg) {
     '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Algo salió mal</div><div class="empty-sub">' + msg + '</div></div>';
 }
 
-function setFilter(f) {
-  activeFilter = f;
-  ['all','pending','reviewed'].forEach(id => {
-    document.getElementById('f-'+id).classList.toggle('active', id === f);
-  });
+// ── Sala de espera: filas y consultorios ─────────────────────
+const FILAS = [
+  {key:'generales',      label:'Generales',   color:'#16a34a',
+   rooms:['Consultorio 1','Consultorio 2','Consultorio 3']},
+  {key:'especializados', label:'Especialistas', color:'#f97316',
+   rooms:['Consultorio 4','Consultorio 5','Consultorio 6','Consultorio 7','Consultorio 8']},
+  {key:'rapidos',        label:'Vacunación / Inyectología', color:'#8e3f9e',
+   rooms:['Vacunación 1','Vacunación 2']}
+];
+
+// A qué fila pertenece cada paciente.
+// Control CON cita → especialista; control SIN cita → general.
+function recordFila(r) {
+  const s = (r.service || '').toLowerCase();
+  if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1) return 'rapidos';
+  if (s.indexOf('especial') !== -1) return 'especializados';
+  if (s.indexOf('control') !== -1) return (r.agendado === 'si') ? 'especializados' : 'generales';
+  return 'generales';
+}
+
+// Normaliza la hora de la cita venga como "10:30" o como fecha de Sheets.
+function fmtHora(h) {
+  if (!h) return '';
+  if (typeof h === 'string' && /^\d{1,2}:\d{2}$/.test(h)) return h;
+  const d = new Date(h);
+  if (!isNaN(d)) return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  return String(h);
+}
+
+function horaToDate(h) {
+  const s = fmtHora(h); const p = s.split(':');
+  if (p.length < 2) return null;
+  const d = new Date(); d.setHours(+p[0], +p[1], 0, 0); return d;
+}
+
+// ── La regla híbrida ─────────────────────────────────────────
+// En especialistas: si hay una cita programada que ya llegó (o llega
+// en <=15 min), esa va primero. Si no, entra el espontáneo que más
+// lleva esperando (llena el hueco). En las demás filas: orden de llegada.
+function pickNext(list, filaKey) {
+  if (!list.length) return null;
+  if (filaKey === 'especializados') {
+    const soon = new Date(Date.now() + 15*60000);
+    const prog = list.filter(r => r.agendado === 'si' && r.horaCita)
+      .map(r => ({ r: r, t: horaToDate(r.horaCita) }))
+      .filter(x => x.t && x.t <= soon)
+      .sort((a,b) => a.t - b.t);
+    if (prog.length) return prog[0].r;
+  }
+  return list.slice().sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp))[0];
+}
+
+function setView(v) {
+  activeView = v;
+  ['sala','pending','reviewed'].forEach(id =>
+    document.getElementById('f-'+id).classList.toggle('active', id === v));
+  document.getElementById('dateFilter').style.display = (v === 'reviewed') ? 'block' : 'none';
   renderAll();
 }
 
+function isSameDay(ts, ref) {
+  const d = new Date(ts);
+  return !isNaN(d) && d.toDateString() === ref.toDateString();
+}
+
+// ── Render de la sala de espera ──────────────────────────────
+function renderSala() {
+  const today = new Date();
+  const hoy = allRecords.filter(r => isSameDay(r.timestamp, today));
+  let html = '<div class="filas">';
+
+  FILAS.forEach(function(f) {
+    const mine     = hoy.filter(r => recordFila(r) === f.key);
+    const esperando= mine.filter(r => (r.estadoTurno || 'esperando') === 'esperando');
+    const llamando = mine.filter(r => r.estadoTurno === 'llamando');
+    const next     = pickNext(esperando, f.key);
+
+    html += '<div class="fila"><div class="fila-hd" style="background:'+f.color+'">'+
+            '<span class="fila-t">'+f.label+'</span>'+
+            '<span class="fila-n">'+esperando.length+' en espera</span></div><div class="fila-bd">';
+
+    // Turnos que se están llamando ahora
+    llamando.forEach(function(r) {
+      html += '<div class="calling"><div class="calling-top"><div>'+
+        '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
+        '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
+        '</div><button class="btn-done" onclick="markAtendido('+r.rowIndex+')">✓ Atendido</button>'+
+        '</div></div>';
+    });
+
+    // Siguiente a llamar
+    if (next) {
+      const hora = fmtHora(next.horaCita);
+      const ag = next.agendado === 'si'
+        ? '<span class="mini mini-ag">Agendado'+(hora?' '+hora:'')+'</span>'
+        : '<span class="mini mini-esp">Espontáneo</span>';
+      let opts = '';
+      f.rooms.forEach(function(rm){ opts += '<option value="'+rm+'">'+rm+'</option>'; });
+      html += '<div class="next-box"><div class="next-lbl">Siguiente</div>'+
+        '<div class="next-turno" style="color:'+f.color+'">'+esc(next.turno||'—')+'</div>'+
+        '<div class="next-pet">'+esc(next.petName||'Sin nombre')+' '+ag+'</div>'+
+        '<div class="next-meta">👤 '+esc(next.ownerName||'—')+' · '+esc(next.service||'')+
+          (next.specialty?' · '+esc(next.specialty):'')+'</div>'+
+        '<div class="next-ctrls"><select id="room-'+f.key+'">'+opts+'</select>'+
+        '<button class="btn-call" style="background:'+f.color+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
+        '</div></div>';
+    } else {
+      html += '<div class="q-empty">Nadie esperando</div>';
+    }
+
+    // Resto de la cola
+    const rest = esperando.filter(r => !next || r.rowIndex !== next.rowIndex);
+    rest.forEach(function(r) {
+      const hora = fmtHora(r.horaCita);
+      const ag = r.agendado === 'si' ? '<span class="mini mini-ag">'+(hora||'Agendado')+'</span>' : '';
+      html += '<div class="q-item"><div class="q-turno" style="color:'+f.color+'">'+esc(r.turno||'—')+'</div>'+
+        '<div class="q-info"><div class="q-pet">'+esc(r.petName||'')+' '+ag+'</div>'+
+        '<div class="q-meta">'+esc(r.ownerName||'')+' · '+fmtTime(r.timestamp)+'</div></div></div>';
+    });
+
+    html += '</div></div>';
+  });
+
+  html += '</div>';
+  document.getElementById('mainCnt').innerHTML = html;
+}
+
+function callNext(rowIndex, filaKey) {
+  const sel = document.getElementById('room-'+filaKey);
+  const room = sel ? sel.value : '';
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room }) })
+    .then(r => r.json()).then(function(res){
+      if (res && res.ok) {
+        const rec = allRecords.find(x => x.rowIndex === rowIndex);
+        if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; }
+        renderSala();
+        showToast('🔔 Turno llamado a ' + room);
+      } else showToast('❌ Error al llamar');
+    }).catch(function(){ showToast('❌ Error de conexión'); });
+}
+
+function markAtendido(rowIndex) {
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido' }) })
+    .then(r => r.json()).then(function(res){
+      if (res && res.ok) {
+        const rec = allRecords.find(x => x.rowIndex === rowIndex);
+        if (rec) rec.estadoTurno = 'atendido';
+        renderSala();
+        showToast('✓ Marcado como atendido');
+      } else showToast('❌ Error');
+    }).catch(function(){ showToast('❌ Error de conexión'); });
+}
+
 function renderAll() {
+  if (activeView === 'sala') { renderSala(); return; }
   const q = document.getElementById('searchInput').value.toLowerCase();
+  const today = new Date();
+  const dfVal = document.getElementById('dateFilter').value;
   let records = allRecords.filter(r => {
     const matchQ = !q ||
       (r.petName||'').toLowerCase().includes(q) ||
       (r.ownerName||'').toLowerCase().includes(q);
+    if (!matchQ) return false;
     const isReviewed = r.status === 'revisado';
-    const matchF = activeFilter === 'all' ||
-      (activeFilter === 'pending' && !isReviewed) ||
-      (activeFilter === 'reviewed' && isReviewed);
-    return matchQ && matchF;
+    if (activeView === 'pending') {
+      // Solo pendientes del día de hoy
+      return !isReviewed && isSameDay(r.timestamp, today);
+    } else {
+      // Revisadas, opcionalmente filtradas por la fecha elegida
+      if (!isReviewed) return false;
+      if (dfVal) {
+        const parts = dfVal.split('-');
+        const chosen = new Date(parts[0], parts[1]-1, parts[2]);
+        return isSameDay(r.timestamp, chosen);
+      }
+      return true;
+    }
   });
 
   if (!records.length) {
+    const msg = activeView === 'pending'
+      ? 'No hay pacientes pendientes hoy'
+      : 'No hay registros revisados para mostrar';
     document.getElementById('mainCnt').innerHTML =
-      '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div><div class="empty-sub">No hay registros que coincidan con tu búsqueda</div></div>';
+      '<div class="empty"><div class="empty-icon">🐾</div><div class="empty-title">Todo al día</div><div class="empty-sub">' + msg + '</div></div>';
     return;
   }
 
@@ -241,15 +447,26 @@ function fmtTime(ts) {
   return dt.getHours() + ':' + String(dt.getMinutes()).padStart(2,'0');
 }
 
+function serviceColor(s) {
+  s = (s || '').toLowerCase();
+  if (s.indexOf('especial') !== -1) return '#f97316';
+  if (s.indexOf('control')  !== -1) return '#2563eb';
+  if (s.indexOf('vacun')    !== -1) return '#8e3f9e';
+  if (s.indexOf('inyect')   !== -1) return '#eab308';
+  if (s.indexOf('general')  !== -1) return '#16a34a';
+  return '#94a3b8';
+}
+
 function buildCard(r) {
   const reviewed = r.status === 'revisado';
   const em = r.species === 'Felino' ? '🐈' : '🐕';
   const rowIdx = r.rowIndex;
   const svc = r.service || '';
   const svcShort = svc.replace('Consulta ','').replace('Control de ','').replace('Control','Control');
+  const color = serviceColor(svc);
 
   return `
-<div class="rec${reviewed?' reviewed':''}" id="rec-${rowIdx}">
+<div class="rec${reviewed?' reviewed':''}" id="rec-${rowIdx}" style="border-left:5px solid ${color}">
   <div class="rec-head" onclick="toggleRec(${rowIdx})">
     <div class="rec-emoji">${em}</div>
     <div class="rec-info">
@@ -264,7 +481,7 @@ function buildCard(r) {
         ${r.breed ? '<span>· '+esc(r.breed)+'</span>' : ''}
       </div>
     </div>
-    <span class="rec-service">${esc(svcShort)}</span>
+    <span class="rec-service" style="background:${color}22;color:${color}">${esc(svcShort)}</span>
     <div class="rec-time">${fmtTime(r.timestamp)}</div>
     <div class="rec-arrow">▼</div>
   </div>
@@ -278,9 +495,10 @@ function buildCard(r) {
         <div class="field"><div class="fl">Edad</div><div class="fv">${esc(r.age||'—')}</div></div>
         <div class="field"><div class="fl">Sexo</div><div class="fv">${esc(r.sex||'—')}</div></div>
         <div class="field"><div class="fl">Castrado/a</div><div class="fv">${esc(r.neutered||'—')}</div></div>
-        <div class="field"><div class="fl">Teléfono</div><div class="fv">${esc(r.ownerPhone||'—')}</div></div>
+        <div class="field"><div class="fl">Peso</div><div class="fv">${r.weight ? esc(r.weight)+' kg' : '—'}</div></div>
       </div>
     </div>
+    ${r.detail ? `<div class="section"><div class="sec-title">Detalle de la consulta</div><div class="full-field"><div class="fv" style="white-space:pre-wrap">${esc(r.detail)}</div></div></div>` : ''}
     <div class="section">
       <div class="sec-title">Servicio y motivo</div>
       <div class="grid2">
@@ -387,14 +605,16 @@ function copyRecord(rowIdx) {
     r.vetesoftHc ? '▸ HISTORIA CLÍNICA VETESOFT: ' + r.vetesoftHc + '\n\n' : '',
     '▸ DATOS DEL PACIENTE\n',
     line('Nombre', r.petName), line('Especie', r.species), line('Raza', r.breed),
-    line('Edad', r.age), line('Sexo', r.sex), line('Castrado/a', r.neutered), '\n',
+    line('Edad', r.age), line('Sexo', r.sex), line('Castrado/a', r.neutered),
+    r.weight ? line('Peso', r.weight + ' kg') : '', '\n',
     '▸ PROPIETARIO\n',
-    line('Nombre', r.ownerName), line('Teléfono', r.ownerPhone), '\n',
+    line('Nombre', r.ownerName), '\n',
     '▸ SERVICIO\n',
     line('Tipo', r.service), line('Especialidad', r.specialty), '\n',
     '▸ MOTIVO DE CONSULTA\n',
     (r.complaint||'—') + '\n\n',
     line('Inicio de síntomas', r.duration), line('Evolución', r.evolution), '\n',
+    r.detail ? '▸ DETALLE DE LA CONSULTA\n' + r.detail + '\n\n' : '',
     '▸ REVISIÓN DE SÍNTOMAS\n',
     line('Apetito', r.appetite), line('Consumo de agua', r.water),
     line('Vómito', r.vomit), line('Diarrea', r.diarrhea),
@@ -424,10 +644,11 @@ function copyRecord(rowIdx) {
 }
 
 function updateCounts() {
-  const pending = allRecords.filter(r => r.status !== 'revisado').length;
+  const today = new Date();
+  const pending = allRecords.filter(r => r.status !== 'revisado' && isSameDay(r.timestamp, today)).length;
   const el = document.getElementById('pendingCount');
   if (pending > 0) {
-    el.textContent = pending + ' pendiente' + (pending === 1 ? '' : 's');
+    el.textContent = pending + ' pendiente' + (pending === 1 ? '' : 's') + ' hoy';
     el.classList.add('show');
   } else {
     el.classList.remove('show');
@@ -446,7 +667,11 @@ function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-setInterval(loadRecords, 60000);
+// Auto-actualización silenciosa cada 60s, PERO se pausa si hay una
+// tarjeta abierta para no sacar al médico de lo que está leyendo.
+setInterval(function(){
+  if (!document.querySelector('.rec.open')) loadRecords(true);
+}, 60000);
 loadRecords();
 </script>
 </body>
