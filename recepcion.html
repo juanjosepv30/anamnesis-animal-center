@@ -133,6 +133,53 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_N
 const RECEP_PIN = '2025';
 let selected = null;
 
+// Las 13 especialidades con su médico.
+const SPECIALTIES = [
+  {name:'Cardiología',       doctor:'Dr. Wilmer Páez'},
+  {name:'Dermatología',      doctor:'Dra. Marisol Villamizar'},
+  {name:'Medicina Felina',   doctor:'Dra. Estefanía Tenorio'},
+  {name:'Gastroenterología', doctor:'Dra. Tatiana Rodríguez'},
+  {name:'Endocrinología',    doctor:'Dra. Catherine Hernández'},
+  {name:'Neonatología',      doctor:'Dra. Catherine Hernández'},
+  {name:'Nutrición',         doctor:'Dr. Freddy Vera'},
+  {name:'Oftalmología',      doctor:'Dr. Alberto Amaya'},
+  {name:'Imagenología',      doctor:'Dra. Angie Valero'},
+  {name:'Terapia Física',    doctor:'Dra. Milena Rodríguez'},
+  {name:'Nefrología',        doctor:'Dr. Wilmer Rodríguez'},
+  {name:'Ortopedia',         doctor:'Dr. Wilmer Páez'},
+  {name:'Oncología',         doctor:'Dr. Jhoiner Barbosa'}
+];
+
+function buildSpecOptions() {
+  var h = '<option value="">— No aplica —</option>';
+  SPECIALTIES.forEach(function(s){
+    h += '<option value="'+s.name+'">'+s.name+' — '+s.doctor+'</option>';
+  });
+  return h;
+}
+
+// Horas de cita: solo en punto y y-media (06:00 → 22:00).
+function buildHoraOptions(sel) {
+  var h = '';
+  for (var m = 6*60; m <= 22*60; m += 30) {
+    var hh = String(Math.floor(m/60)).padStart(2,'0');
+    var mm = String(m%60).padStart(2,'0');
+    var v = hh + ':' + mm;
+    h += '<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>';
+  }
+  return h;
+}
+
+// Media hora más cercana a la hora actual.
+function nearestHalfHour() {
+  var n = new Date();
+  var m = n.getHours()*60 + n.getMinutes();
+  var r = Math.round(m/30)*30;
+  if (r < 6*60) r = 6*60;
+  if (r > 22*60) r = 22*60;
+  return String(Math.floor(r/60)).padStart(2,'0') + ':' + String(r%60).padStart(2,'0');
+}
+
 function checkPin() {
   if (document.getElementById('pinInput').value === RECEP_PIN) {
     document.getElementById('pinScreen').style.display = 'none';
@@ -188,8 +235,7 @@ function doSearch() {
 function pickResult(r) {
   selected = r;
   document.getElementById('results').innerHTML = '';
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const hh = nearestHalfHour();
   document.getElementById('regArea').innerHTML =
     '<div class="reg-form">'+
       '<div class="reg-sel">✅ '+esc(r.petName||'')+' — '+esc(r.owner||'')+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
@@ -200,9 +246,10 @@ function pickResult(r) {
           '<option value="Consulta general">Consulta general</option>'+
           '<option value="Vacunación">Vacunación</option>'+
           '<option value="Inyectología">Inyectología</option>'+
+          '<option value="Viajero">Viajero / certificado</option>'+
         '</select></div>'+
-        '<div><label>Especialidad / Doctor</label><input type="text" id="regSpec" placeholder="Ej: Cardiología"></div>'+
-        '<div><label>Hora de la cita</label><input type="time" id="regHora" value="'+hh+'"></div>'+
+        '<div><label>Especialidad / Doctor</label><select id="regSpec">'+buildSpecOptions()+'</select></div>'+
+        '<div><label>Hora de la cita</label><select id="regHora">'+buildHoraOptions(hh)+'</select></div>'+
       '</div>'+
       '<div class="reg-actions">'+
         '<button class="btn-primary" onclick="doRegister()">Registrar como agendado →</button>'+
