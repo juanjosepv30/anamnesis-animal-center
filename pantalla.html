@@ -28,14 +28,22 @@ body{display:flex;flex-direction:column}
 .side{flex:1;display:flex;flex-direction:column;min-width:260px}
 .zone-t{font-size:1.05rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--tm);margin-bottom:14px;flex-shrink:0}
 
-.cards{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));grid-auto-rows:min-content;gap:18px;overflow:hidden;align-content:start}
-.card{background:var(--wh);border-radius:24px;padding:26px 30px;border-left:16px solid var(--p);box-shadow:0 8px 30px rgba(58,33,64,.10);display:flex;align-items:center;justify-content:space-between;gap:20px}
+.cards{flex:1;display:flex;flex-direction:column;gap:18px;overflow:hidden;align-content:start}
+.card{background:var(--wh);border-radius:24px;padding:30px 36px;border-left:18px solid var(--p);box-shadow:0 8px 30px rgba(58,33,64,.10);display:flex;align-items:center;justify-content:space-between;gap:20px;flex-shrink:0}
 .card.nuevo{animation:pop 1.6s ease-in-out 3}
 @keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
-.c-turno{font-size:5rem;font-weight:900;line-height:.95;letter-spacing:-2px;font-variant-numeric:tabular-nums}
-.c-pet{font-size:1.7rem;font-weight:800;color:var(--tx);margin-top:4px}
-.c-room-lbl{font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--ts)}
-.c-room{font-size:2.3rem;font-weight:900;line-height:1.1;text-align:right}
+.c-turno{font-size:6.5rem;font-weight:900;line-height:.95;letter-spacing:-3px;font-variant-numeric:tabular-nums}
+.c-pet{font-size:2rem;font-weight:800;color:var(--tx);margin-top:4px}
+.c-room-lbl{font-size:.85rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--ts)}
+.c-room{font-size:2.8rem;font-weight:900;line-height:1.1;text-align:right}
+
+/* El turno anterior: presente pero claramente secundario */
+.card.prev{padding:14px 26px;border-left-width:10px;opacity:.5;box-shadow:none;background:rgba(255,255,255,.6)}
+.card.prev .c-turno{font-size:2.6rem;letter-spacing:-1px}
+.card.prev .c-pet{font-size:1rem;margin-top:0}
+.card.prev .c-room{font-size:1.3rem}
+.card.prev .c-room-lbl{font-size:.65rem}
+.c-prev-lbl{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--ts);margin-bottom:2px}
 
 /* Próximos */
 .next-list{flex:1;background:var(--wh);border-radius:20px;padding:18px;overflow:hidden}
@@ -159,17 +167,28 @@ function cargar(){
 
 function pintar(llamando, esperando){
   // ── Llamando ahora ──
+  // Solo el turno ACTUAL (grande) y el ANTERIOR (chico). Ordenamos por
+  // la hora del llamado: el último llamado es el que manda.
+  llamando.sort(function(a,b){
+    return new Date(b.calledAt || 0) - new Date(a.calledAt || 0);
+  });
+  var actual   = llamando[0] || null;
+  var anterior = llamando[1] || null;
+
   var cont = document.getElementById('cards');
-  if (!llamando.length) {
+  if (!actual) {
     cont.innerHTML = '<div class="empty"><div class="empty-em">🐾</div>'+
-      '<div class="empty-t">Esperá a ser llamado</div></div>';
+      '<div class="empty-t">Espera a ser llamado</div></div>';
   } else {
     var html = '';
-    llamando.forEach(function(r){
+    [actual, anterior].forEach(function(r, i){
+      if (!r) return;
       var color = serviceColor(r.service);
-      var nuevo = !vistos[r.turno] && !primeraCarga;
-      html += '<div class="card'+(nuevo?' nuevo':'')+'" style="border-left-color:'+color+'">'+
-        '<div><div class="c-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
+      var clave = r.turno + '|' + (r.calledAt || '');
+      var nuevo = (i === 0) && !vistos[clave] && !primeraCarga;
+      html += '<div class="card'+(i===1?' prev':'')+(nuevo?' nuevo':'')+'" style="border-left-color:'+color+'">'+
+        '<div>'+(i===1?'<div class="c-prev-lbl">Anterior</div>':'')+
+        '<div class="c-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
         '<div class="c-pet">'+esc(r.petName||'')+'</div></div>'+
         '<div><div class="c-room-lbl">Consultorio</div>'+
         '<div class="c-room" style="color:'+color+'">'+esc(r.consultorio||'—')+'</div></div>'+
@@ -179,9 +198,10 @@ function pintar(llamando, esperando){
     cont.innerHTML = html;
   }
 
-  // Marcamos como vistos los que están llamando ahora
+  // La clave incluye la hora del llamado: si vuelven a llamar al MISMO
+  // turno, cambia la clave y la campanita suena de nuevo.
   var actuales = {};
-  llamando.forEach(function(r){ actuales[r.turno] = true; });
+  llamando.forEach(function(r){ actuales[r.turno + '|' + (r.calledAt || '')] = true; });
   vistos = actuales;
   primeraCarga = false;
 

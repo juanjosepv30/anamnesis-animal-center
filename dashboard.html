@@ -132,6 +132,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .calling-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .calling-t{font-size:1.1rem;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums}
 .calling-m{font-size:.73rem;color:var(--tm);margin-top:2px}
+.calling-btns{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+.btn-again{border:1.5px solid #86efac;background:var(--wh);color:#15803d;border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.btn-again:hover{background:#f0fdf4}
 .btn-done{border:1.5px solid #86efac;background:var(--wh);color:#15803d;border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .q-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;background:var(--bg);margin-bottom:5px}
 .q-turno{font-weight:700;font-size:.82rem;min-width:42px;font-variant-numeric:tabular-nums}
@@ -177,7 +180,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div class="filter-btns">
       <button class="fbtn active" id="f-sala" onclick="setView('sala')">🔔 Sala de espera</button>
       <button class="fbtn" id="f-pending" onclick="setView('pending')">📋 Anamnesis</button>
-      <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Revisadas</button>
+      <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Atendidas</button>
     </div>
     <div class="srch-wrap">
       <span class="srch-icon">🔍</span>
@@ -394,8 +397,11 @@ function renderSala() {
         '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
           '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
           '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
-        '</div><button class="btn-done" onclick="markAtendido('+r.rowIndex+')">✓ Atendido</button>'+
-        '</div></div>';
+        '</div>'+
+        '<div class="calling-btns">'+
+          '<button class="btn-again" onclick="llamarDeNuevo('+r.rowIndex+')">🔔 Llamar otra vez</button>'+
+          '<button class="btn-done" onclick="markAtendido('+r.rowIndex+')">✓ Atendido</button>'+
+        '</div></div></div>';
     });
 
     // Siguiente a llamar — semi-desplegado, clickeable para ver la anamnesis
@@ -498,6 +504,20 @@ function callNext(rowIndex, filaKey) {
     }).catch(function(){ showToast('❌ Error de conexión'); });
 }
 
+// Volver a llamar al mismo turno (si el cliente no apareció).
+// Actualiza la hora del llamado → vuelve a sonar y a destacarse en la TV.
+function llamarDeNuevo(rowIndex) {
+  const rec = allRecords.find(x => x.rowIndex === rowIndex);
+  const room = rec ? (rec.consultorio || '') : '';
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room }) })
+    .then(r => r.json()).then(function(res){
+      if (res && res.ok) {
+        if (rec) rec.calledAt = new Date().toISOString();
+        showToast('🔔 Llamado otra vez' + (room ? ' a ' + room : ''));
+      } else showToast('❌ Error al llamar');
+    }).catch(function(){ showToast('❌ Error de conexión'); });
+}
+
 function markAtendido(rowIndex) {
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido' }) })
     .then(r => r.json()).then(function(res){
@@ -508,7 +528,7 @@ function markAtendido(rowIndex) {
         if (rec) { rec.estadoTurno = 'atendido'; rec.status = 'revisado'; }
         renderSala();
         updateCounts();
-        showToast('✓ Atendido · pasó a Revisadas');
+        showToast('✓ Atendido · pasó a Atendidas');
       } else showToast('❌ Error');
     }).catch(function(){ showToast('❌ Error de conexión'); });
 }

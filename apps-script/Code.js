@@ -26,7 +26,8 @@ const COL = {
   DEWORMING: 26, MEDICATIONS: 27, HISTORY: 28,
   ALLERGIES: 29, DIET: 30, NOTES: 31, STATUS: 32,
   VETESOFT_ID: 33, VETESOFT_HC: 34, WEIGHT: 35, DETAIL: 36,
-  TURNO: 37, ESTADO: 38, AGENDADO: 39, HORA_CITA: 40, CONSULTORIO: 41
+  TURNO: 37, ESTADO: 38, AGENDADO: 39, HORA_CITA: 40, CONSULTORIO: 41,
+  CALLED_AT: 42
 };
 
 // ── CORS helper ──────────────────────────────────────────────
@@ -407,7 +408,7 @@ function getSheet() {
       'Orina','Piel/Pelo','Dolor','Vacunas','Desparasitado',
       'Medicamentos','Enf/Cirugías','Alergias','Alimentación',
       'Notas','Estado','Vetesoft ID','HC Vetesoft','Peso (kg)','Detalle Consulta',
-      'Turno','Estado Turno','Agendado','Hora Cita','Consultorio'
+      'Turno','Estado Turno','Agendado','Hora Cita','Consultorio','Llamado a las'
     ];
     sheet.appendRow(headers);
     sheet.setFrozenRows(1);
@@ -657,7 +658,7 @@ function submitForm(data) {
     var id = Utilities.getUuid();
     var turno = assignTurno(sheet, data.service);
     var row = [now.toISOString(), id].concat(anamnesisValues(data))
-              .concat([turno, 'esperando', 'no', '', '']);
+              .concat([turno, 'esperando', 'no', '', '', '']);
     sheet.appendRow(row);
     bumpVersion();
     // Espontáneo: recepción no lo reportó, así que este es el primer aviso.
@@ -695,8 +696,8 @@ function registerArrival(data) {
     var id = Utilities.getUuid();
     var now = new Date();
     var turno = assignTurno(sheet, data.service);
-    var row = new Array(42);
-    for (var k = 0; k < 42; k++) row[k] = '';
+    var row = new Array(43);
+    for (var k = 0; k < 43; k++) row[k] = '';
     row[COL.TIMESTAMP] = now.toISOString(); row[COL.ID] = id;
     row[COL.PET_NAME] = data.petName || ''; row[COL.SPECIES] = data.species || '';
     row[COL.BREED] = data.breed || ''; row[COL.OWNER_NAME] = data.owner || data.ownerName || '';
@@ -723,8 +724,13 @@ function updateTurno(rowIndex, estado, consultorio) {
     var sheet = getSheet();
     if (estado) {
       sheet.getRange(rowIndex, COL.ESTADO + 1).setValue(estado);
+      // Cada llamado (incluidos los repetidos) actualiza la hora: así la
+      // pantalla sabe cuál es el turno actual y cuál el anterior.
+      if (estado === 'llamando') {
+        sheet.getRange(rowIndex, COL.CALLED_AT + 1).setValue(new Date().toISOString());
+      }
       // "Atendido" cierra el caso: sale de la sala Y de anamnesis,
-      // y pasa al módulo de Revisadas. Un solo estado, no dos.
+      // y pasa al módulo de Atendidas. Un solo estado, no dos.
       if (estado === 'atendido') {
         sheet.getRange(rowIndex, COL.STATUS + 1).setValue('revisado');
       }
@@ -791,7 +797,8 @@ function getRecords() {
         estadoTurno: r[COL.ESTADO] || '',
         agendado   : r[COL.AGENDADO] || '',
         horaCita   : r[COL.HORA_CITA] || '',
-        consultorio: r[COL.CONSULTORIO] || ''
+        consultorio: r[COL.CONSULTORIO] || '',
+        calledAt   : r[COL.CALLED_AT] || ''
       });
     }
     return { ok: true, records: records };
