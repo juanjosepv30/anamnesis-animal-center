@@ -384,7 +384,7 @@ var QUESTIONS = [
 
   // ── VIAJERO (solo ese servicio) ──
   {id:'via_destino', group:'VIAJERO', q:'¿A qué destino viaja?', type:'text', onlyServices:['Viajero'], branch:true, label:'Destino', placeholder:'Ej: España, Estados Unidos, Medellín'},
-  {id:'via_fecha', group:'VIAJERO', q:'¿Cuándo viaja?', type:'text', onlyServices:['Viajero'], branch:true, label:'Fecha del viaje', placeholder:'Ej: 15 de agosto'},
+  {id:'via_fecha', group:'VIAJERO', q:'¿Cuándo viaja?', sub:'Selecciona la fecha del viaje.', type:'date', onlyServices:['Viajero'], branch:true, label:'Fecha del viaje'},
   {id:'via_modo', group:'VIAJERO', q:'¿Cómo viaja tu mascota?', type:'single', onlyServices:['Viajero'], branch:true, label:'Modo de viaje', options:[
     {label:'En cabina', value:'Cabina'}, {label:'En bodega', value:'Bodega'},
     {label:'Terrestre', value:'Terrestre'}, {label:'No sé todavía', value:'No se'}
@@ -712,8 +712,9 @@ function buildStdScreen(q, pos) {
     opts += '</div>';
   }
   if (q.type === 'text') opts += '<div class="text-wrap"><input class="text-input" type="text" id="inp_'+q.id+'" value="'+escAttr(F[q.id]||'')+'" placeholder="'+escAttr(q.placeholder||'')+'" onkeydown="if(event.key===\'Enter\')nextFromText(\''+q.id+'\','+pos+')"></div>';
+  if (q.type === 'date') opts += '<div class="text-wrap"><input class="text-input" type="date" id="inp_'+q.id+'" value="'+escAttr(F[q.id]||'')+'" min="'+todayISO()+'"></div>';
   if (q.type === 'textarea') opts += '<div class="text-wrap"><textarea class="text-input" id="inp_'+q.id+'" placeholder="'+escAttr(q.placeholder||'')+'">'+escHtml(F[q.id]||'')+'</textarea></div>';
-  var showNext = (q.type === 'text' || q.type === 'textarea');
+  var showNext = (q.type === 'text' || q.type === 'date' || q.type === 'textarea');
   return '<div class="screen has-illo">'+illoBlock(q)+'<div class="group-label">'+escHtml(q.group)+'</div><div class="question">'+escHtml(q.q)+'</div>'+(q.sub?'<div class="question-sub">'+escHtml(q.sub)+'</div>':'')+opts+(showNext?'<button class="next-btn" onclick="nextFromText(\''+q.id+'\','+pos+')">Siguiente →</button>':'')+(q.skippable?'<div class="skip-link" onclick="goNext('+pos+')">Omitir →</div>':'')+'</div>';
 }
 
@@ -879,6 +880,12 @@ function showSendError() {
 function startForm() {
   document.getElementById('startScreen').style.display = 'none';
   buildActiveIndices(); currentPos = 0; renderQuestion(0);
+}
+
+// Fecha de hoy en formato yyyy-mm-dd (para el mínimo del selector de fecha).
+function todayISO(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 function escHtml(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
