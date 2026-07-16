@@ -565,8 +565,8 @@ function renderSala() {
   const verFilas = misFilas();
   const filasVisibles = FILAS.filter(f => verFilas.indexOf(f.key) !== -1);
 
-  // Si está fuera de turno hay que decírselo, y decirle la verdad: cuando
-  // nadie más marcó, la red de seguridad le sigue avisando igual.
+  // Fuera de turno no le llega NADA. Hay que decírselo acá, porque si no
+  // el silencio se confunde con "no ha llegado nadie".
   let html = '';
   if (miMedico && !estoyDeTurno()) {
     const otros = otrosDeTurnoComoYo();
