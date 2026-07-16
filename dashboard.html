@@ -539,6 +539,13 @@ function setMiMedico(v) {
 // antes: el sistema no puede quedarse mudo con un paciente esperando.
 let deTurno = [];
 
+// ¿Este médico rota por turnos? Solo los generales. Los especialistas
+// trabajan por cita y están siempre habilitados: para ellos el turno no
+// existe y no hay que preguntarles nada.
+function soyGeneral() {
+  return misEspecialidades().indexOf('general') !== -1;
+}
+
 function estoyDeTurno() {
   return !!miMedico && deTurno.indexOf(miMedico) !== -1;
 }
@@ -555,7 +562,9 @@ function otrosDeTurnoComoYo() {
 
 function pintarTurno() {
   const b = document.getElementById('btnTurno');
-  if (!miMedico) { b.style.display = 'none'; return; }
+  // Sin identidad, o si es especialista, el botón no tiene sentido: él no
+  // entra ni sale de turno, siempre recibe sus citas.
+  if (!miMedico || !soyGeneral()) { b.style.display = 'none'; return; }
   const on = estoyDeTurno();
   b.style.display = '';
   b.className = 'turno-tgl' + (on ? ' on' : '');
@@ -644,6 +653,12 @@ let bienvMostrada = false;
 function verBienvenida() {
   if (bienvMostrada) return;
   if (!medicos.length) return;          // sin directorio no hay a quién elegir
+
+  // Si viene del WhatsApp (…?t=E-04) ya marcó turno al empezar el día: no
+  // hay que volver a preguntarle. Viene a llamar a alguien, no a loguearse.
+  try { if (new URLSearchParams(location.search).get('t')) return; } catch (e) {}
+
+  if (miMedico && !soyGeneral()) return;   // especialista: el turno no le aplica
   if (miMedico && estoyDeTurno()) return;
   bienvMostrada = true;
 
@@ -667,9 +682,17 @@ function pintarBienvenida() {
 
 function bienvenidaEligio(v) {
   setMiMedico(v);
-  // Si ya estaba de turno (volvió a abrir la app, se le cerró sola, entró
-  // desde el WhatsApp), no hay nada que preguntarle: ya está trabajando.
-  if (miMedico && estoyDeTurno()) {
+  if (!miMedico) { pintarBienvenida(); return; }
+
+  // El especialista no marca turno: trabaja por cita y siempre recibe.
+  if (!soyGeneral()) {
+    cerrarBienvenida();
+    showToast('Listo. Te avisamos siempre que llegue una cita tuya');
+    return;
+  }
+  // Ya estaba de turno (volvió a abrir la app, entró desde el WhatsApp):
+  // no hay nada que preguntarle, ya está trabajando.
+  if (estoyDeTurno()) {
     cerrarBienvenida();
     showToast('Ya estabas de turno, ' + miMedico.replace(/^Dra?\.\s*/, ''));
     return;
@@ -733,7 +756,9 @@ function renderSala() {
   // Fuera de turno no le llega NADA. Hay que decírselo acá, porque si no
   // el silencio se confunde con "no ha llegado nadie".
   let html = avisoInstalar();
-  if (miMedico && !estoyDeTurno()) {
+  // Solo al general: al especialista le llegan sus citas siempre, decirle
+  // que está "fuera de turno" sería mentirle.
+  if (miMedico && soyGeneral() && !estoyDeTurno()) {
     const otros = otrosDeTurnoComoYo();
     html += '<div class="fuera-aviso">⚠️ Fuera de turno: no te llegan avisos. ' +
       (otros.length
