@@ -104,9 +104,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .btn-copy{flex:1;padding:10px 14px;border:1.5px solid var(--p);border-radius:9px;background:var(--wh);color:var(--p);font-size:.8rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;min-width:130px}
 .btn-copy:hover{background:var(--pl)}
 .btn-copy.copied{border-color:var(--ok);color:var(--ok);background:var(--okl)}
-.btn-rev{flex:1;padding:10px 14px;border:none;border-radius:9px;background:var(--p);color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s;min-width:130px}
-.btn-rev:hover{background:var(--pd)}
-.btn-rev.done{background:var(--bg2);color:var(--ts);cursor:default}
 
 /* ── States ── */
 .empty{text-align:center;padding:64px 20px}
@@ -197,6 +194,13 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .sug-si{background:#f0fdf4;color:#15803d;border:1.5px solid #86efac}
 .sug-no{background:var(--bg);color:var(--tm);border:1.5px solid var(--bd)}
 .next-baja{opacity:.75}
+/* Freno al que dejó un paciente sin cerrar. No es un botón deshabilitado
+   y ya: trae el atajo para cerrarlo, porque el "no" sin salida molesta. */
+.cerrar-primero{display:flex;align-items:center;gap:8px;margin-top:9px;background:#fffbeb;
+  border:1.5px solid #fde68a;border-radius:9px;padding:7px 9px;font-size:.74rem;
+  font-weight:600;color:#92400e;flex-wrap:wrap}
+.cerrar-primero b{font-weight:800}
+.cerrar-primero .btn-done{margin-left:auto;flex-shrink:0}
 .next-ctrls{display:flex;gap:6px;margin-top:9px}
 .next-ctrls select{flex:1;border:1.5px solid var(--bd);border-radius:8px;padding:7px 8px;font-size:.76rem;font-family:'DM Sans',sans-serif;background:var(--wh);outline:none;min-width:0}
 .btn-call{border:none;border-radius:8px;padding:7px 13px;color:#fff;font-size:.76rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
@@ -864,6 +868,16 @@ function renderSala() {
   // hay que decirle cuál llamar primero. Ver decidirEntreFilas.
   const recomendado = decidirEntreFilas(hoy, filasVisibles);
 
+  // ¿Dejé un paciente sin cerrar? Entonces no puedo llamar a otro: primero
+  // cierro el que tengo. Esto le pone el freno SOLO a quien lo llamó — el
+  // compañero de turno puede seguir llamando sin problema.
+  // De paso arregla el olvido de marcar "Atendido": el sistema cree ocupado
+  // al que no cierra, y entonces deja de avisarle. Ahora no puede seguir
+  // sin cerrar, así que el olvido se nota en el acto.
+  const miPacienteAbierto = miMedico
+    ? hoy.find(r => r.estadoTurno === 'llamando' && r.calledBy === miMedico)
+    : null;
+
   filasVisibles.forEach(function(f) {
     const mine     = hoy.filter(r => recordFila(r) === f.key);
     const esperando= mine.filter(r => (r.estadoTurno || 'esperando') === 'esperando');
@@ -932,9 +946,15 @@ function renderSala() {
           (next.complaint ? '<div class="next-motivo">“'+esc(String(next.complaint).slice(0,90))+(String(next.complaint).length>90?'…':'')+'”</div>' : '')+
           '<div class="q-link">Ver anamnesis completa →</div>'+
         '</div>'+
-        '<div class="next-ctrls"><select id="room-'+f.key+'">'+opts+'</select>'+
-        '<button class="btn-call" style="background:'+nc+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
-        '</div></div>';
+        (miPacienteAbierto
+          // Tiene un paciente abierto: primero lo cierra. Le damos el
+          // atajo para hacerlo, no solo el "no".
+          ? '<div class="cerrar-primero">Primero cierra a <b>'+esc(miPacienteAbierto.petName||miPacienteAbierto.turno)+'</b>'+
+            '<button class="btn-done" onclick="markAtendido('+miPacienteAbierto.rowIndex+')">✓ Atendido</button></div>'
+          : '<div class="next-ctrls"><select id="room-'+f.key+'">'+opts+'</select>'+
+            '<button class="btn-call" style="background:'+nc+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
+            '</div>')+
+        '</div>';
     } else {
       body += '<div class="q-empty">Nadie esperando</div>';
     }
@@ -993,7 +1013,14 @@ function goToAnamnesis(rowIndex) {
     const el = document.getElementById('rec-' + rowIndex);
     if (el) {
       el.classList.add('open');
-      el.scrollIntoView({ behavior:'smooth', block:'center' });
+      // Arriba del todo, no al centro: centrar la tarjeta deja los datos
+      // del paciente fuera de pantalla y obliga a subir para leerlos.
+      // El descuento es por el encabezado, que es sticky y si no la tapa.
+      const hdr  = document.querySelector('.hdr');
+      const srch = document.querySelector('.srch');
+      const tapa = (hdr ? hdr.offsetHeight : 0) + (srch ? srch.offsetHeight : 0) + 8;
+      const y = el.getBoundingClientRect().top + window.pageYOffset - tapa;
+      window.scrollTo({ top: Math.max(0, y), behavior:'smooth' });
       if (rec && !rec.complaint && !rec.detail)
         showToast('El cliente todavía no llenó su anamnesis');
     } else {
@@ -1243,9 +1270,6 @@ function buildCard(r) {
     </div>
     <div class="rec-actions">
       <button class="btn-copy" id="copy-${rowIdx}" onclick="copyRecord(${rowIdx})">📋 Copiar anamnesis</button>
-      <button class="btn-rev${reviewed?' done':''}" id="rev-${rowIdx}" onclick="${reviewed ? '' : 'markReviewed('+rowIdx+')'}">
-        ${reviewed ? '✓ Ya revisado' : '✅ Marcar como revisado'}
-      </button>
     </div>
   </div>
 </div>`;
@@ -1263,37 +1287,9 @@ function toggleRec(rowIdx) {
   document.getElementById('rec-' + rowIdx).classList.toggle('open');
 }
 
-function markReviewed(rowIdx) {
-  const btn = document.getElementById('rev-' + rowIdx);
-  btn.textContent = '⏳ Guardando...';
-  btn.disabled = true;
-  fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'markReviewed', rowIndex: rowIdx }) })
-    .then(function(r){ return r.json(); })
-    .then(function(res) {
-      if (res && res.ok) {
-        const r = allRecords.find(x => x.rowIndex === rowIdx);
-        if (r) r.status = 'revisado';
-        updateCounts();
-        const cardEl = document.getElementById('rec-' + rowIdx);
-        const wasOpen = cardEl && cardEl.classList.contains('open');
-        renderAll();
-        if (wasOpen) {
-          const newCard = document.getElementById('rec-' + rowIdx);
-          if (newCard) newCard.classList.add('open');
-        }
-        showToast('✓ Paciente marcado como revisado');
-      } else {
-        btn.textContent = '✅ Marcar como revisado';
-        btn.disabled = false;
-        showToast('❌ Error al guardar');
-      }
-    })
-    .catch(function() {
-      btn.textContent = '✅ Marcar como revisado';
-      btn.disabled = false;
-      showToast('❌ Error de conexión');
-    });
-}
+// markReviewed se quitó: la anamnesis ya no se marca aparte.
+// Cuando el médico marca al paciente como ATENDIDO, updateTurno pone
+// status=revisado en el backend y la ficha pasa sola a Atendidas.
 
 function copyRecord(rowIdx) {
   const r = allRecords.find(x => x.rowIndex === rowIdx);
