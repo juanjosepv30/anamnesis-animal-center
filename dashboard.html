@@ -369,7 +369,7 @@ function roomsFor(filaKey) {
 }
 
 // Solo DOS filas: el médico general atiende consulta general, controles
-// generales, vacunación, inyectología y viajero. El especialista, lo suyo.
+// generales, vacunación e inyectología. El especialista, lo suyo.
 // Las filas NO llevan color: el color identifica al SERVICIO, y dentro de
 // cada fila conviven varios servicios. Pintar la fila solo confundiría.
 const FILAS = [
@@ -378,15 +378,18 @@ const FILAS = [
 ];
 
 // A qué fila pertenece cada paciente.
-// Solo va a Especialistas si es consulta especializada o un control
-// con especialidad. Todo lo demás lo atiende el médico general.
+// Va a Especialistas todo lo que solo puede resolver una persona puntual:
+// si cae en Generales, aparece en la cola de médicos que no lo pueden
+// atender y ensucia la fila de los que sí.
 function recordFila(r) {
   const s = (r.service || '').toLowerCase();
   if (s.indexOf('especial') !== -1) return 'especializados';
   if (s.indexOf('control') !== -1 && (r.specialty || r.agendado === 'si')) return 'especializados';
-  // Rayos X y ecografía los hace la Dra. Angie: es fila de especialistas.
+  // Rayos X y ecografía los hace la Dra. Angie.
   if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return 'especializados';
-  return 'generales';   // general, control general, vacunación, inyectología, viajero
+  // Certificado de viaje: solo el Dr. Freddy.
+  if (s.indexOf('viajer') !== -1) return 'especializados';
+  return 'generales';   // general, control general, vacunación, inyectología
 }
 
 // Normaliza la hora de la cita venga como "10:30" o como fecha de Sheets.
@@ -533,7 +536,7 @@ function destinatarios(r) {
   if (s.indexOf('control')  !== -1) return sp ? [sp] : ['general'];
   if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return ['rayos x y ecografia'];
   if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1) return ['vacunacion', 'general'];
-  if (s.indexOf('viajer')   !== -1) return ['viajero', 'general'];
+  if (s.indexOf('viajer')   !== -1) return ['viajero'];
   return ['general'];
 }
 
@@ -543,15 +546,17 @@ function atiendo(r) {
   return destinatarios(r).some(t => t && mis.indexOf(t) !== -1);
 }
 
-// Qué filas puede llegar a tener este médico. Freddy Vera hace Nutrición
-// (especialistas) y Viajero (generales), así que ve las dos.
+// Qué filas puede llegar a tener este médico. Tiene que coincidir con
+// recordFila: si una manda el certificado de viaje a Especialistas y la
+// otra cree que es de Generales, Freddy no lo ve en ninguna.
+// Freddy hace Nutrición y Viajero (especialistas) Y General: ve las dos.
 function misFilas() {
   const mis = misEspecialidades();
   if (!mis.length) return FILAS.map(f => f.key);
   const set = {};
   mis.forEach(function(e){
-    if (e === 'general' || e === 'vacunacion' || e === 'viajero') set.generales = 1;
-    else set.especializados = 1;
+    if (e === 'general' || e === 'vacunacion') set.generales = 1;
+    else set.especializados = 1;   // incluye viajero, rayos x y las demás
   });
   return FILAS.map(f => f.key).filter(k => set[k]);
 }
