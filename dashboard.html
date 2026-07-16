@@ -338,7 +338,8 @@ function loadRecords(silent) {
         updateCounts();
         deducirMedico();    // si vino del WhatsApp, ya sabemos quién es
         abrirDesdeLink();   // si vino desde la notificación, lo dejamos en la sala
-        verBienvenida();    // ¿arrancamos el turno?
+        // La puerta NO se decide acá: la maneja cargarMedicos, que llega
+        // en la mitad del tiempo. Esto corre en paralelo, por detrás.
         const now = new Date();
         document.getElementById('lastUpdated').textContent =
           'Última actualización: ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
@@ -641,6 +642,10 @@ function cargarMedicos() {
     .then(function(res){
       if (!res || !res.ok) return;
       medicos = res.medicos || [];
+      // El turno viene con los médicos: con esto ya podemos preguntarle
+      // quién es sin esperar la lista de pacientes.
+      deTurno = res.deTurno || [];
+      document.getElementById('pruebaAviso').style.display = res.modoPrueba ? '' : 'none';
       const sel = document.getElementById('miMedico');
       sel.innerHTML = '<option value="">👁 Ver todos los pacientes</option>' +
         medicos.map(m => '<option value="'+esc(m.medico)+'">'+
@@ -685,8 +690,9 @@ function verBienvenida() {
   // hay que volver a preguntarle. Viene a llamar a alguien, no a loguearse.
   try { if (new URLSearchParams(location.search).get('t')) return; } catch (e) {}
 
-  if (miMedico && !soyGeneral()) return;   // especialista: el turno no le aplica
-  if (miMedico && estoyDeTurno()) return;
+  // Ya sabemos quién es y no tiene nada que marcar → afuera la puerta.
+  if (miMedico && !soyGeneral()) { cerrarBienvenida(); return; }   // especialista
+  if (miMedico && estoyDeTurno()) { cerrarBienvenida(); return; }
   bienvMostrada = true;
 
   const sel = document.getElementById('bienvMedico');
@@ -694,7 +700,21 @@ function verBienvenida() {
     medicos.map(m => '<option value="'+esc(m.medico)+'">'+
       esc(m.medico)+' — '+esc(m.especialidades.join(', '))+'</option>').join('');
   sel.value = miMedico || '';
+  sel.disabled = false;
   pintarBienvenida();
+  document.getElementById('bienvenida').style.display = 'flex';
+}
+
+// La puerta se abre ANTES de pedir nada: el médico ve de una que el
+// sistema le está preguntando quién es, no una pantalla cargando.
+// Los pacientes tardan el doble que los médicos y no hacen falta acá.
+function puertaInicial() {
+  try { if (new URLSearchParams(location.search).get('t')) return; } catch (e) {}
+  const b = document.getElementById('bienvBtn');
+  b.disabled = true;
+  b.textContent = 'Un momento...';
+  document.getElementById('bienvSub').textContent = 'Cargando los médicos...';
+  document.getElementById('bienvMedico').disabled = true;
   document.getElementById('bienvenida').style.display = 'flex';
 }
 
@@ -1301,8 +1321,15 @@ if ('serviceWorker' in navigator) {
 setInterval(chequearCambios, 5000);
 setInterval(function(){ if (!document.querySelector('.rec.open')) loadRecords(true); }, 120000); // red de seguridad
 
-// El directorio primero: sin él no sabemos qué le toca a cada médico.
-cargarMedicos().then(loadRecords);
+// ── Arranque ──
+// 1. La puerta se abre YA: el médico ve la pregunta, no un spinner.
+// 2. Los médicos llegan en ~1.4s y con eso la puerta ya es usable.
+// 3. Los pacientes (~3s) cargan EN PARALELO, detrás. Cuando el médico
+//    termina de marcar turno, el dashboard ya está listo.
+// Antes esto iba encadenado y el pop-up tardaba 4.4s en aparecer.
+puertaInicial();
+cargarMedicos().then(verBienvenida);
+loadRecords();
 </script>
 </body>
 </html>
