@@ -176,7 +176,7 @@ var SPECIALTIES = [
   {name:'Neonatología',     doctor:'Dra. Catherine Hernández', slug:'catherine-hernandez', initials:'CH'},
   {name:'Nutrición',        doctor:'Dr. Freddy Vera',         slug:'freddy-vera',        initials:'FV'},
   {name:'Oftalmología',     doctor:'Dr. Alberto Amaya',       slug:'alberto-amaya',      initials:'AA'},
-  {name:'Imagenología',     doctor:'Dra. Angie Valero',       slug:'angie-valero',       initials:'AV'},
+  {name:'Rayos X y Ecografía', doctor:'Dra. Angie Valero',    slug:'angie-valero',       initials:'AV'},
   {name:'Terapia Física',   doctor:'Dra. Milena Rodríguez',   slug:'milena-rodriguez',   initials:'MR'},
   {name:'Nefrología',       doctor:'Dr. Wilmer Rodríguez',    slug:'wilmer-rodriguez',   initials:'WR'},
   {name:'Ortopedia',        doctor:'Dr. Wilmer Páez',         slug:'wilmer-paez',        initials:'WP'},
@@ -339,6 +339,7 @@ var ILLO_MAP = {
   sp_nut_1:'apple', sp_nut_2:'apple', sp_nut_3:'apple',
   sp_oft_1:'eye', sp_oft_2:'eye', sp_oft_3:'eye',
   sp_img_1:'xray', sp_img_3:'xray',
+  rx_estudio:'xray', rx_motivo:'notepad', rx_orden:'folder', rx_ayuno:'food',
   sp_ter_1:'pawband', sp_ter_2:'pawband', sp_ter_3:'pawband',
   sp_nef_3:'drop',
   sp_ort_1:'bone', sp_ort_2:'bone', sp_ort_3:'bone', sp_ort_4:'bone',
@@ -379,7 +380,30 @@ var QUESTIONS = [
     {label:'📋 Control / seguimiento', value:'Control'},
     {label:'💉 Vacunación', value:'Vacunación'},
     {label:'🩹 Inyectología', value:'Inyectología'},
+    {label:'🩻 Rayos X y Ecografía', value:'Rayos X y Ecografía'},
     {label:'✈️ Viajero / certificado', value:'Viajero'}
+  ]},
+
+  // ── RAYOS X Y ECOGRAFÍA (solo ese servicio) ──
+  // Cuestionario corto a propósito: el dueño viene con un estudio ya
+  // indicado, no a que le averigüemos qué le pasa. Al no estar en GEN_ESP,
+  // se salta toda la batería de síntomas de la consulta general.
+  {id:'rx_estudio', group:'RAYOS X Y ECOGRAFÍA', q:'¿Qué estudio le indicaron?', type:'single', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Estudio', options:[
+    {label:'Ecografía', value:'Ecografía'},
+    {label:'Rayos X', value:'Rayos X'},
+    {label:'Los dos', value:'Los dos'},
+    {label:'No sé', value:'No sé'}
+  ]},
+  {id:'rx_motivo', group:'RAYOS X Y ECOGRAFÍA', q:'¿Por qué se lo indicaron?', sub:'En pocas palabras, para saber qué buscamos.', type:'textarea', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Motivo del estudio', placeholder:'Ej: cojea de la pata trasera, se cayó, control de una masa...'},
+  {id:'rx_orden', group:'RAYOS X Y ECOGRAFÍA', q:'¿Traes la orden médica?', type:'single', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Orden médica', options:[
+    {label:'Sí', value:'Si'},
+    {label:'No', value:'No'},
+    {label:'Me la ordenaron aquí', value:'Ordenada aquí'}
+  ]},
+  {id:'rx_ayuno', group:'RAYOS X Y ECOGRAFÍA', q:'¿Está en ayuno?', sub:'Para la ecografía de abdomen suele pedirse.', type:'single', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Ayuno', options:[
+    {label:'Sí', value:'Si'},
+    {label:'No', value:'No'},
+    {label:'No sabía que debía estarlo', value:'No sabía'}
   ]},
 
   // ── VIAJERO (solo ese servicio) ──
@@ -557,11 +581,11 @@ var QUESTIONS = [
     {label:'Ve bien', value:'Normal'}, {label:'Ve mal / choca', value:'Deficiente'}
   ]},
 
-  // Imagenología
-  {id:'sp_img_1', group:'IMAGENOLOGÍA', q:'¿Qué estudio le indicaron?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Imagenología', branch:true, label:'Estudio', options:[
+  // Rayos X y Ecografía (como especialidad, dentro de consulta especializada)
+  {id:'sp_img_1', group:'RAYOS X Y ECOGRAFÍA', q:'¿Qué estudio le indicaron?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Rayos X y Ecografía', branch:true, label:'Estudio', options:[
     {label:'Ecografía', value:'Ecografía'}, {label:'Radiografía', value:'Radiografía'}, {label:'No sé', value:'No se'}
   ]},
-  {id:'sp_img_3', group:'IMAGENOLOGÍA', q:'¿Está en ayuno?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Imagenología', branch:true, label:'Ayuno', options:[
+  {id:'sp_img_3', group:'RAYOS X Y ECOGRAFÍA', q:'¿Está en ayuno?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Rayos X y Ecografía', branch:true, label:'Ayuno', options:[
     {label:'Sí', value:'Si'}, {label:'No', value:'No'}
   ]},
 

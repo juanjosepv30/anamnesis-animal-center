@@ -261,7 +261,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div class="bienv-sub" id="bienvSub">Al entrar de turno te avisamos por WhatsApp cuando llegue un paciente tuyo.</div>
     <button class="bienv-btn" id="bienvBtn" onclick="bienvenidaListo()">Sí, estoy de turno</button>
     <div class="bienv-quien">
-      <label class="bienv-lbl" for="bienvMedico">¿Quién eres? Si eres especialista, selecciónate aquí</label>
+      <label class="bienv-lbl" for="bienvMedico">¿Quién eres?</label>
       <select class="bienv-sel" id="bienvMedico" onchange="bienvenidaEligio(this.value)"></select>
     </div>
     <button class="bienv-luego" onclick="cerrarBienvenida()">Ahora no, solo quiero mirar</button>
@@ -309,6 +309,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <span class="lg"><span class="lg-dot" style="background:#2563eb"></span>Control</span>
     <span class="lg"><span class="lg-dot" style="background:#8e3f9e"></span>Vacunación</span>
     <span class="lg"><span class="lg-dot" style="background:#eab308"></span>Inyectología</span>
+    <span class="lg"><span class="lg-dot" style="background:#be123c"></span>Rayos X y Ecografía</span>
+    <span class="lg"><span class="lg-dot" style="background:#0891b2"></span>Viajero</span>
   </div>
 </div>
 
@@ -386,6 +388,8 @@ function recordFila(r) {
   const s = (r.service || '').toLowerCase();
   if (s.indexOf('especial') !== -1) return 'especializados';
   if (s.indexOf('control') !== -1 && (r.specialty || r.agendado === 'si')) return 'especializados';
+  // Rayos X y ecografía los hace la Dra. Angie: es fila de especialistas.
+  if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return 'especializados';
   return 'generales';   // general, control general, vacunación, inyectología, viajero
 }
 
@@ -495,6 +499,7 @@ function destinatarios(r) {
   const s = normEsp(r.service), sp = normEsp(r.specialty);
   if (s.indexOf('especial') !== -1) return [sp];
   if (s.indexOf('control')  !== -1) return sp ? [sp] : ['general'];
+  if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return ['rayos x y ecografia'];
   if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1) return ['vacunacion', 'general'];
   if (s.indexOf('viajer')   !== -1) return ['viajero', 'general'];
   return ['general'];
@@ -968,6 +973,8 @@ function serviceColor(s) {
   if (s.indexOf('control')  !== -1) return '#2563eb';
   if (s.indexOf('vacun')    !== -1) return '#8e3f9e';
   if (s.indexOf('inyect')   !== -1) return '#eab308';
+  if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return '#be123c';
+  if (s.indexOf('viajer')   !== -1) return '#0891b2';
   if (s.indexOf('general')  !== -1) return '#16a34a';
   return '#94a3b8';
 }
