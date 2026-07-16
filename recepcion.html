@@ -27,8 +27,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .card-t{font-size:.95rem;font-weight:700;margin-bottom:4px}
 .card-sub{font-size:.8rem;color:var(--tm);margin-bottom:14px}
 
-.search-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px}
-.search-row input{border:1.5px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:.87rem;font-family:'DM Sans',sans-serif;outline:none;background:var(--bg)}
+/* auto-fit y no 4 columnas fijas: en un celular no caben y empujaban la
+   página entera hacia la derecha. min-width:0 porque un input trae ancho
+   mínimo propio y se niega a achicarse aunque la columna sea chica. */
+.search-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.search-row input{border:1.5px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:.87rem;font-family:'DM Sans',sans-serif;outline:none;background:var(--bg);min-width:0}
 .search-row input:focus{border-color:var(--p);background:var(--wh)}
 .search-row button{padding:10px 18px;border:none;border-radius:9px;background:var(--p);color:#fff;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
 @media(max-width:640px){.search-row{grid-template-columns:1fr 1fr}.search-row button{grid-column:1/-1}}
