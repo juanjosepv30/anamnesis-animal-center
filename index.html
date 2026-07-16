@@ -176,7 +176,6 @@ var SPECIALTIES = [
   {name:'Neonatología',     doctor:'Dra. Catherine Hernández', slug:'catherine-hernandez', initials:'CH'},
   {name:'Nutrición',        doctor:'Dr. Freddy Vera',         slug:'freddy-vera',        initials:'FV'},
   {name:'Oftalmología',     doctor:'Dr. Alberto Amaya',       slug:'alberto-amaya',      initials:'AA'},
-  {name:'Rayos X y Ecografía', doctor:'Dra. Angie Valero',    slug:'angie-valero',       initials:'AV'},
   {name:'Terapia Física',   doctor:'Dra. Milena Rodríguez',   slug:'milena-rodriguez',   initials:'MR'},
   {name:'Nefrología',       doctor:'Dr. Wilmer Rodríguez',    slug:'wilmer-rodriguez',   initials:'WR'},
   {name:'Ortopedia',        doctor:'Dr. Wilmer Páez',         slug:'wilmer-paez',        initials:'WP'},
@@ -338,7 +337,6 @@ var ILLO_MAP = {
   sp_neo_1:'bottle', sp_neo_2:'bottle', sp_neo_3:'bottle',
   sp_nut_1:'apple', sp_nut_2:'apple', sp_nut_3:'apple',
   sp_oft_1:'eye', sp_oft_2:'eye', sp_oft_3:'eye',
-  sp_img_1:'xray', sp_img_3:'xray',
   rx_estudio:'xray', rx_zona:'magnifier', rx_ayuno:'food', rx_orino:'toilet', rx_orino_cuando:'calendar',
   sp_ter_1:'pawband', sp_ter_2:'pawband', sp_ter_3:'pawband',
   sp_nef_3:'drop',
@@ -587,13 +585,9 @@ var QUESTIONS = [
     {label:'Ve bien', value:'Normal'}, {label:'Ve mal / choca', value:'Deficiente'}
   ]},
 
-  // Rayos X y Ecografía (como especialidad, dentro de consulta especializada)
-  {id:'sp_img_1', group:'RAYOS X Y ECOGRAFÍA', q:'¿Qué estudio le indicaron?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Rayos X y Ecografía', branch:true, label:'Estudio', options:[
-    {label:'Ecografía', value:'Ecografía'}, {label:'Radiografía', value:'Radiografía'}, {label:'No sé', value:'No se'}
-  ]},
-  {id:'sp_img_3', group:'RAYOS X Y ECOGRAFÍA', q:'¿Está en ayuno?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Rayos X y Ecografía', branch:true, label:'Ayuno', options:[
-    {label:'Sí', value:'Si'}, {label:'No', value:'No'}
-  ]},
+  // Rayos X y Ecografía ya no es una especialidad del selector: es un
+  // servicio propio (ver rx_*). Tenerla en los dos lados obligaba al dueño
+  // a elegir dos veces lo mismo.
 
   // Endocrinología (sed y orina ya se preguntan en la general)
   {id:'sp_endo_2', group:'ENDOCRINOLOGÍA', q:'¿Ha cambiado de peso sin cambiar la comida?', type:'single', onlyServices:['Consulta especializada'], onlySpecialty:'Endocrinología', branch:true, label:'Cambio de peso', options:[
