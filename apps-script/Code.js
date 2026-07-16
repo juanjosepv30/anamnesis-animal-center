@@ -27,7 +27,7 @@ const COL = {
   ALLERGIES: 29, DIET: 30, NOTES: 31, STATUS: 32,
   VETESOFT_ID: 33, VETESOFT_HC: 34, WEIGHT: 35, DETAIL: 36,
   TURNO: 37, ESTADO: 38, AGENDADO: 39, HORA_CITA: 40, CONSULTORIO: 41,
-  CALLED_AT: 42
+  CALLED_AT: 42, CALLED_BY: 43
 };
 
 // ── CORS helper ──────────────────────────────────────────────
@@ -129,7 +129,7 @@ function doPost(e) {
     }
 
     if (action === 'updateTurno') {
-      return json(updateTurno(body.rowIndex, body.estado, body.consultorio));
+      return json(updateTurno(body.rowIndex, body.estado, body.consultorio, body.medico));
     }
 
     // El médico marca que entra o sale de turno.
@@ -159,11 +159,45 @@ function waConfig() {
 // Envía una plantilla de WhatsApp.
 //   params        → llena las variables {{1}}, {{2}}... del cuerpo
 //   urlBtnParam   → llena la variable del botón de URL (para el link directo)
+// ── Modo prueba ──────────────────────────────────────────────
+// Con el modo prueba encendido, TODOS los avisos se desvían a un solo
+// teléfono. Sirve para probar el sistema sin hacerle vibrar el celular a
+// los médicos de verdad.
+// Se enciende y se apaga desde el editor de Apps Script, a propósito:
+// no es un botón de la página para que nadie lo prenda sin querer.
+function activarModoPrueba(telefono) {
+  var tel = String(telefono || '').replace(/[^0-9]/g, '');
+  if (tel.length < 10) {
+    Logger.log('❌ Teléfono inválido. Usá el formato 573001234567 (con el 57).');
+    return;
+  }
+  PropertiesService.getScriptProperties().setProperty('TEL_PRUEBA', tel);
+  bumpVersion();
+  Logger.log('🧪 MODO PRUEBA ENCENDIDO. Todos los avisos van a ir SOLO a ' + tel + '.');
+  Logger.log('   Los médicos NO van a recibir nada hasta que lo apagues.');
+  Logger.log('   Para apagarlo, ejecutá: desactivarModoPrueba()');
+}
+
+function desactivarModoPrueba() {
+  PropertiesService.getScriptProperties().deleteProperty('TEL_PRUEBA');
+  bumpVersion();
+  Logger.log('✅ MODO PRUEBA APAGADO. Los avisos vuelven a los médicos de verdad.');
+}
+
+function getTelPrueba() {
+  try { return PropertiesService.getScriptProperties().getProperty('TEL_PRUEBA') || ''; }
+  catch (e) { return ''; }
+}
+
 function waSendTemplate(to, templateName, langCode, params, urlBtnParam) {
   var cfg = waConfig();
   if (!cfg.token || !cfg.phoneId) {
     return { ok: false, error: 'Faltan WA_TOKEN o WA_PHONE_ID en Propiedades del script' };
   }
+  // Modo prueba: se desvía acá, en el último punto antes de salir, para que
+  // ningún camino pueda saltárselo por accidente.
+  var prueba = getTelPrueba();
+  if (prueba) to = prueba;
   var payload = {
     messaging_product: 'whatsapp',
     to: String(to).replace(/[^0-9]/g, ''),
@@ -342,6 +376,52 @@ function normEsp(s) {
     .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 }
 
+// Un especialista que también atiende consulta general necesita su fila
+// "General" en la hoja. Esta función se la agrega copiando el teléfono que
+// ya tiene, para no tipearlo de nuevo. Ejecutala desde el editor.
+function agregarComoGeneral() {
+  var MEDICOS = [
+    'Dr. Jhoiner Barbosa',
+    'Dra. Catherine Hernández',
+    'Dra. Tatiana Rodríguez'
+  ];
+  var sh   = getMedicosSheet();
+  var rows = sh.getDataRange().getValues();
+
+  MEDICOS.forEach(function(nombre) {
+    var tel = '', yaEsGeneral = false;
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0]).trim() !== nombre) continue;
+      if (!tel) tel = String(rows[i][2] || '').trim();
+      if (normEsp(rows[i][1]) === 'general') yaEsGeneral = true;
+    }
+    if (yaEsGeneral) { Logger.log('• ' + nombre + ': ya estaba como General, no toco nada.'); return; }
+    if (!tel)        { Logger.log('⚠️ ' + nombre + ': no lo encontré en la hoja (¿el nombre está igual?).'); return; }
+    sh.appendRow([nombre, 'General', tel, 'si']);
+    Logger.log('✅ ' + nombre + ' → agregado como General.');
+  });
+  Logger.log('Listo. Revisá la pestaña Medicos.');
+}
+
+// ¿Qué médicos están ocupados AHORA? Ocupado = tiene un paciente que él
+// llamó y todavía no cerró. Cuando marca "atendido" queda libre otra vez.
+// Nos sirve para no molestar al que ya está atendiendo: cuando termine va
+// a mirar el dashboard igual. El aviso es para el que está desocupado.
+function medicosOcupados() {
+  try {
+    var data = getSheet().getDataRange().getValues();
+    var hoy = dayKey(new Date()), ocupados = {};
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][COL.ESTADO]) !== 'llamando') continue;
+      var t = data[i][COL.TIMESTAMP];
+      if (!t || dayKey(new Date(t)) !== hoy) continue;
+      var med = String(data[i][COL.CALLED_BY] || '').trim();
+      if (med) ocupados[med] = true;
+    }
+    return Object.keys(ocupados);
+  } catch (e) { return []; }
+}
+
 // ── Turnos del día ───────────────────────────────────────────
 // Quién está trabajando AHORA. Vive en ScriptProperties junto con el día:
 // si el día no es hoy, la lista se ignora, así el turno se apaga solo cada
@@ -443,15 +523,29 @@ function medicosQueAvisar(service, specialty) {
     cand.push({ medico: med, tel: tel });
   }
 
-  // Solo a los que están de turno. RED DE SEGURIDAD: si de este grupo no
-  // marcó turno NADIE, le avisamos a todos igual que antes. Preferimos
-  // molestar a alguien que dejar a un paciente esperando sin que nadie se
-  // entere. El sistema nunca se queda mudo.
+  // Se filtra en dos escalones, y cada uno tiene su red de seguridad: si un
+  // filtro dejaría a NADIE, no se aplica. Preferimos molestar de más que
+  // dejar a un paciente esperando sin que nadie se entere. El sistema nunca
+  // se queda mudo.
+
+  // 1) Turno: solo los que marcaron entrada.
   var deTurno = getTurnos();
   var enTurno = cand.filter(function(c){ return deTurno.indexOf(c.medico) !== -1; });
   var porTurno = enTurno.length > 0;
+  var elegidos = porTurno ? enTurno : cand;
 
-  return { elegidos: porTurno ? enTurno : cand, candidatos: cand, porTurno: porTurno };
+  // 2) Libres: al que ya está atendiendo no lo molestamos — cuando cierre
+  //    su paciente va a ver la cola en el dashboard.
+  var ocupados = medicosOcupados();
+  var libres = elegidos.filter(function(c){ return ocupados.indexOf(c.medico) === -1; });
+  var porLibre = libres.length > 0 && libres.length < elegidos.length;
+  if (libres.length) elegidos = libres;
+
+  return {
+    elegidos: elegidos, candidatos: cand,
+    porTurno: porTurno, porLibre: porLibre,
+    todosOcupados: libres.length === 0
+  };
 }
 
 // ¿A qué teléfonos hay que avisarle por este paciente?
@@ -473,10 +567,15 @@ function quienAvisa(service, specialty) {
       specialty: specialty,
       especialidadesQueAtienden: destinatariosDe(service, specialty),
       deTurnoAhora: getTurnos(),
+      ocupadosAhora: medicosOcupados(),
+      modoPrueba: getTelPrueba() ? 'ENCENDIDO — nada llega a los médicos' : 'apagado',
       seLeAvisaA: r.elegidos.map(function(c){ return c.medico; }),
-      motivo: r.porTurno
-        ? 'Filtrado por turno: solo los que marcaron entrada.'
-        : 'Nadie de este grupo marcó turno, así que se avisa a todos (red de seguridad).'
+      motivo: [
+        r.porTurno ? 'Solo los que marcaron turno.'
+                   : 'Nadie marcó turno → se avisa a todos (red de seguridad).',
+        r.todosOcupados ? 'Todos están ocupados → se les avisa igual (red de seguridad).'
+                        : (r.porLibre ? 'Se excluyó a los que están atendiendo.' : 'Todos estaban libres.')
+      ].join(' ')
     };
   } catch (err) {
     return { ok: false, error: String(err) };
@@ -489,6 +588,10 @@ function notifyNewPatient(data, turno) {
   try {
     var phones = getDoctorPhones(data.service, data.specialty);
     if (!phones.length) return;
+
+    // En modo prueba todos los avisos caen en el mismo teléfono: mandamos
+    // uno solo, si no llegarían tantos mensajes repetidos como médicos.
+    if (getTelPrueba()) phones = [phones[0]];
 
     var quien = data.petName || 'Paciente';
     var svc   = data.service || '';
@@ -523,7 +626,7 @@ function getSheet() {
       'Orina','Piel/Pelo','Dolor','Vacunas','Desparasitado',
       'Medicamentos','Enf/Cirugías','Alergias','Alimentación',
       'Notas','Estado','Vetesoft ID','HC Vetesoft','Peso (kg)','Detalle Consulta',
-      'Turno','Estado Turno','Agendado','Hora Cita','Consultorio','Llamado a las'
+      'Turno','Estado Turno','Agendado','Hora Cita','Consultorio','Llamado a las','Llamado por'
     ];
     sheet.appendRow(headers);
     sheet.setFrozenRows(1);
@@ -811,8 +914,8 @@ function registerArrival(data) {
     var id = Utilities.getUuid();
     var now = new Date();
     var turno = assignTurno(sheet, data.service);
-    var row = new Array(43);
-    for (var k = 0; k < 43; k++) row[k] = '';
+    var row = new Array(44);
+    for (var k = 0; k < 44; k++) row[k] = '';
     row[COL.TIMESTAMP] = now.toISOString(); row[COL.ID] = id;
     row[COL.PET_NAME] = data.petName || ''; row[COL.SPECIES] = data.species || '';
     row[COL.BREED] = data.breed || ''; row[COL.OWNER_NAME] = data.owner || data.ownerName || '';
@@ -834,7 +937,7 @@ function registerArrival(data) {
 }
 
 // ── Actualizar estado/consultorio de un turno ────────────────
-function updateTurno(rowIndex, estado, consultorio) {
+function updateTurno(rowIndex, estado, consultorio, medico) {
   try {
     var sheet = getSheet();
     if (estado) {
@@ -843,6 +946,9 @@ function updateTurno(rowIndex, estado, consultorio) {
       // pantalla sabe cuál es el turno actual y cuál el anterior.
       if (estado === 'llamando') {
         sheet.getRange(rowIndex, COL.CALLED_AT + 1).setValue(new Date().toISOString());
+        // Quién lo llamó: con esto sabemos qué médico está ocupado y a
+        // quién NO hay que molestar con el próximo aviso.
+        if (medico) sheet.getRange(rowIndex, COL.CALLED_BY + 1).setValue(medico);
       }
       // "Atendido" cierra el caso: sale de la sala Y de anamnesis,
       // y pasa al módulo de Atendidas. Un solo estado, no dos.
@@ -864,7 +970,7 @@ function getRecords() {
   try {
     const sheet = getSheet();
     const data  = sheet.getDataRange().getValues();
-    if (data.length <= 1) return { ok: true, records: [], deTurno: getTurnos() };
+    if (data.length <= 1) return { ok: true, records: [], deTurno: getTurnos(), modoPrueba: !!getTelPrueba() };
 
     const records = [];
     for (let i = data.length - 1; i >= 1; i--) {
@@ -917,7 +1023,9 @@ function getRecords() {
       });
     }
     // Viaja con los registros para no gastar una petición aparte.
-    return { ok: true, records: records, deTurno: getTurnos() };
+    // modoPrueba va acá para que el dashboard lo grite: si queda encendido
+    // sin querer, los médicos dejan de recibir avisos EN SILENCIO.
+    return { ok: true, records: records, deTurno: getTurnos(), modoPrueba: !!getTelPrueba() };
   } catch (err) {
     return { ok: false, error: err.message };
   }

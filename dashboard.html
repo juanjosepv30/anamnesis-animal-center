@@ -120,6 +120,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .turno-tgl.on{border-color:#16a34a;background:#f0fdf4;color:#15803d}
 .turno-tgl.on::before{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.2)}
 .turno-tgl:disabled{opacity:.5;cursor:wait}
+/* Modo prueba: imposible de ignorar. Si queda encendido sin querer, los
+   médicos dejan de recibir avisos y nadie se entera. */
+.prueba-aviso{background:#dc2626;color:#fff;text-align:center;padding:9px 16px;
+  font-size:.8rem;font-weight:700;letter-spacing:.3px}
 /* Aviso de que no le está llegando nada */
 .fuera-aviso{background:#fffbeb;border:2px solid #fde68a;color:#92400e;border-radius:12px;
   padding:10px 14px;margin:10px 0 0;font-size:.85rem;font-weight:700;text-align:center}
@@ -171,10 +175,40 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .legend{flex-wrap:wrap;gap:12px;font-size:.72rem;color:var(--tm);font-weight:600}
 .lg{display:flex;align-items:center;gap:5px}
 .lg-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
-@media(max-width:520px){.grid2,.grid3{grid-template-columns:1fr 1fr}.hdr-brand-sub{display:none}.legend{gap:8px;font-size:.66rem}}
+@media(max-width:520px){.grid2,.grid3{grid-template-columns:1fr 1fr}}
+
+/* ── Celular ──
+   El médico entra desde el WhatsApp con una mano y necesita ver a quién
+   llamar, no el menú. Todo el encabezado tiene que caber en tres renglones
+   cortos: pestañas, quién soy + turno, y listo. */
+@media(max-width:640px){
+  .hdr{padding:0 14px;height:52px}
+  .hdr-brand-sub{display:none}
+  .hdr-brand-icon{width:30px;height:30px}
+  .btn-hdr{padding:6px 10px;font-size:.72rem}
+  .srch{padding:8px 12px;top:52px}
+  .srch-inner{gap:7px}
+  /* Las tres pestañas en UN renglón: sin esto el texto se parte en dos
+     líneas y las pastillas quedan enormes. */
+  .filter-btns{width:100%;gap:5px}
+  .fbtn{flex:1;min-width:0;padding:8px 2px;font-size:.7rem;white-space:nowrap;
+        overflow:hidden;text-overflow:ellipsis}
+  /* La leyenda de colores sobra acá: cada tarjeta ya dice el servicio con
+     todas las letras, y en el celular cuesta dos renglones. */
+  .legend{display:none}
+  .srch-wrap{flex:1 1 100%}
+  #miMedico{flex:1 1 140px}
+  .turno-tgl{flex:0 0 auto;padding:9px 11px;font-size:.78rem}
+  .cnt{padding:14px 12px}
+  .filas{gap:10px}
+}
 </style>
 </head>
 <body>
+
+<div class="prueba-aviso" id="pruebaAviso" style="display:none">
+  🧪 MODO PRUEBA ENCENDIDO — los médicos NO están recibiendo avisos por WhatsApp
+</div>
 
 <header class="hdr">
   <div class="hdr-brand">
@@ -238,6 +272,7 @@ function loadRecords(silent) {
       if (res && res.ok) {
         allRecords = res.records || [];
         deTurno    = res.deTurno || [];
+        document.getElementById('pruebaAviso').style.display = res.modoPrueba ? '' : 'none';
         pintarTurno();
         renderAll();
         updateCounts();
@@ -659,7 +694,7 @@ function goToAnamnesis(rowIndex) {
 function callNext(rowIndex, filaKey) {
   const sel = document.getElementById('room-'+filaKey);
   const room = sel ? sel.value : '';
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room }) })
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room, medico: miMedico }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
         const rec = allRecords.find(x => x.rowIndex === rowIndex);
@@ -675,7 +710,7 @@ function callNext(rowIndex, filaKey) {
 function llamarDeNuevo(rowIndex) {
   const rec = allRecords.find(x => x.rowIndex === rowIndex);
   const room = rec ? (rec.consultorio || '') : '';
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room }) })
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room, medico: miMedico }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
         if (rec) rec.calledAt = new Date().toISOString();
