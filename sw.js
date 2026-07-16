@@ -25,7 +25,20 @@ self.addEventListener('activate', function (e) {
   e.waitUntil(self.clients.claim());
 });
 
-self.addEventListener('fetch', function () {
-  // Sin respondWith: cada pedido va a la red como si no existiéramos.
-  // Alcanza para que Android considere la página instalable.
+self.addEventListener('fetch', function (e) {
+  // GitHub Pages manda el HTML con "Cache-Control: max-age=600": el
+  // navegador puede servir hasta 10 MINUTOS de código viejo. En un sistema
+  // que decide a quién llamar y a quién avisar, eso no es aceptable — un
+  // médico puede quedar corriendo reglas que ya cambiamos y no enterarse.
+  //
+  // Así que para las páginas pedimos siempre a la red, saltándonos ese
+  // caché. Es lo contrario de lo que suele hacer un service worker, y es a
+  // propósito: acá el enemigo es el código viejo, no la latencia.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request, { cache: 'reload' })
+        .catch(function () { return fetch(e.request); })   // sin red, lo que haya
+    );
+  }
+  // Todo lo demás (API, imágenes) va derecho a la red, sin que nos metamos.
 });
