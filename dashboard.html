@@ -136,11 +136,15 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
    El médico abre la app y lo primero que ve es la pregunta que importa:
    ¿arrancamos? Un solo botón grande. El selector de quién sos va abajo,
    porque casi siempre ya está elegido de la vez anterior. */
-.bienv{position:fixed;inset:0;background:rgba(26,10,46,.55);z-index:500;
-  display:flex;align-items:center;justify-content:center;padding:20px;
-  backdrop-filter:blur(3px)}
-.bienv-box{background:var(--wh);border-radius:20px;padding:26px 22px;max-width:380px;width:100%;
-  box-shadow:0 20px 60px rgba(26,10,46,.3);text-align:center}
+/* No es un pop-up: es la pantalla de entrada. Va SIEMPRE primero, así que
+   tapa el dashboard por completo. Antes se veía translúcida y con el
+   dashboard borroso detrás — daba la sensación de estar interrumpiendo
+   algo, cuando en realidad todavía no había empezado nada. */
+.bienv{position:fixed;inset:0;background:var(--bg);z-index:500;
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.bienv-box{background:var(--wh);border:1px solid var(--bd);border-radius:20px;
+  padding:30px 24px;max-width:380px;width:100%;
+  box-shadow:0 4px 24px rgba(26,10,46,.06);text-align:center}
 .bienv-logo{width:64px;height:64px;border-radius:16px;object-fit:cover;margin:0 auto 14px;display:block}
 .bienv-h{font-size:1.35rem;font-weight:700;color:var(--tx);margin-bottom:6px}
 .bienv-sub{font-size:.86rem;color:var(--tm);line-height:1.5;margin-bottom:20px}
