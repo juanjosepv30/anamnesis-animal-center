@@ -169,19 +169,44 @@ function sumarMinutos(hhmm, mins) {
   return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
 }
 
+// ¿Este servicio lo atiende un especialista? Solo ellos trabajan con
+// agenda. Espejo de recordFila en dashboard.html: si una dice que el
+// certificado de viaje es de especialista y la otra que no, recepción y
+// médicos ven cosas distintas del mismo paciente.
+function esDeEspecialista(service, specialty) {
+  var s = String(service || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (s.indexOf('especial') !== -1) return true;
+  if (s.indexOf('control') !== -1 && specialty) return true;
+  if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return true;
+  if (s.indexOf('viajer') !== -1) return true;
+  return false;   // general, vacunación, inyectología, control general
+}
+
 // Con cita → se pide su hora. Sin cita → se pregunta si hay una antes.
 // Mostrar los dos campos a la vez invita a llenar el que no es.
 function pintarTipoCita() {
-  var conCita = document.getElementById('regAgendado').value === 'si';
+  var svc  = document.getElementById('regService').value;
+  var spec = (document.getElementById('regSpec').value || '').trim();
+  var conAgenda = esDeEspecialista(svc, spec);
+
+  // Sin agenda no hay nada que preguntar: entra por orden de llegada.
+  document.getElementById('boxTieneCita').style.display = conAgenda ? '' : 'none';
+  if (!conAgenda) {
+    document.getElementById('regAgendado').value = 'no';
+    document.getElementById('regEsperar').value  = '';
+  }
+
+  var conCita = conAgenda && document.getElementById('regAgendado').value === 'si';
   document.getElementById('boxHora').style.display    = conCita ? '' : 'none';
-  document.getElementById('boxEsperar').style.display = conCita ? 'none' : '';
+  document.getElementById('boxEsperar').style.display = (conAgenda && !conCita) ? '' : 'none';
   document.querySelector('.btn-primary').textContent  = conCita
     ? 'Registrar como agendado →'
-    : 'Registrar sin cita →';
+    : 'Registrar llegada →';
   if (conCita) {                       // limpiamos lo que no aplica
     document.getElementById('regEsperar').value = '';
-    pintarDescongela();
   }
+  pintarDescongela();
 }
 
 // Le mostramos a recepción a qué hora se descongela, para que pueda
@@ -260,20 +285,22 @@ function pickResult(r) {
     '<div class="reg-form">'+
       '<div class="reg-sel">✅ '+esc(r.petName||'')+' — '+esc(r.owner||'')+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
       '<div class="reg-grid">'+
-        '<div><label>Servicio</label><select id="regService">'+
+        '<div><label>Servicio</label><select id="regService" onchange="pintarTipoCita()">'+
           '<option value="Consulta especializada">Consulta especializada</option>'+
           '<option value="Control">Control</option>'+
+          '<option value="Rayos X y Ecografía">Rayos X y Ecografía</option>'+
           '<option value="Consulta general">Consulta general</option>'+
           '<option value="Vacunación">Vacunación</option>'+
           '<option value="Inyectología">Inyectología</option>'+
           '<option value="Viajero">Viajero / certificado</option>'+
         '</select></div>'+
-        '<div><label>Especialidad / Doctor</label><select id="regSpec">'+buildSpecOptions()+'</select></div>'+
+        '<div><label>Especialidad / Doctor</label><select id="regSpec" onchange="pintarTipoCita()">'+buildSpecOptions()+'</select></div>'+
+        // Solo los especialistas trabajan con agenda. Una consulta general
+        // o una vacunación no se agendan: el cliente llega y ya. Preguntar
+        // "¿tiene cita?" ahí es hacer pensar en algo que no aplica.
         // Los dos casos son excluyentes: o trae cita, o llega sin cita y
-        // puede quedar detrás de una. Antes el formulario marcaba agendado
-        // a todo el mundo, y eso le regalaba la prioridad de cita al que no
-        // la tenía.
-        '<div><label>¿Tiene cita?</label><select id="regAgendado" onchange="pintarTipoCita()">'+
+        // puede quedar detrás de una.
+        '<div id="boxTieneCita"><label>¿Tiene cita?</label><select id="regAgendado" onchange="pintarTipoCita()">'+
           '<option value="si">Sí, está en la agenda</option>'+
           '<option value="no">No, el doctor aceptó atenderlo</option>'+
         '</select></div>'+
@@ -293,6 +320,9 @@ function pickResult(r) {
         '<button class="btn-ghost" onclick="cancelReg()">Cancelar</button>'+
       '</div>'+
     '</div>';
+  // El formulario arranca en "Consulta especializada": hay que dejar los
+  // campos coherentes de entrada, no solo cuando alguien toca algo.
+  pintarTipoCita();
 }
 
 function cancelReg(){ selected=null; document.getElementById('regArea').innerHTML=''; }
