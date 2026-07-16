@@ -189,6 +189,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .next-turno{font-size:1.5rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
 .next-pet{font-size:.85rem;font-weight:600;margin-top:3px}
 .next-meta{font-size:.72rem;color:var(--tm);margin-top:2px}
+/* Sugerencia de a cuál llamar primero. Solo aparece cuando el médico tiene
+   las dos filas y tiene que elegir. */
+.sug{font-size:.72rem;font-weight:700;border-radius:7px;padding:6px 9px;margin-bottom:9px;line-height:1.4}
+.sug-si{background:#f0fdf4;color:#15803d;border:1.5px solid #86efac}
+.sug-no{background:var(--bg);color:var(--tm);border:1.5px solid var(--bd)}
+.next-baja{opacity:.75}
 .next-ctrls{display:flex;gap:6px;margin-top:9px}
 .next-ctrls select{flex:1;border:1.5px solid var(--bd);border-radius:8px;padding:7px 8px;font-size:.76rem;font-family:'DM Sans',sans-serif;background:var(--wh);outline:none;min-width:0}
 .btn-call{border:none;border-radius:8px;padding:7px 13px;color:#fff;font-size:.76rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
@@ -421,6 +427,42 @@ function porLlegada(a, b) { return new Date(a.timestamp) - new Date(b.timestamp)
 //   1. Cita programada cuya hora ya llegó (o llega en ≤15 min)
 //   2. Intercalado: 1 inyectología por cada 2 pacientes largos
 //   3. Orden de llegada
+// ── ¿Quién está por desocuparse? ─────────────────────────────
+// Minutos que tiene que llevar un médico con su paciente para considerar
+// que está por salir. Depende de lo que esté atendiendo: una inyección no
+// dura lo que una consulta. Números dados por la clínica.
+function umbralSalida(service) {
+  const s = normEsp(service);
+  if (s.indexOf('inyect') !== -1) return 8;
+  if (s.indexOf('vacun')  !== -1) return 18;
+  return 25;   // consultas, controles, especializadas, rayos X, viajero
+}
+
+// Libre ahora, o a punto de estarlo.
+function estaPorSalir(medico, hoy) {
+  const enConsulta = hoy.find(x => x.estadoTurno === 'llamando' && x.calledBy === medico);
+  if (!enConsulta) return true;                 // no está atendiendo a nadie
+  if (!enConsulta.calledAt) return false;       // lo llamó sin identificarse: no sabemos
+  const min = (Date.now() - new Date(enConsulta.calledAt)) / 60000;
+  return min >= umbralSalida(enConsulta.service);
+}
+
+// ¿Este médico puede atender a este paciente? Espejo de medicosQueAvisar:
+// por 'general' hace falta estar de turno; por una especialidad, no.
+function puedeTomar(m, r) {
+  const tgt = destinatarios(r);
+  return m.especialidades.map(normEsp).some(function(e) {
+    if (tgt.indexOf(e) === -1) return false;
+    return e === 'general' ? deTurno.indexOf(m.medico) !== -1 : true;
+  });
+}
+
+// ¿Hay OTRO médico que pueda tomar a este paciente ya o en pocos minutos?
+// Si lo hay, yo no tengo que correr por él: va a esperar poco igual.
+function otroLoPuedeTomarPronto(r, hoy) {
+  return medicos.some(m => m.medico !== miMedico && puedeTomar(m, r) && estaPorSalir(m.medico, hoy));
+}
+
 function pickNext(list, filaKey, yaLlamados) {
   if (!list.length) return null;
 
@@ -744,6 +786,40 @@ function avisoInstalar() {
          '<button class="x" onclick="cerrarInstalar()" title="No mostrar más">✕</button></div>';
 }
 
+// ── ¿Cuál de las dos filas primero? ──────────────────────────
+// Solo aplica al médico que atiende las dos (Tatiana es gastro y general).
+//
+// LA REGLA, en palabras de la clínica: llamá al que más tiempo lleva
+// esperando. Excepción: si a ese lo va a poder tomar otro médico en pocos
+// minutos, saltá al que solo vos podés atender.
+//
+// El criterio es el TIEMPO DE ESPERA DEL PACIENTE, no la categoría. Que un
+// paciente sea "solo tuyo" no le da prioridad por sí solo: solo importa
+// cuando cambia cuánto va a esperar alguien. Si la otra doctora acaba de
+// entrar a consulta, la general se queda 30 minutos varada y hay que
+// tomarla. Si está por salir, la va a tomar ella y podés ir a lo tuyo.
+function decidirEntreFilas(hoy, filasVisibles) {
+  if (filasVisibles.length < 2) return null;   // una sola fila: no hay nada que decidir
+
+  const cands = filasVisibles.map(function(f) {
+    const mine = hoy.filter(r => recordFila(r) === f.key);
+    const esp  = mine.filter(r => (r.estadoTurno || 'esperando') === 'esperando');
+    const ya   = mine.filter(r => r.estadoTurno === 'llamando' || r.estadoTurno === 'atendido');
+    return pickNext(esp, f.key, ya);
+  }).filter(Boolean);
+
+  if (cands.length < 2) return cands[0] || null;
+
+  cands.sort(porLlegada);
+  const masViejo = cands[0], elOtro = cands[1];
+
+  // Al que más espera lo toma otro en breve → andá al que solo podés vos.
+  if (otroLoPuedeTomarPronto(masViejo, hoy) && !otroLoPuedeTomarPronto(elOtro, hoy)) {
+    return elOtro;
+  }
+  return masViejo;
+}
+
 // ── Render de la sala de espera ──────────────────────────────
 function renderSala() {
   const today = new Date();
@@ -767,6 +843,10 @@ function renderSala() {
   }
 
   html += '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
+
+  // Cuando un médico tiene las dos filas (Tatiana es gastro Y general),
+  // hay que decirle cuál llamar primero. Ver decidirEntreFilas.
+  const recomendado = decidirEntreFilas(hoy, filasVisibles);
 
   filasVisibles.forEach(function(f) {
     const mine     = hoy.filter(r => recordFila(r) === f.key);
@@ -814,7 +894,19 @@ function renderSala() {
         : '<span class="mini mini-esp">Espontáneo</span>';
       let opts = '';
       roomsFor(f.key).forEach(function(rm){ opts += '<option value="'+rm+'">'+rm+'</option>'; });
-      body += '<div class="next-box"><div class="next-lbl">Siguiente</div>'+
+      // Si atiende las dos filas, le decimos cuál va primero y por qué.
+      // Es una sugerencia, no una orden: el botón queda habilitado igual.
+      // El médico sabe si su paciente puede esperar diez minutos.
+      const esElRecomendado = recomendado && recomendado.rowIndex === next.rowIndex;
+      const hayQueElegir    = !!recomendado && filasVisibles.length > 1;
+      const sugerencia = !hayQueElegir ? ''
+        : (esElRecomendado
+            ? '<div class="sug sug-si">👉 Llama a este primero — lleva más esperando o nadie más puede tomarlo</div>'
+            : '<div class="sug sug-no">Puede esperar: otro médico está por desocuparse</div>');
+
+      body += '<div class="next-box'+(hayQueElegir && !esElRecomendado ? ' next-baja' : '')+'">'+
+        sugerencia +
+        '<div class="next-lbl">Siguiente</div>'+
         '<div class="q-click" onclick="goToAnamnesis('+next.rowIndex+')">'+
           '<div class="next-turno" style="color:'+nc+'">'+esc(next.turno||'—')+'</div>'+
           '<div class="next-pet">'+esc(next.petName||'Sin nombre')+' '+ag+'</div>'+
