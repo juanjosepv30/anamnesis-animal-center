@@ -111,6 +111,18 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* ── Sala de espera (colas) ── */
 .filas{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
 .filas.una{grid-template-columns:1fr;max-width:520px;margin:0 auto}
+
+/* Entro / salgo de turno */
+.turno-tgl{border:2px solid var(--bd);background:var(--wh);color:var(--tm);border-radius:12px;
+  padding:9px 14px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:800;cursor:pointer;
+  white-space:nowrap;display:flex;align-items:center;gap:7px;transition:all .15s}
+.turno-tgl::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--ts)}
+.turno-tgl.on{border-color:#16a34a;background:#f0fdf4;color:#15803d}
+.turno-tgl.on::before{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.2)}
+.turno-tgl:disabled{opacity:.5;cursor:wait}
+/* Aviso de que no le está llegando nada */
+.fuera-aviso{background:#fffbeb;border:2px solid #fde68a;color:#92400e;border-radius:12px;
+  padding:10px 14px;margin:10px 0 0;font-size:.85rem;font-weight:700;text-align:center}
 @media(max-width:900px){.filas{grid-template-columns:1fr}}
 .fila{background:var(--wh);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
 /* Encabezado neutro a propósito: el color pertenece al servicio, no a la fila */
@@ -190,6 +202,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <select id="miMedico" class="date-filter" onchange="setMiMedico(this.value)" title="Ves solo los pacientes que te corresponden">
       <option value="">👁 Ver todos los pacientes</option>
     </select>
+    <button id="btnTurno" class="turno-tgl" style="display:none" onclick="toggleTurno()"></button>
   </div>
   <div class="srch-inner legend" style="margin-top:8px">
     <span class="lg"><span class="lg-dot" style="background:#16a34a"></span>General</span>
@@ -221,6 +234,8 @@ function loadRecords(silent) {
     .then(function(res) {
       if (res && res.ok) {
         allRecords = res.records || [];
+        deTurno    = res.deTurno || [];
+        pintarTurno();
         renderAll();
         updateCounts();
         deducirMedico();    // si vino del WhatsApp, ya sabemos quién es
@@ -406,8 +421,65 @@ function misFilas() {
 function setMiMedico(v) {
   miMedico = v;
   try { localStorage.setItem('ac_medico', v); } catch (e) {}
+  pintarTurno();
   renderSala();
   updateCounts();
+}
+
+// ── Turno: entro / salgo ─────────────────────────────────────
+// Solo a los que marcaron entrada les llega el WhatsApp. Se apaga solo
+// cada medianoche, así nadie amanece recibiendo mensajes de su día libre.
+// Si NADIE de tu fila marcó turno, el aviso sale para todos igual que
+// antes: el sistema no puede quedarse mudo con un paciente esperando.
+let deTurno = [];
+
+function estoyDeTurno() {
+  return !!miMedico && deTurno.indexOf(miMedico) !== -1;
+}
+
+// Quién más está cubriendo lo mismo que yo ahora. Sirve para explicarle al
+// que está fuera de turno si de verdad hay alguien atrás o no.
+function otrosDeTurnoComoYo() {
+  const mis = misEspecialidades();
+  if (!mis.length) return [];
+  return medicos.filter(m => m.medico !== miMedico &&
+    deTurno.indexOf(m.medico) !== -1 &&
+    m.especialidades.map(normEsp).some(e => mis.indexOf(e) !== -1));
+}
+
+function pintarTurno() {
+  const b = document.getElementById('btnTurno');
+  if (!miMedico) { b.style.display = 'none'; return; }
+  const on = estoyDeTurno();
+  b.style.display = '';
+  b.className = 'turno-tgl' + (on ? ' on' : '');
+  b.textContent = on ? 'Estoy de turno' : 'Fuera de turno';
+  b.title = on
+    ? 'Te estamos avisando por WhatsApp. Toca para salir de turno.'
+    : 'No te estamos avisando. Toca para entrar de turno.';
+}
+
+function toggleTurno() {
+  if (!miMedico) return;
+  const b = document.getElementById('btnTurno');
+  const quiero = !estoyDeTurno();
+  b.disabled = true;
+  fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'setTurno', medico: miMedico, activo: quiero })
+  })
+    .then(r => r.json())
+    .then(function(res){
+      if (!res || !res.ok) { showToast('No se pudo cambiar el turno'); return; }
+      deTurno = res.deTurno || [];
+      pintarTurno();
+      renderSala();
+      showToast(quiero
+        ? 'Entraste de turno — te avisamos por WhatsApp'
+        : 'Saliste de turno — no te vamos a molestar');
+    })
+    .catch(function(){ showToast('Error de conexión'); })
+    .then(function(){ b.disabled = false; });
 }
 
 function cargarMedicos() {
@@ -452,7 +524,20 @@ function renderSala() {
 
   const verFilas = misFilas();
   const filasVisibles = FILAS.filter(f => verFilas.indexOf(f.key) !== -1);
-  let html = '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
+
+  // Si está fuera de turno hay que decírselo, y decirle la verdad: cuando
+  // nadie más marcó, la red de seguridad le sigue avisando igual.
+  let html = '';
+  if (miMedico && !estoyDeTurno()) {
+    const otros = otrosDeTurnoComoYo();
+    html += '<div class="fuera-aviso">' + (otros.length
+      ? '⚠️ Estás fuera de turno: no te estamos avisando por WhatsApp. Está cubriendo ' +
+        esc(otros.map(m => m.medico).join(', ')) + '.'
+      : '⚠️ Estás fuera de turno, pero nadie más marcó turno todavía, así que te seguimos avisando. ' +
+        'Ningún paciente puede quedarse sin que un médico se entere.') + '</div>';
+  }
+
+  html += '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
 
   filasVisibles.forEach(function(f) {
     const mine     = hoy.filter(r => recordFila(r) === f.key);

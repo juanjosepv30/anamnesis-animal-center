@@ -79,6 +79,13 @@ function doGet(e) {
     return json(getMedicos());
   }
 
+  // Diagnóstico: ¿a quién se le avisaría por este paciente, ahora mismo?
+  // Devuelve NOMBRES, nunca teléfonos. Sirve para entender por qué a
+  // alguien le sonó (o no le sonó) el celular.
+  if (action === 'quienAvisa') {
+    return json(quienAvisa(e.parameter.service || '', e.parameter.specialty || ''));
+  }
+
   if (action === 'search') {
     const petName   = e.parameter.petName   || '';
     const ownerName = e.parameter.ownerName || '';
@@ -123,6 +130,11 @@ function doPost(e) {
 
     if (action === 'updateTurno') {
       return json(updateTurno(body.rowIndex, body.estado, body.consultorio));
+    }
+
+    // El médico marca que entra o sale de turno.
+    if (action === 'setTurno') {
+      return json(setTurno(body.medico, !!body.activo));
     }
 
     return json({ ok: false, error: 'Unknown action' });
@@ -330,6 +342,41 @@ function normEsp(s) {
     .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 }
 
+// ── Turnos del día ───────────────────────────────────────────
+// Quién está trabajando AHORA. Vive en ScriptProperties junto con el día:
+// si el día no es hoy, la lista se ignora, así el turno se apaga solo cada
+// medianoche y nadie amanece recibiendo mensajes de su día libre.
+function getTurnos() {
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty('TURNOS');
+    if (!raw) return [];
+    var t = JSON.parse(raw);
+    if (t.dia !== dayKey(new Date())) return [];
+    return t.medicos || [];
+  } catch (e) { return []; }
+}
+
+function setTurno(medico, activo) {
+  medico = String(medico || '').trim();
+  if (!medico) return { ok: false, error: 'Falta el médico' };
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(5000); } catch (e) {}
+  try {
+    var lista = getTurnos();
+    var i = lista.indexOf(medico);
+    if (activo && i === -1) lista.push(medico);
+    if (!activo && i !== -1) lista.splice(i, 1);
+    PropertiesService.getScriptProperties()
+      .setProperty('TURNOS', JSON.stringify({ dia: dayKey(new Date()), medicos: lista }));
+    bumpVersion();
+    return { ok: true, deTurno: lista };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
 // Directorio para el dashboard: quién es cada médico y qué atiende.
 // Un médico puede cubrir varias especialidades (Wilmer Páez hace
 // Cardiología y Ortopedia), así que agrupamos por nombre.
@@ -356,45 +403,83 @@ function getMedicos() {
   }
 }
 
+// ¿Qué especialidades atienden a este paciente?
+// ESPEJO de destinatarios() en dashboard.html. Si cambia una, cambia la
+// otra: es la regla que hace que el médico vea en el dashboard exactamente
+// los pacientes por los que se le avisa.
+function destinatariosDe(service, specialty) {
+  var s  = normEsp(service);
+  var sp = normEsp(specialty);
+
+  if (s.indexOf('especial') !== -1) return [sp];
+  // Control CON especialidad → lo atiende ese especialista.
+  // Control sin especialidad → es un control general.
+  if (s.indexOf('control') !== -1) return sp ? [sp] : ['general'];
+  // Vacunación e inyectología: avisan a vacunación Y a los generales.
+  if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1) return ['vacunacion', 'general'];
+  // Viajero: avisa a los generales, pero también al Dr. Freddy,
+  // que es el especialista en trámites de viaje (fila "Viajero").
+  if (s.indexOf('viajer') !== -1) return ['viajero', 'general'];
+  return ['general'];   // consulta general
+}
+
+// ¿A qué médicos hay que avisarle por este paciente, ahora mismo?
+// Única fuente de verdad: getDoctorPhones y quienAvisa salen de acá, para
+// que el aviso y el diagnóstico nunca puedan contradecirse.
+function medicosQueAvisar(service, specialty) {
+  var rows    = getMedicosSheet().getDataRange().getValues();
+  var targets = destinatariosDe(service, specialty);
+
+  var cand = [], seen = {};
+  for (var i = 1; i < rows.length; i++) {
+    var med    = String(rows[i][0] || '').trim();
+    var esp    = normEsp(rows[i][1]);
+    var tel    = String(rows[i][2] || '').replace(/[^0-9]/g, '');
+    var avisar = normEsp(rows[i][3]);
+    if (!tel || avisar !== 'si') continue;
+    if (targets.indexOf(esp) === -1) continue;
+    if (seen[tel]) continue;          // sin repetir si un médico calza dos veces
+    seen[tel] = true;
+    cand.push({ medico: med, tel: tel });
+  }
+
+  // Solo a los que están de turno. RED DE SEGURIDAD: si de este grupo no
+  // marcó turno NADIE, le avisamos a todos igual que antes. Preferimos
+  // molestar a alguien que dejar a un paciente esperando sin que nadie se
+  // entere. El sistema nunca se queda mudo.
+  var deTurno = getTurnos();
+  var enTurno = cand.filter(function(c){ return deTurno.indexOf(c.medico) !== -1; });
+  var porTurno = enTurno.length > 0;
+
+  return { elegidos: porTurno ? enTurno : cand, candidatos: cand, porTurno: porTurno };
+}
+
 // ¿A qué teléfonos hay que avisarle por este paciente?
 function getDoctorPhones(service, specialty) {
   try {
-    var rows = getMedicosSheet().getDataRange().getValues();
-    var s  = normEsp(service);
-    var sp = normEsp(specialty);
-    var targets;
-
-    if (s.indexOf('especial') !== -1) {
-      targets = [sp];
-    } else if (s.indexOf('control') !== -1) {
-      // Control CON especialidad → lo atiende ese especialista.
-      // Control sin especialidad → es un control general.
-      targets = sp ? [sp] : ['general'];
-    } else if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1) {
-      // Vacunación e inyectología: avisan a vacunación Y a los generales.
-      targets = ['vacunacion', 'general'];
-    } else if (s.indexOf('viajer') !== -1) {
-      // Viajero: avisa a los generales, pero también al Dr. Freddy,
-      // que es el especialista en trámites de viaje (fila "Viajero").
-      targets = ['viajero', 'general'];
-    } else {
-      targets = ['general'];   // consulta general
-    }
-
-    var phones = [], seen = {};
-    for (var i = 1; i < rows.length; i++) {
-      var esp    = normEsp(rows[i][1]);
-      var tel    = String(rows[i][2] || '').replace(/[^0-9]/g, '');
-      var avisar = normEsp(rows[i][3]);
-      if (!tel || avisar !== 'si') continue;
-      if (targets.indexOf(esp) === -1) continue;
-      if (seen[tel]) continue;          // sin repetir si un médico calza dos veces
-      seen[tel] = true;
-      phones.push(tel);
-    }
-    return phones;
+    return medicosQueAvisar(service, specialty).elegidos.map(function(c){ return c.tel; });
   } catch (err) {
     return [];
+  }
+}
+
+// Diagnóstico legible: nombres, nunca teléfonos.
+function quienAvisa(service, specialty) {
+  try {
+    var r = medicosQueAvisar(service, specialty);
+    return {
+      ok: true,
+      service: service,
+      specialty: specialty,
+      especialidadesQueAtienden: destinatariosDe(service, specialty),
+      deTurnoAhora: getTurnos(),
+      seLeAvisaA: r.elegidos.map(function(c){ return c.medico; }),
+      motivo: r.porTurno
+        ? 'Filtrado por turno: solo los que marcaron entrada.'
+        : 'Nadie de este grupo marcó turno, así que se avisa a todos (red de seguridad).'
+    };
+  } catch (err) {
+    return { ok: false, error: String(err) };
   }
 }
 
@@ -779,7 +864,7 @@ function getRecords() {
   try {
     const sheet = getSheet();
     const data  = sheet.getDataRange().getValues();
-    if (data.length <= 1) return { ok: true, records: [] };
+    if (data.length <= 1) return { ok: true, records: [], deTurno: getTurnos() };
 
     const records = [];
     for (let i = data.length - 1; i >= 1; i--) {
@@ -831,7 +916,8 @@ function getRecords() {
         calledAt   : r[COL.CALLED_AT] || ''
       });
     }
-    return { ok: true, records: records };
+    // Viaja con los registros para no gastar una petición aparte.
+    return { ok: true, records: records, deTurno: getTurnos() };
   } catch (err) {
     return { ok: false, error: err.message };
   }
