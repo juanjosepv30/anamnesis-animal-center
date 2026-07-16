@@ -326,12 +326,13 @@ function loadRecords(silent) {
     document.getElementById('mainCnt').innerHTML = '<div class="spinner"></div>';
     document.getElementById('lastUpdated').textContent = 'Actualizando...';
   }
+  const pedidoEn = Date.now();
   fetch(API_URL + '?action=records')
     .then(function(r){ return r.json(); })
     .then(function(res) {
       if (res && res.ok) {
         allRecords = res.records || [];
-        deTurno    = res.deTurno || [];
+        if (aplicaEsteTurno(pedidoEn)) deTurno = res.deTurno || [];
         document.getElementById('pruebaAviso').style.display = res.modoPrueba ? '' : 'none';
         pintarTurno();
         renderAll();
@@ -577,6 +578,12 @@ function setMiMedico(v) {
 // antes: el sistema no puede quedarse mudo con un paciente esperando.
 let deTurno = [];
 
+// Cuándo marcó turno el médico. Los pedidos que salieron ANTES de eso
+// traen un estado viejo: si los dejamos aplicar, le pisan lo que acaba de
+// hacer y la puerta se le vuelve a abrir en la cara.
+let turnoTocadoEn = 0;
+function aplicaEsteTurno(pedidoEn) { return pedidoEn > turnoTocadoEn; }
+
 // ¿Este médico rota por turnos? Solo los generales. Los especialistas
 // trabajan por cita y están siempre habilitados: para ellos el turno no
 // existe y no hay que preguntarles nada.
@@ -623,6 +630,9 @@ function ponerTurno(quiero) {
     .then(r => r.json())
     .then(function(res){
       if (!res || !res.ok) { showToast('No se pudo cambiar el turno'); return; }
+      // Esto es lo más fresco que existe: lo acaba de decidir el médico.
+      // A partir de acá, cualquier respuesta que salió antes se descarta.
+      turnoTocadoEn = Date.now();
       deTurno = res.deTurno || [];
       pintarTurno();
       renderSala();
@@ -636,15 +646,28 @@ function ponerTurno(quiero) {
     .then(function(){ b.disabled = false; });
 }
 
+// La lista de médicos casi nunca cambia, y pedirla tarda ~2s. La guardamos
+// en el celular para que la puerta sea usable de inmediato. Igual se pide
+// siempre por detrás: si cambió, se corrige sola en la misma carga.
+// OJO: el TURNO no se cachea — ese cambia todo el día.
+function medicosDelCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem('ac_medicos') || 'null');
+    if (Array.isArray(c) && c.length) medicos = c;
+  } catch (e) {}
+}
+
 function cargarMedicos() {
+  const pedidoEn = Date.now();
   return fetch(API_URL + '?action=medicos')
     .then(r => r.json())
     .then(function(res){
       if (!res || !res.ok) return;
       medicos = res.medicos || [];
+      try { localStorage.setItem('ac_medicos', JSON.stringify(medicos)); } catch (e) {}
       // El turno viene con los médicos: con esto ya podemos preguntarle
       // quién es sin esperar la lista de pacientes.
-      deTurno = res.deTurno || [];
+      if (aplicaEsteTurno(pedidoEn)) deTurno = res.deTurno || [];
       document.getElementById('pruebaAviso').style.display = res.modoPrueba ? '' : 'none';
       const sel = document.getElementById('miMedico');
       sel.innerHTML = '<option value="">👁 Ver todos los pacientes</option>' +
@@ -710,12 +733,26 @@ function verBienvenida() {
 // Los pacientes tardan el doble que los médicos y no hacen falta acá.
 function puertaInicial() {
   try { if (new URLSearchParams(location.search).get('t')) return; } catch (e) {}
+  document.getElementById('bienvenida').style.display = 'flex';
+
+  // Con la lista guardada del día anterior ya puede elegir su nombre sin
+  // esperar nada. Si no hay caché (primera vez), muestra que está cargando.
+  medicosDelCache();
+  if (medicos.length) {
+    const sel = document.getElementById('bienvMedico');
+    sel.innerHTML = '<option value="">— Elige tu nombre —</option>' +
+      medicos.map(m => '<option value="'+esc(m.medico)+'">'+
+        esc(m.medico)+' — '+esc(m.especialidades.join(', '))+'</option>').join('');
+    sel.value = miMedico || '';
+    sel.disabled = false;
+    pintarBienvenida();
+    return;
+  }
   const b = document.getElementById('bienvBtn');
   b.disabled = true;
   b.textContent = 'Un momento...';
   document.getElementById('bienvSub').textContent = 'Cargando los médicos...';
   document.getElementById('bienvMedico').disabled = true;
-  document.getElementById('bienvenida').style.display = 'flex';
 }
 
 function pintarBienvenida() {
