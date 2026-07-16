@@ -148,7 +148,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
   padding:16px;font-size:1.05rem;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;
   box-shadow:0 4px 14px rgba(22,163,74,.3);transition:transform .1s}
 .bienv-btn:active{transform:scale(.98)}
-.bienv-btn:disabled{opacity:.6;cursor:wait}
+/* Deshabilitado tiene que PARECER deshabilitado: si sigue verde y grande,
+   el médico lo toca y no pasa nada. */
+.bienv-btn:disabled{background:var(--bg2);color:var(--ts);box-shadow:none;cursor:default}
 .bienv-quien{margin-top:18px;padding-top:18px;border-top:1px solid var(--bd)}
 .bienv-lbl{font-size:.76rem;color:var(--tm);font-weight:600;margin-bottom:8px;display:block}
 .bienv-sel{width:100%;max-width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:11px;
