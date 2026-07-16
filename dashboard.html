@@ -132,6 +132,31 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .turno-tgl.on{border-color:#16a34a;background:#f0fdf4;color:#15803d}
 .turno-tgl.on::before{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.2)}
 .turno-tgl:disabled{opacity:.5;cursor:wait}
+/* ── Bienvenida al empezar el turno ──
+   El médico abre la app y lo primero que ve es la pregunta que importa:
+   ¿arrancamos? Un solo botón grande. El selector de quién sos va abajo,
+   porque casi siempre ya está elegido de la vez anterior. */
+.bienv{position:fixed;inset:0;background:rgba(26,10,46,.55);z-index:500;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  backdrop-filter:blur(3px)}
+.bienv-box{background:var(--wh);border-radius:20px;padding:26px 22px;max-width:380px;width:100%;
+  box-shadow:0 20px 60px rgba(26,10,46,.3);text-align:center}
+.bienv-logo{width:64px;height:64px;border-radius:16px;object-fit:cover;margin:0 auto 14px;display:block}
+.bienv-h{font-size:1.35rem;font-weight:700;color:var(--tx);margin-bottom:6px}
+.bienv-sub{font-size:.86rem;color:var(--tm);line-height:1.5;margin-bottom:20px}
+.bienv-btn{width:100%;border:none;border-radius:14px;background:#16a34a;color:#fff;
+  padding:16px;font-size:1.05rem;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;
+  box-shadow:0 4px 14px rgba(22,163,74,.3);transition:transform .1s}
+.bienv-btn:active{transform:scale(.98)}
+.bienv-btn:disabled{opacity:.6;cursor:wait}
+.bienv-quien{margin-top:18px;padding-top:18px;border-top:1px solid var(--bd)}
+.bienv-lbl{font-size:.76rem;color:var(--tm);font-weight:600;margin-bottom:8px;display:block}
+.bienv-sel{width:100%;max-width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:11px;
+  font-size:.87rem;font-family:'DM Sans',sans-serif;color:var(--tx);background:var(--wh);outline:none}
+.bienv-sel:focus{border-color:var(--p)}
+.bienv-luego{margin-top:14px;background:none;border:none;color:var(--tm);font-size:.8rem;
+  font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline}
+
 /* Invitación a instalar. Sin el ícono en la pantalla de inicio, el médico
    no tiene forma rápida de entrar a marcar turno. */
 .instalar{background:var(--pl);border:1.5px solid #c4b5fd;color:var(--pd);border-radius:12px;
@@ -226,6 +251,20 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 </head>
 <body>
 
+<div class="bienv" id="bienvenida" style="display:none">
+  <div class="bienv-box">
+    <img class="bienv-logo" src="img/icono-192.png" alt="" onerror="this.remove()">
+    <div class="bienv-h">¿Listo para trabajar?</div>
+    <div class="bienv-sub" id="bienvSub">Al entrar de turno te avisamos por WhatsApp cuando llegue un paciente tuyo.</div>
+    <button class="bienv-btn" id="bienvBtn" onclick="bienvenidaListo()">Sí, estoy de turno</button>
+    <div class="bienv-quien">
+      <label class="bienv-lbl" for="bienvMedico">¿Quién eres? Si eres especialista, selecciónate aquí</label>
+      <select class="bienv-sel" id="bienvMedico" onchange="bienvenidaEligio(this.value)"></select>
+    </div>
+    <button class="bienv-luego" onclick="cerrarBienvenida()">Ahora no, solo quiero mirar</button>
+  </div>
+</div>
+
 <div class="prueba-aviso" id="pruebaAviso" style="display:none">
   🧪 MODO PRUEBA ENCENDIDO — los médicos NO están recibiendo avisos por WhatsApp
 </div>
@@ -297,7 +336,8 @@ function loadRecords(silent) {
         renderAll();
         updateCounts();
         deducirMedico();    // si vino del WhatsApp, ya sabemos quién es
-        abrirDesdeLink();   // si vino desde la notificación, abre esa ficha
+        abrirDesdeLink();   // si vino desde la notificación, lo dejamos en la sala
+        verBienvenida();    // ¿arrancamos el turno?
         const now = new Date();
         document.getElementById('lastUpdated').textContent =
           'Última actualización: ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
@@ -517,12 +557,14 @@ function pintarTurno() {
     : 'No te estamos avisando. Toca para entrar de turno.';
 }
 
+// Devuelve la promesa para que la bienvenida pueda esperar a que termine
+// antes de cerrarse: si no, cierra el pop-up y el médico no sabe si quedó.
 function toggleTurno() {
-  if (!miMedico) return;
+  if (!miMedico) return Promise.resolve();
   const b = document.getElementById('btnTurno');
   const quiero = !estoyDeTurno();
   b.disabled = true;
-  fetch(API_URL, {
+  return fetch(API_URL, {
     method: 'POST',
     body: JSON.stringify({ action: 'setTurno', medico: miMedico, activo: quiero })
   })
@@ -574,6 +616,55 @@ function deducirMedico() {
     document.getElementById('miMedico').value = cand[0].medico;
     showToast('Abriste como ' + cand[0].medico);
   }
+}
+
+// ── Bienvenida al empezar el turno ───────────────────────────
+// El médico llega, abre la app y lo primero que ve es la pregunta que
+// importa: ¿arrancamos? Sin esto tenía que descubrir solo un botón chico
+// arriba, y si no lo tocaba no le llegaba ningún aviso en todo el día.
+// Solo aparece si NO está de turno: al que ya está trabajando no se le
+// interrumpe.
+let bienvMostrada = false;
+
+function verBienvenida() {
+  if (bienvMostrada) return;
+  if (!medicos.length) return;          // sin directorio no hay a quién elegir
+  if (miMedico && estoyDeTurno()) return;
+  bienvMostrada = true;
+
+  const sel = document.getElementById('bienvMedico');
+  sel.innerHTML = '<option value="">— Elige tu nombre —</option>' +
+    medicos.map(m => '<option value="'+esc(m.medico)+'">'+
+      esc(m.medico)+' — '+esc(m.especialidades.join(', '))+'</option>').join('');
+  sel.value = miMedico || '';
+  pintarBienvenida();
+  document.getElementById('bienvenida').style.display = 'flex';
+}
+
+function pintarBienvenida() {
+  const b = document.getElementById('bienvBtn');
+  b.disabled = !miMedico;
+  b.textContent = miMedico ? 'Sí, estoy de turno' : 'Primero elige tu nombre';
+  document.getElementById('bienvSub').textContent = miMedico
+    ? 'Al entrar de turno te avisamos por WhatsApp cuando llegue un paciente tuyo.'
+    : 'Elige tu nombre abajo para poder entrar de turno.';
+}
+
+function bienvenidaEligio(v) {
+  setMiMedico(v);
+  pintarBienvenida();
+}
+
+function cerrarBienvenida() {
+  document.getElementById('bienvenida').style.display = 'none';
+}
+
+function bienvenidaListo() {
+  if (!miMedico) return;
+  const b = document.getElementById('bienvBtn');
+  b.disabled = true;
+  b.textContent = 'Entrando...';
+  toggleTurno().then(cerrarBienvenida);
 }
 
 // ── Invitación a instalar ────────────────────────────────────
@@ -719,11 +810,16 @@ function abrirDesdeLink() {
   var t = null;
   try { t = new URLSearchParams(location.search).get('t'); } catch (e) {}
   if (!t) return;
+
+  // El turno del link ya sirvió para saber quién es (ver deducirMedico).
+  // Acá lo dejamos en la SALA, no en la anamnesis: el médico viene a ver
+  // toda su cola y a llamar al que sigue, no a leer una ficha suelta. Si
+  // quiere la anamnesis, la abre desde la tarjeta.
+  setView('sala');
   var rec = allRecords.find(function(x){
     return String(x.turno || '').toUpperCase() === String(t).toUpperCase();
   });
-  if (rec) goToAnamnesis(rec.rowIndex);
-  else showToast('No se encontró el turno ' + t + ' (¿ya fue atendido?)');
+  if (rec) showToast('Llegaste por ' + rec.turno + ' · ' + (rec.petName || ''));
 }
 
 // Desde la sala de espera → abre la anamnesis de ese paciente.
