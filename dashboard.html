@@ -159,21 +159,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .bienv-luego{margin-top:14px;background:none;border:none;color:var(--tm);font-size:.8rem;
   font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline}
 
-/* Invitación a instalar. Sin el ícono en la pantalla de inicio, el médico
-   no tiene forma rápida de entrar a marcar turno. */
-.instalar{background:var(--pl);border:1.5px solid #c4b5fd;color:var(--pd);border-radius:12px;
-  padding:10px 12px;margin:0 0 12px;font-size:.8rem;font-weight:600;line-height:1.5;
-  display:flex;align-items:center;gap:10px}
-.instalar b{font-weight:800}
-.instalar .x{margin-left:auto;flex-shrink:0;background:none;border:none;color:var(--p);
-  font-size:1.1rem;font-weight:800;cursor:pointer;padding:0 4px;font-family:'DM Sans',sans-serif}
 /* Modo prueba: imposible de ignorar. Si queda encendido sin querer, los
    médicos dejan de recibir avisos y nadie se entera. */
 .prueba-aviso{background:#dc2626;color:#fff;text-align:center;padding:9px 16px;
   font-size:.8rem;font-weight:700;letter-spacing:.3px}
 /* Aviso de que no le está llegando nada */
-.fuera-aviso{background:#fffbeb;border:2px solid #fde68a;color:#92400e;border-radius:12px;
-  padding:10px 14px;margin:0 0 12px;font-size:.82rem;font-weight:700;text-align:center;line-height:1.45}
 @media(max-width:900px){.filas{grid-template-columns:1fr}}
 .fila{background:var(--wh);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
 /* Encabezado neutro a propósito: el color pertenece al servicio, no a la fila */
@@ -592,16 +582,6 @@ function estoyDeTurno() {
   return !!miMedico && deTurno.indexOf(miMedico) !== -1;
 }
 
-// Quién más está cubriendo lo mismo que yo ahora. Sirve para explicarle al
-// que está fuera de turno si de verdad hay alguien atrás o no.
-function otrosDeTurnoComoYo() {
-  const mis = misEspecialidades();
-  if (!mis.length) return [];
-  return medicos.filter(m => m.medico !== miMedico &&
-    deTurno.indexOf(m.medico) !== -1 &&
-    m.especialidades.map(normEsp).some(e => mis.indexOf(e) !== -1));
-}
-
 function pintarTurno() {
   const b = document.getElementById('btnTurno');
   // Sin identidad, o si es especialista, el botón no tiene sentido: él no
@@ -755,37 +735,6 @@ function bienvenidaListo() {
   ponerTurno(true).then(cerrarBienvenida);
 }
 
-// ── Invitación a instalar ────────────────────────────────────
-// Al empezar el turno no hay ninguna notificación que tocar (nadie marcó
-// turno todavía, así que no se mandó nada). La única entrada rápida es el
-// ícono en la pantalla de inicio — y casi nadie sabe cómo ponerlo.
-let instalarCerrado = false;
-try { instalarCerrado = localStorage.getItem('ac_instalar_no') === '1'; } catch (e) {}
-
-function yaInstalada() {
-  try {
-    return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  } catch (e) { return false; }
-}
-
-function cerrarInstalar() {
-  instalarCerrado = true;
-  try { localStorage.setItem('ac_instalar_no', '1'); } catch (e) {}
-  renderSala();
-}
-
-function avisoInstalar() {
-  if (instalarCerrado || yaInstalada()) return '';
-  if (!window.matchMedia('(max-width:640px)').matches) return '';   // solo celular
-  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const comoSeHace = iOS
-    ? 'toca <b>Compartir</b> y luego <b>Añadir a pantalla de inicio</b>'
-    : 'abre el menú <b>⋮</b> y toca <b>Añadir a pantalla de inicio</b>';
-  return '<div class="instalar"><span>📲 Para entrar de una al empezar tu turno, ' +
-         comoSeHace + '.</span>' +
-         '<button class="x" onclick="cerrarInstalar()" title="No mostrar más">✕</button></div>';
-}
-
 // ── ¿Cuál de las dos filas primero? ──────────────────────────
 // Solo aplica al médico que atiende las dos (Tatiana es gastro y general).
 //
@@ -829,20 +778,10 @@ function renderSala() {
   const verFilas = misFilas();
   const filasVisibles = FILAS.filter(f => verFilas.indexOf(f.key) !== -1);
 
-  // Fuera de turno no le llega NADA. Hay que decírselo acá, porque si no
-  // el silencio se confunde con "no ha llegado nadie".
-  let html = avisoInstalar();
-  // Solo al general: al especialista le llegan sus citas siempre, decirle
-  // que está "fuera de turno" sería mentirle.
-  if (miMedico && soyGeneral() && !estoyDeTurno()) {
-    const otros = otrosDeTurnoComoYo();
-    html += '<div class="fuera-aviso">⚠️ Fuera de turno: no te llegan avisos. ' +
-      (otros.length
-        ? 'Cubre ' + esc(otros.map(m => m.medico).join(', ')) + '.'
-        : 'Marca entrada y te llega lo que está esperando.') + '</div>';
-  }
-
-  html += '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
+  // Acá había un aviso de "fuera de turno: no te llegan avisos". Se quitó:
+  // era un cartel sin salida. Al que no marcó turno hay que darle el botón,
+  // no el susto — de eso se encarga el pop-up de bienvenida.
+  let html = '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
 
   // Cuando un médico tiene las dos filas (Tatiana es gastro Y general),
   // hay que decirle cuál llamar primero. Ver decidirEntreFilas.
