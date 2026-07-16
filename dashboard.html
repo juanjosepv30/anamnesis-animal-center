@@ -196,6 +196,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .calling-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .calling-t{font-size:1.1rem;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums}
 .calling-m{font-size:.73rem;color:var(--tm);margin-top:2px}
+.calling-med{font-weight:700;color:var(--p)}
 .calling-btns{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
 .btn-again{border:1.5px solid #86efac;background:var(--wh);color:#15803d;border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .btn-again:hover{background:#f0fdf4}
@@ -747,7 +748,11 @@ function renderSala() {
       body += '<div class="calling"><div class="calling-top">'+
         '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
           '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
-          '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
+          '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+
+            // Quién lo atiende: de esto depende a quién se le avisa el
+            // próximo paciente, así que tiene que estar a la vista.
+            (r.calledBy ? '<br><span class="calling-med">👤 '+esc(r.calledBy)+'</span>' : '')+
+          '</div>'+
         '</div>'+
         '<div class="calling-btns">'+
           '<button class="btn-again" onclick="llamarDeNuevo('+r.rowIndex+')">🔔 Llamar otra vez</button>'+
