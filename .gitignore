@@ -4,3 +4,8 @@ img/logo animal center*.jpg
 
 # Credenciales de clasp - NUNCA subir
 .clasprc.json
+
+# El backend NO va al repo: es publico (GitHub Pages lo exige) y aca
+# vivirian los tokens. El codigo sigue en la carpeta local y clasp lo
+# sube directo a Apps Script.
+apps-script/
