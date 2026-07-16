@@ -204,8 +204,15 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .calling-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .calling-t{font-size:1.1rem;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums}
 .calling-m{font-size:.73rem;color:var(--tm);margin-top:2px}
-.calling-med{font-weight:700;color:var(--p)}
 .calling-btns{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+/* Llamar otra vez y Ausente van juntos: los dos son "todavía no pasó".
+   Atendido va abajo y solo: es el que cierra el caso. */
+.calling-fila1{display:flex;gap:5px}
+.calling-fila1 .btn-again{flex:1}
+.btn-aus{border:1.5px solid var(--bd);background:var(--wh);color:var(--tm);border-radius:7px;
+  padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;
+  font-family:'DM Sans',sans-serif;white-space:nowrap}
+.btn-aus:hover{border-color:#f59e0b;color:#b45309;background:#fffbeb}
 .btn-again{border:1.5px solid #86efac;background:var(--wh);color:#15803d;border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .btn-again:hover{background:#f0fdf4}
 .btn-done{border:1.5px solid #86efac;background:var(--wh);color:#15803d;border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
@@ -876,7 +883,13 @@ function renderSala() {
   filasVisibles.forEach(function(f) {
     const mine     = hoy.filter(r => recordFila(r) === f.key);
     const esperando= mine.filter(r => (r.estadoTurno || 'esperando') === 'esperando');
-    const llamando = mine.filter(r => r.estadoTurno === 'llamando');
+    // El paciente que está atendiendo un médico es asunto suyo: al
+    // compañero solo le sirve saber a quién sigue. Verlo en la pantalla de
+    // otro es ruido y encima invita a pisarle el turno.
+    // Si no hay identidad ("ver todos") se muestran todos, y si nadie firmó
+    // el llamado tampoco lo escondemos: sería peor perderlo de vista.
+    const llamando = mine.filter(r => r.estadoTurno === 'llamando' &&
+      (!miMedico || !r.calledBy || r.calledBy === miMedico));
     // Los que ya pasaron hoy por esta fila: sirven para mantener la
     // proporción del intercalado a lo largo del día.
     const yaLlamados = mine.filter(r => r.estadoTurno === 'llamando' || r.estadoTurno === 'atendido');
@@ -893,19 +906,22 @@ function renderSala() {
               '<span class="fila-cv">'+(isCol ? '▸' : '▾')+'</span>'+
             '</span></div>';
 
-    // Turnos que se están llamando ahora
+    // El paciente que estoy atendiendo. Solo lo veo yo (ver el filtro de
+    // arriba), así que ya no hace falta el nombre del médico en la tarjeta.
     llamando.forEach(function(r) {
+      // Ausente es la salida para el que no apareció: sin esto el médico
+      // queda trabado y termina marcando "Atendido" a alguien que nunca
+      // atendió, que es peor — ensucia el dato y no queda registro real.
       body += '<div class="calling"><div class="calling-top">'+
         '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
           '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
-          '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+
-            // Quién lo atiende: de esto depende a quién se le avisa el
-            // próximo paciente, así que tiene que estar a la vista.
-            (r.calledBy ? '<br><span class="calling-med">👤 '+esc(r.calledBy)+'</span>' : '')+
-          '</div>'+
+          '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
         '</div>'+
         '<div class="calling-btns">'+
-          '<button class="btn-again" onclick="llamarDeNuevo('+r.rowIndex+')">🔔 Llamar otra vez</button>'+
+          '<div class="calling-fila1">'+
+            '<button class="btn-again" onclick="llamarDeNuevo('+r.rowIndex+')">🔔 Llamar otra vez</button>'+
+            '<button class="btn-aus" onclick="markAusente('+r.rowIndex+')">Ausente</button>'+
+          '</div>'+
           '<button class="btn-done" onclick="markAtendido('+r.rowIndex+')">✓ Atendido</button>'+
         '</div></div></div>';
     });
@@ -1053,6 +1069,24 @@ function llamarDeNuevo(rowIndex) {
         if (rec) rec.calledAt = new Date().toISOString();
         showToast('🔔 Llamado otra vez' + (room ? ' a ' + room : ''));
       } else showToast('❌ Error al llamar');
+    }).catch(function(){ showToast('❌ Error de conexión'); });
+}
+
+// No apareció. Vuelve a la cola de recepción como 'ausente' (desde ahí lo
+// pueden reactivar) y libera al médico para llamar al siguiente.
+// Importante que exista: si no, el médico marca "Atendido" a alguien que
+// nunca vio, y ahí el dato deja de servir para nada.
+function markAusente(rowIndex) {
+  const rec = allRecords.find(x => x.rowIndex === rowIndex);
+  if (!confirm('¿' + ((rec && rec.petName) || 'Este paciente') + ' no se presentó?')) return;
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'ausente' }) })
+    .then(r => r.json()).then(function(res){
+      if (res && res.ok) {
+        if (rec) rec.estadoTurno = 'ausente';
+        renderSala();
+        updateCounts();
+        showToast('Marcado como ausente · recepción puede reactivarlo');
+      } else showToast('❌ Error');
     }).catch(function(){ showToast('❌ Error de conexión'); });
 }
 
