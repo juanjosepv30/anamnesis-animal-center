@@ -169,18 +169,18 @@ function sumarMinutos(hhmm, mins) {
   return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
 }
 
-// ¿Este servicio lo atiende un especialista? Solo ellos trabajan con
-// agenda. Espejo de recordFila en dashboard.html: si una dice que el
-// certificado de viaje es de especialista y la otra que no, recepción y
-// médicos ven cosas distintas del mismo paciente.
-function esDeEspecialista(service, specialty) {
+// ¿Este servicio se agenda? Ojo: NO es lo mismo que "lo atiende un
+// especialista". Rayos X los hace la Dra. Angie y los viajeros el Dr.
+// Freddy —los dos son especialistas— pero esos servicios no se reservan
+// por hora: el cliente llega y se atiende. Por eso esta función NO es
+// espejo de recordFila, que responde otra pregunta (a qué cola va).
+function trabajaConAgenda(service, specialty) {
   var s = String(service || '').toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '');
   if (s.indexOf('especial') !== -1) return true;
   if (s.indexOf('control') !== -1 && specialty) return true;
-  if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return true;
-  if (s.indexOf('viajer') !== -1) return true;
-  return false;   // general, vacunación, inyectología, control general
+  return false;   // rayos x, ecografía, viajero, general, vacunación,
+                  // inyectología y control general: por orden de llegada
 }
 
 // Con cita → se pide su hora. Sin cita → se pregunta si hay una antes.
@@ -188,7 +188,7 @@ function esDeEspecialista(service, specialty) {
 function pintarTipoCita() {
   var svc  = document.getElementById('regService').value;
   var spec = (document.getElementById('regSpec').value || '').trim();
-  var conAgenda = esDeEspecialista(svc, spec);
+  var conAgenda = trabajaConAgenda(svc, spec);
 
   // Sin agenda no hay nada que preguntar: entra por orden de llegada.
   document.getElementById('boxTieneCita').style.display = conAgenda ? '' : 'none';
