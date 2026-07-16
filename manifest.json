@@ -1,0 +1,15 @@
+{
+  "name": "Animal Center — Médicos",
+  "short_name": "AC Médicos",
+  "description": "Sala de espera y anamnesis de Animal Center",
+  "start_url": "./dashboard.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf7ff",
+  "theme_color": "#7c3aed",
+  "icons": [
+    { "src": "img/icono-app.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" },
+    { "src": "img/icono-app.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+  ]
+}

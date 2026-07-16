@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Médicos — Animal Center</title>
+<!-- El médico llega a la clínica y necesita entrar de una. No puede depender
+     de una notificación: si nadie marcó turno todavía, no hay ningún mensaje
+     que tocar. Con esto el dashboard se agrega a la pantalla de inicio y
+     queda como cualquier otra app: un toque y adentro. -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7c3aed">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="AC Médicos">
+<link rel="apple-touch-icon" href="img/icono-app.png">
+<link rel="icon" href="img/icono-app.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -120,6 +132,14 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .turno-tgl.on{border-color:#16a34a;background:#f0fdf4;color:#15803d}
 .turno-tgl.on::before{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.2)}
 .turno-tgl:disabled{opacity:.5;cursor:wait}
+/* Invitación a instalar. Sin el ícono en la pantalla de inicio, el médico
+   no tiene forma rápida de entrar a marcar turno. */
+.instalar{background:var(--pl);border:1.5px solid #c4b5fd;color:var(--pd);border-radius:12px;
+  padding:10px 12px;margin:0 0 12px;font-size:.8rem;font-weight:600;line-height:1.5;
+  display:flex;align-items:center;gap:10px}
+.instalar b{font-weight:800}
+.instalar .x{margin-left:auto;flex-shrink:0;background:none;border:none;color:var(--p);
+  font-size:1.1rem;font-weight:800;cursor:pointer;padding:0 4px;font-family:'DM Sans',sans-serif}
 /* Modo prueba: imposible de ignorar. Si queda encendido sin querer, los
    médicos dejan de recibir avisos y nadie se entera. */
 .prueba-aviso{background:#dc2626;color:#fff;text-align:center;padding:9px 16px;
@@ -556,6 +576,37 @@ function deducirMedico() {
   }
 }
 
+// ── Invitación a instalar ────────────────────────────────────
+// Al empezar el turno no hay ninguna notificación que tocar (nadie marcó
+// turno todavía, así que no se mandó nada). La única entrada rápida es el
+// ícono en la pantalla de inicio — y casi nadie sabe cómo ponerlo.
+let instalarCerrado = false;
+try { instalarCerrado = localStorage.getItem('ac_instalar_no') === '1'; } catch (e) {}
+
+function yaInstalada() {
+  try {
+    return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  } catch (e) { return false; }
+}
+
+function cerrarInstalar() {
+  instalarCerrado = true;
+  try { localStorage.setItem('ac_instalar_no', '1'); } catch (e) {}
+  renderSala();
+}
+
+function avisoInstalar() {
+  if (instalarCerrado || yaInstalada()) return '';
+  if (!window.matchMedia('(max-width:640px)').matches) return '';   // solo celular
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const comoSeHace = iOS
+    ? 'toca <b>Compartir</b> y luego <b>Añadir a pantalla de inicio</b>'
+    : 'abre el menú <b>⋮</b> y toca <b>Añadir a pantalla de inicio</b>';
+  return '<div class="instalar"><span>📲 Para entrar de una al empezar tu turno, ' +
+         comoSeHace + '.</span>' +
+         '<button class="x" onclick="cerrarInstalar()" title="No mostrar más">✕</button></div>';
+}
+
 // ── Render de la sala de espera ──────────────────────────────
 function renderSala() {
   const today = new Date();
@@ -567,7 +618,7 @@ function renderSala() {
 
   // Fuera de turno no le llega NADA. Hay que decírselo acá, porque si no
   // el silencio se confunde con "no ha llegado nadie".
-  let html = '';
+  let html = avisoInstalar();
   if (miMedico && !estoyDeTurno()) {
     const otros = otrosDeTurnoComoYo();
     html += '<div class="fuera-aviso">⚠️ Fuera de turno: no te llegan avisos. ' +
