@@ -565,12 +565,19 @@ function pintarTurno() {
     : 'No te estamos avisando. Toca para entrar de turno.';
 }
 
+// El botón de arriba alterna. La bienvenida NO: su botón dice "estoy de
+// turno" y eso jamás puede darte de baja. Por eso el estado va explícito y
+// no se deduce de dónde estabas.
+function toggleTurno() {
+  return ponerTurno(!estoyDeTurno());
+}
+
 // Devuelve la promesa para que la bienvenida pueda esperar a que termine
 // antes de cerrarse: si no, cierra el pop-up y el médico no sabe si quedó.
-function toggleTurno() {
+function ponerTurno(quiero) {
   if (!miMedico) return Promise.resolve();
+  if (quiero === estoyDeTurno()) return Promise.resolve();   // ya está así
   const b = document.getElementById('btnTurno');
-  const quiero = !estoyDeTurno();
   b.disabled = true;
   return fetch(API_URL, {
     method: 'POST',
@@ -660,6 +667,13 @@ function pintarBienvenida() {
 
 function bienvenidaEligio(v) {
   setMiMedico(v);
+  // Si ya estaba de turno (volvió a abrir la app, se le cerró sola, entró
+  // desde el WhatsApp), no hay nada que preguntarle: ya está trabajando.
+  if (miMedico && estoyDeTurno()) {
+    cerrarBienvenida();
+    showToast('Ya estabas de turno, ' + miMedico.replace(/^Dra?\.\s*/, ''));
+    return;
+  }
   pintarBienvenida();
 }
 
@@ -672,7 +686,8 @@ function bienvenidaListo() {
   const b = document.getElementById('bienvBtn');
   b.disabled = true;
   b.textContent = 'Entrando...';
-  toggleTurno().then(cerrarBienvenida);
+  // ENTRAR, nunca alternar: este botón dice "estoy de turno".
+  ponerTurno(true).then(cerrarBienvenida);
 }
 
 // ── Invitación a instalar ────────────────────────────────────

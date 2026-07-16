@@ -339,7 +339,7 @@ var ILLO_MAP = {
   sp_nut_1:'apple', sp_nut_2:'apple', sp_nut_3:'apple',
   sp_oft_1:'eye', sp_oft_2:'eye', sp_oft_3:'eye',
   sp_img_1:'xray', sp_img_3:'xray',
-  rx_estudio:'xray', rx_motivo:'notepad', rx_orden:'folder', rx_ayuno:'food',
+  rx_estudio:'xray', rx_zona:'magnifier', rx_ayuno:'food', rx_orino:'toilet', rx_orino_cuando:'calendar',
   sp_ter_1:'pawband', sp_ter_2:'pawband', sp_ter_3:'pawband',
   sp_nef_3:'drop',
   sp_ort_1:'bone', sp_ort_2:'bone', sp_ort_3:'bone', sp_ort_4:'bone',
@@ -394,16 +394,22 @@ var QUESTIONS = [
     {label:'Los dos', value:'Los dos'},
     {label:'No sé', value:'No sé'}
   ]},
-  {id:'rx_motivo', group:'RAYOS X Y ECOGRAFÍA', q:'¿Por qué se lo indicaron?', sub:'En pocas palabras, para saber qué buscamos.', type:'textarea', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Motivo del estudio', placeholder:'Ej: cojea de la pata trasera, se cayó, control de una masa...'},
-  {id:'rx_orden', group:'RAYOS X Y ECOGRAFÍA', q:'¿Traes la orden médica?', type:'single', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Orden médica', options:[
-    {label:'Sí', value:'Si'},
-    {label:'No', value:'No'},
-    {label:'Me la ordenaron aquí', value:'Ordenada aquí'}
-  ]},
-  {id:'rx_ayuno', group:'RAYOS X Y ECOGRAFÍA', q:'¿Está en ayuno?', sub:'Para la ecografía de abdomen suele pedirse.', type:'single', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Ayuno', options:[
+  {id:'rx_zona', group:'RAYOS X Y ECOGRAFÍA', q:'¿Qué zona van a evaluar?', type:'text', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Zona a evaluar', placeholder:'Ej: abdomen, cadera, tórax, pata trasera...'},
+  {id:'rx_ayuno', group:'RAYOS X Y ECOGRAFÍA', q:'¿Está en ayuno?', type:'single', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Ayuno', options:[
     {label:'Sí', value:'Si'},
     {label:'No', value:'No'},
     {label:'No sabía que debía estarlo', value:'No sabía'}
+  ]},
+  {id:'rx_orino', group:'RAYOS X Y ECOGRAFÍA', q:'¿Ha orinado?', type:'single', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Ha orinado', options:[
+    {label:'Sí', value:'Si'},
+    {label:'No', value:'No'}
+  ]},
+  {id:'rx_orino_cuando', group:'RAYOS X Y ECOGRAFÍA', q:'¿Hace cuánto orinó?', type:'single', onlyServices:['Rayos X y Ecografía'], branch:true, label:'Última orinada',
+   conditional:'rx_orino===Si', options:[
+    {label:'Hace menos de 1 hora', value:'Menos de 1 hora'},
+    {label:'Entre 1 y 3 horas', value:'1 a 3 horas'},
+    {label:'Hace más de 3 horas', value:'Más de 3 horas'},
+    {label:'No sé', value:'No sé'}
   ]},
 
   // ── VIAJERO (solo ese servicio) ──
