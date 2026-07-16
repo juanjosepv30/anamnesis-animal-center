@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Animal Center — Médicos</title>
+<!-- PUENTE. El dashboard vive en /doctores; esto solo redirige.
+     No se puede borrar: la plantilla de WhatsApp aprobada por Meta
+     apunta acá, y Meta solo deja editar una plantilla cada 24 horas.
+     Se puede borrar cuando la plantilla apunte a /doctores/ y no queden
+     mensajes viejos dando vueltas (los mensajes de WhatsApp no caducan:
+     un médico puede abrir uno de la semana pasada).
+     El ?t=E-04 se conserva: es lo que identifica al paciente y al médico
+     que abre desde la notificación. -->
+<link rel="canonical" href="/doctores/">
+<script>
+  location.replace('/doctores/' + (location.search || '') + location.hash);
+</script>
+<meta http-equiv="refresh" content="0; url=/doctores/">
+<style>
+  body{font-family:system-ui,sans-serif;background:#faf7ff;color:#6b5c7e;
+       display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}
+  a{color:#7c3aed;font-weight:700}
+</style>
+</head>
+<body>
+  <div><p>Llevándote a <a href="/doctores/">la sala de espera</a>…</p></div>
+</body>
+</html>
