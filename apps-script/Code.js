@@ -422,6 +422,66 @@ function medicosOcupados() {
   } catch (e) { return []; }
 }
 
+// Qué especialidades cubre un médico, según la hoja.
+function especialidadesDe(medico) {
+  try {
+    var rows = getMedicosSheet().getDataRange().getValues(), esp = [];
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0]).trim() !== String(medico).trim()) continue;
+      var e = normEsp(rows[i][1]);
+      if (e && esp.indexOf(e) === -1) esp.push(e);
+    }
+    return esp;
+  } catch (e) { return []; }
+}
+
+// El aviso no se pierde: se aplaza. Cuando un médico marca entrada le
+// llega TODO lo que está esperando y le corresponde — lo que llegó
+// mientras no había nadie de turno, y lo que el turno anterior dejó sin
+// atender. Así el mensaje llega cuando de verdad puede hacer algo con él.
+function notificarPendientes(medico) {
+  try {
+    var mis = especialidadesDe(medico);
+    if (!mis.length) return 0;
+
+    // Su teléfono, solo si tiene el aviso activado en la hoja.
+    var rows = getMedicosSheet().getDataRange().getValues(), tel = '';
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0]).trim() !== String(medico).trim()) continue;
+      if (normEsp(rows[i][3]) !== 'si') continue;
+      var t = String(rows[i][2] || '').replace(/[^0-9]/g, '');
+      if (t) { tel = t; break; }
+    }
+    if (!tel) return 0;
+
+    var data = getSheet().getDataRange().getValues();
+    var hoy = dayKey(new Date()), mandados = 0;
+
+    for (var j = 1; j < data.length; j++) {
+      var r = data[j];
+      // Solo los que siguen esperando: si ya lo llamaron o ya lo
+      // atendieron, no hay nada que avisar.
+      if (String(r[COL.ESTADO] || 'esperando') !== 'esperando') continue;
+      var ts = r[COL.TIMESTAMP];
+      if (!ts || dayKey(new Date(ts)) !== hoy) continue;
+
+      // ¿Le toca a este médico?
+      var targets = destinatariosDe(r[COL.SERVICE], r[COL.SPECIALTY]);
+      var mio = targets.some(function(t2){ return t2 && mis.indexOf(t2) !== -1; });
+      if (!mio) continue;
+
+      waAvisarPaciente([tel], {
+        turno: r[COL.TURNO], petName: r[COL.PET_NAME], service: r[COL.SERVICE],
+        specialty: r[COL.SPECIALTY], complaint: r[COL.COMPLAINT]
+      });
+      mandados++;
+    }
+    return mandados;
+  } catch (e) {
+    return 0;   // que un fallo de WhatsApp nunca impida marcar turno
+  }
+}
+
 // ── Turnos del día ───────────────────────────────────────────
 // Quién está trabajando AHORA. Vive en ScriptProperties junto con el día:
 // si el día no es hoy, la lista se ignora, así el turno se apaga solo cada
@@ -449,7 +509,14 @@ function setTurno(medico, activo) {
     PropertiesService.getScriptProperties()
       .setProperty('TURNOS', JSON.stringify({ dia: dayKey(new Date()), medicos: lista }));
     bumpVersion();
-    return { ok: true, deTurno: lista };
+
+    // Al entrar: le mandamos lo que quedó esperando mientras no estaba.
+    // Se hace DESPUÉS de guardar el turno y fuera del camino crítico: si
+    // WhatsApp falla, el médico igual quedó de turno.
+    var pendientes = 0;
+    if (activo && i === -1) pendientes = notificarPendientes(medico);
+
+    return { ok: true, deTurno: lista, pendientes: pendientes };
   } catch (err) {
     return { ok: false, error: String(err) };
   } finally {
@@ -523,28 +590,27 @@ function medicosQueAvisar(service, specialty) {
     cand.push({ medico: med, tel: tel });
   }
 
-  // Se filtra en dos escalones, y cada uno tiene su red de seguridad: si un
-  // filtro dejaría a NADIE, no se aplica. Preferimos molestar de más que
-  // dejar a un paciente esperando sin que nadie se entere. El sistema nunca
-  // se queda mudo.
-
-  // 1) Turno: solo los que marcaron entrada.
-  var deTurno = getTurnos();
-  var enTurno = cand.filter(function(c){ return deTurno.indexOf(c.medico) !== -1; });
-  var porTurno = enTurno.length > 0;
-  var elegidos = porTurno ? enTurno : cand;
-
-  // 2) Libres: al que ya está atendiendo no lo molestamos — cuando cierre
-  //    su paciente va a ver la cola en el dashboard.
+  // Se avisa SOLO a quien puede hacer algo con el mensaje: de turno y libre.
+  // Sin redes de seguridad a propósito. Un aviso que llega cuando no podés
+  // atender no sirve de nada: es ruido, y el ruido hace que se ignoren los
+  // avisos que sí importan.
+  //
+  // ¿Y si no queda nadie? No se manda nada, y no se pierde nada: el paciente
+  // sigue en el dashboard y en la pantalla de la sala. El aviso no se pierde,
+  // se APLAZA — apenas un médico marque entrada le llega todo lo que está
+  // esperando (ver notificarPendientes). Y el que está atendiendo va a ver la
+  // cola cuando cierre a su paciente, porque está mirando el dashboard justo
+  // en ese momento.
+  var deTurno  = getTurnos();
   var ocupados = medicosOcupados();
-  var libres = elegidos.filter(function(c){ return ocupados.indexOf(c.medico) === -1; });
-  var porLibre = libres.length > 0 && libres.length < elegidos.length;
-  if (libres.length) elegidos = libres;
+
+  var elegidos = cand.filter(function(c){
+    return deTurno.indexOf(c.medico) !== -1 && ocupados.indexOf(c.medico) === -1;
+  });
 
   return {
     elegidos: elegidos, candidatos: cand,
-    porTurno: porTurno, porLibre: porLibre,
-    todosOcupados: libres.length === 0
+    hayDeTurno: cand.some(function(c){ return deTurno.indexOf(c.medico) !== -1; })
   };
 }
 
@@ -570,12 +636,11 @@ function quienAvisa(service, specialty) {
       ocupadosAhora: medicosOcupados(),
       modoPrueba: getTelPrueba() ? 'ENCENDIDO — nada llega a los médicos' : 'apagado',
       seLeAvisaA: r.elegidos.map(function(c){ return c.medico; }),
-      motivo: [
-        r.porTurno ? 'Solo los que marcaron turno.'
-                   : 'Nadie marcó turno → se avisa a todos (red de seguridad).',
-        r.todosOcupados ? 'Todos están ocupados → se les avisa igual (red de seguridad).'
-                        : (r.porLibre ? 'Se excluyó a los que están atendiendo.' : 'Todos estaban libres.')
-      ].join(' ')
+      motivo: r.elegidos.length
+        ? 'Se avisa a los que están de turno y libres.'
+        : (r.hayDeTurno
+            ? 'Los de turno están todos atendiendo. No se manda nada: van a ver la cola al cerrar su paciente.'
+            : 'Nadie de este grupo marcó turno. No se manda nada: el aviso queda pendiente y le llega al primero que marque entrada.')
     };
   } catch (err) {
     return { ok: false, error: String(err) };
@@ -583,29 +648,37 @@ function quienAvisa(service, specialty) {
 }
 
 // ── Aviso de paciente nuevo ──────────────────────────────────
+// Arma y manda el mensaje de un paciente. Único lugar donde se construye:
+// el aviso del momento y el que se manda al marcar entrada tienen que ser
+// idénticos, si no el médico ve dos formatos distintos del mismo hecho.
+// El idioma debe coincidir EXACTO con el de la plantilla en Meta
+// (la creaste como Spanish (COL) → es_CO). El último parámetro llena el
+// botón "Ver paciente", que abre el dashboard en la anamnesis de ese turno.
+function waAvisarPaciente(phones, p) {
+  // En modo prueba todos los avisos caen en el mismo teléfono: mandamos
+  // uno solo, si no llegarían tantos mensajes repetidos como médicos.
+  if (getTelPrueba() && phones.length) phones = [phones[0]];
+
+  var quien  = p.petName || 'Paciente';
+  var svc    = p.service || '';
+  if (p.specialty) svc += ' · ' + p.specialty;
+  var motivo = p.complaint ? String(p.complaint).slice(0, 120) : 'Aún sin anamnesis';
+
+  phones.forEach(function(tel) {
+    waSendTemplate(tel, 'nuevo_paciente', 'es_CO',
+                   [p.turno || '—', quien, svc || '—', motivo],
+                   p.turno || '');
+  });
+}
+
 // Nunca debe romper el envío del formulario: si falla, sigue de largo.
 function notifyNewPatient(data, turno) {
   try {
     var phones = getDoctorPhones(data.service, data.specialty);
-    if (!phones.length) return;
-
-    // En modo prueba todos los avisos caen en el mismo teléfono: mandamos
-    // uno solo, si no llegarían tantos mensajes repetidos como médicos.
-    if (getTelPrueba()) phones = [phones[0]];
-
-    var quien = data.petName || 'Paciente';
-    var svc   = data.service || '';
-    if (data.specialty) svc += ' · ' + data.specialty;
-    var motivo = data.complaint ? String(data.complaint).slice(0, 120) : 'Aún sin anamnesis';
-
-    // El idioma debe coincidir EXACTO con el de la plantilla en Meta.
-    // La creaste como Spanish (COL) → código es_CO.
-    // El último parámetro llena el botón "Ver paciente", que abre el
-    // dashboard directo en la anamnesis de este turno.
-    phones.forEach(function(tel) {
-      waSendTemplate(tel, 'nuevo_paciente', 'es_CO',
-                     [turno || '—', quien, svc || '—', motivo],
-                     turno || '');
+    if (!phones.length) return;   // nadie de turno y libre → queda pendiente
+    waAvisarPaciente(phones, {
+      turno: turno, petName: data.petName, service: data.service,
+      specialty: data.specialty, complaint: data.complaint
     });
   } catch (err) {
     // Silencioso a propósito: un fallo de WhatsApp no puede tumbar la anamnesis.

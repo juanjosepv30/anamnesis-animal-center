@@ -512,8 +512,10 @@ function toggleTurno() {
       deTurno = res.deTurno || [];
       pintarTurno();
       renderSala();
+      const p = res.pendientes || 0;
       showToast(quiero
-        ? 'Entraste de turno — te avisamos por WhatsApp'
+        ? (p ? 'Entraste de turno — te mandamos ' + p + ' paciente' + (p > 1 ? 's' : '') + ' que estaba' + (p > 1 ? 'n' : '') + ' esperando'
+             : 'Entraste de turno — te avisamos por WhatsApp')
         : 'Saliste de turno — no te vamos a molestar');
     })
     .catch(function(){ showToast('Error de conexión'); })
@@ -568,9 +570,10 @@ function renderSala() {
   let html = '';
   if (miMedico && !estoyDeTurno()) {
     const otros = otrosDeTurnoComoYo();
-    html += '<div class="fuera-aviso">' + (otros.length
-      ? '⚠️ Fuera de turno: no te avisamos. Cubre ' + esc(otros.map(m => m.medico).join(', ')) + '.'
-      : '⚠️ Fuera de turno, pero nadie más marcó: te seguimos avisando.') + '</div>';
+    html += '<div class="fuera-aviso">⚠️ Fuera de turno: no te llegan avisos. ' +
+      (otros.length
+        ? 'Cubre ' + esc(otros.map(m => m.medico).join(', ')) + '.'
+        : 'Marca entrada y te llega lo que está esperando.') + '</div>';
   }
 
   html += '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
