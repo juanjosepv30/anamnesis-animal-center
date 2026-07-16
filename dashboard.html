@@ -193,16 +193,13 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .sug-si{background:#f0fdf4;color:#15803d;border:1.5px solid #86efac}
 .sug-no{background:var(--bg);color:var(--tm);border:1.5px solid var(--bd)}
 .next-baja{opacity:.75}
-/* Freno al que dejó un paciente sin cerrar. No es un botón deshabilitado
-   y ya: trae el atajo para cerrarlo, porque el "no" sin salida molesta. */
-.cerrar-primero{display:flex;align-items:center;gap:8px;margin-top:9px;background:#fffbeb;
-  border:1.5px solid #fde68a;border-radius:9px;padding:7px 9px;font-size:.74rem;
-  font-weight:600;color:#92400e;flex-wrap:wrap}
-.cerrar-primero b{font-weight:800}
-.cerrar-primero .btn-done{margin-left:auto;flex-shrink:0}
 .next-ctrls{display:flex;gap:6px;margin-top:9px}
 .next-ctrls select{flex:1;border:1.5px solid var(--bd);border-radius:8px;padding:7px 8px;font-size:.76rem;font-family:'DM Sans',sans-serif;background:var(--wh);outline:none;min-width:0}
 .btn-call{border:none;border-radius:8px;padding:7px 13px;color:#fff;font-size:.76rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+/* Llamar apagado: quedó un paciente sin cerrar. No lleva texto que lo
+   explique — su tarjeta está justo arriba con su propio ✓ Atendido. */
+.btn-call.apagado{background:var(--bg2);color:var(--ts);cursor:not-allowed;opacity:.7}
+.next-ctrls select:disabled{opacity:.5;cursor:not-allowed}
 .calling{border:1.5px solid #86efac;background:#f0fdf4;border-radius:11px;padding:10px 12px;margin-bottom:8px}
 .calling-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .calling-t{font-size:1.1rem;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums}
@@ -946,15 +943,16 @@ function renderSala() {
           '<div class="next-espera'+claseEspera(next.timestamp)+'">⏳ Esperando '+fmtEspera(next.timestamp).replace(/^hace /,'')+'</div>'+
           (next.complaint ? '<div class="next-motivo">“'+esc(String(next.complaint).slice(0,90))+(String(next.complaint).length>90?'…':'')+'”</div>' : '')+
         '</div>'+
-        (miPacienteAbierto
-          // Tiene un paciente abierto: primero lo cierra. Le damos el
-          // atajo para hacerlo, no solo el "no".
-          ? '<div class="cerrar-primero">Primero cierra a <b>'+esc(miPacienteAbierto.petName||miPacienteAbierto.turno)+'</b>'+
-            '<button class="btn-done" onclick="markAtendido('+miPacienteAbierto.rowIndex+')">✓ Atendido</button></div>'
-          : '<div class="next-ctrls"><select id="room-'+f.key+'">'+opts+'</select>'+
-            '<button class="btn-call" style="background:'+nc+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')">🔔 Llamar</button>'+
-            '</div>')+
-        '</div>';
+        // Con un paciente sin cerrar, Llamar queda apagado. No hace falta
+        // explicarlo: su tarjeta está justo arriba con su propio ✓ Atendido.
+        '<div class="next-ctrls">'+
+          '<select id="room-'+f.key+'"'+(miPacienteAbierto?' disabled':'')+'>'+opts+'</select>'+
+          '<button class="btn-call'+(miPacienteAbierto?' apagado':'')+'"'+
+            (miPacienteAbierto
+              ? ' disabled title="Cierra primero a '+esc(miPacienteAbierto.petName||miPacienteAbierto.turno)+'"'
+              : ' style="background:'+nc+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')"')+
+          '>🔔 Llamar</button>'+
+        '</div></div>';
     } else {
       body += '<div class="q-empty">Nadie esperando</div>';
     }
