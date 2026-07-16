@@ -94,8 +94,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
   <div class="wrap">
     <div class="card">
-      <div class="card-t">Registrar llegada de agendado</div>
-      <div class="card-sub">Buscá al paciente en Vetesoft (validá contra el calendar) y regístralo en la sala.</div>
+      <div class="card-t">Registrar llegada</div>
+      <div class="card-sub">Busca al paciente en Vetesoft, valida contra el calendar y regístralo en la sala. Sirve para los que tienen cita y para los que no.</div>
       <div class="search-row">
         <input type="text" id="qOwner" placeholder="Nombre del dueño">
         <input type="text" id="qPet" placeholder="Nombre de la mascota">
@@ -167,6 +167,21 @@ function sumarMinutos(hhmm, mins) {
   if (p.length !== 2) return '';
   var t = parseInt(p[0],10)*60 + parseInt(p[1],10) + mins;
   return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
+}
+
+// Con cita → se pide su hora. Sin cita → se pregunta si hay una antes.
+// Mostrar los dos campos a la vez invita a llenar el que no es.
+function pintarTipoCita() {
+  var conCita = document.getElementById('regAgendado').value === 'si';
+  document.getElementById('boxHora').style.display    = conCita ? '' : 'none';
+  document.getElementById('boxEsperar').style.display = conCita ? 'none' : '';
+  document.querySelector('.btn-primary').textContent  = conCita
+    ? 'Registrar como agendado →'
+    : 'Registrar sin cita →';
+  if (conCita) {                       // limpiamos lo que no aplica
+    document.getElementById('regEsperar').value = '';
+    pintarDescongela();
+  }
 }
 
 // Le mostramos a recepción a qué hora se descongela, para que pueda
@@ -254,13 +269,20 @@ function pickResult(r) {
           '<option value="Viajero">Viajero / certificado</option>'+
         '</select></div>'+
         '<div><label>Especialidad / Doctor</label><select id="regSpec">'+buildSpecOptions()+'</select></div>'+
-        '<div><label>Hora de la cita</label><select id="regHora">'+buildHoraOptions(hh)+'</select></div>'+
-        // Solo se llena cuando el doctor tiene una cita ANTES que este
-        // cliente. Se pone la hora de esa cita —lo que se ve en el
-        // calendario— y el sistema le suma los 15 minutos de tolerancia.
-        // Pedirle a alguien que calcule "3:00 + 15" es pedirle que se
-        // equivoque un martes a las 6 de la tarde.
-        '<div><label>¿Hay una cita antes? <span class="lbl-tip">(hora de esa cita)</span></label>'+
+        // Los dos casos son excluyentes: o trae cita, o llega sin cita y
+        // puede quedar detrás de una. Antes el formulario marcaba agendado
+        // a todo el mundo, y eso le regalaba la prioridad de cita al que no
+        // la tenía.
+        '<div><label>¿Tiene cita?</label><select id="regAgendado" onchange="pintarTipoCita()">'+
+          '<option value="si">Sí, está en la agenda</option>'+
+          '<option value="no">No, el doctor aceptó atenderlo</option>'+
+        '</select></div>'+
+        '<div id="boxHora"><label>Hora de su cita</label><select id="regHora">'+buildHoraOptions(hh)+'</select></div>'+
+        // Para el SIN cita: se pone la hora de la cita que hay antes que él
+        // —lo que se ve en el calendario— y el sistema le suma los 15 min.
+        // Pedirle que calcule "3:00 + 15" es pedirle que se equivoque un
+        // martes a las 6 de la tarde.
+        '<div id="boxEsperar" style="display:none"><label>¿Hay una cita antes? <span class="lbl-tip">(hora de esa cita)</span></label>'+
           '<select id="regEsperar" onchange="pintarDescongela()">'+
           '<option value="">— No, puede pasar cuando le toque —</option>'+
           buildHoraOptions('')+'</select>'+
@@ -289,10 +311,15 @@ function doRegister() {
       owner: selected.owner || '',
       service: document.getElementById('regService').value,
       specialty: document.getElementById('regSpec').value.trim(),
-      horaCita: document.getElementById('regHora').value,
+      agendado: document.getElementById('regAgendado').value,
+      // La hora de cita solo viaja si de verdad tiene cita: si no, le
+      // estaríamos dando prioridad de agendado a alguien que llegó sin ella.
+      horaCita: document.getElementById('regAgendado').value === 'si'
+        ? document.getElementById('regHora').value : '',
       // Guardamos la hora YA sumada: el dashboard solo compara contra el
       // reloj, no tiene que saber de tolerancias.
       esperarHasta: (function(){
+        if (document.getElementById('regAgendado').value === 'si') return '';
         var c = document.getElementById('regEsperar').value;
         return c ? sumarMinutos(c, TOLERANCIA_CITA) : '';
       })()
