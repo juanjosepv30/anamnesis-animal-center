@@ -359,16 +359,10 @@ var QUESTIONS = [
     {emoji:'🐕', label:'Perro', value:'Canino'}, {emoji:'🐈', label:'Gato', value:'Felino'}
   ]},
 
-  // Peso — siempre, después de saber si es perro o gato (ilustración según especie)
-  {id:'weight', group:'PESO', q:'¿Cuánto pesa tu mascota?', type:'weight', illo:'scale', placeholder:'Ej: 8.5'},
-
   {id:'breed', group:'TU MASCOTA', q:'¿Cuál es su raza?', type:'text', onlyIfNotFound:true, illo:'animal', placeholder:'Ej: Golden Retriever, Mestizo', skippable:true},
   {id:'age', group:'TU MASCOTA', q:'¿Qué edad tiene?', type:'text', onlyIfNotFound:true, placeholder:'Ej: 3 años, 8 meses'},
   {id:'sex', group:'TU MASCOTA', q:'¿Es macho o hembra?', type:'single', onlyIfNotFound:true, options:[
     {label:'♂ Macho', value:'Macho'}, {label:'♀ Hembra', value:'Hembra'}
-  ]},
-  {id:'neutered', group:'TU MASCOTA', q:'¿Está castrado/a?', type:'single', options:[
-    {label:'Sí', value:'Si'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
   ]},
 
   // Servicio — siempre
@@ -381,6 +375,16 @@ var QUESTIONS = [
     {label:'🩻 Rayos X y Ecografía', value:'Rayos X y Ecografía'},
     {label:'✈️ Viajero / certificado', value:'Viajero'}
   ]},
+
+  // Castrado y peso van DESPUÉS del servicio, no antes.
+  // El peso partía en dos las preguntas de la mascota (especie → PESO →
+  // raza → edad), y el castrado caía justo antes de preguntar a qué venía.
+  // Ninguna de las dos ayuda a saber quién es la mascota: son datos que el
+  // médico necesita para atenderla. Acá, después del servicio, sí encajan.
+  {id:'neutered', group:'TU MASCOTA', q:'¿Está castrado/a?', type:'single', options:[
+    {label:'Sí', value:'Si'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
+  ]},
+  {id:'weight', group:'PESO', q:'¿Cuánto pesa tu mascota?', type:'weight', illo:'scale', placeholder:'Ej: 8.5'},
 
   // ── RAYOS X Y ECOGRAFÍA (solo ese servicio) ──
   // Cuestionario corto a propósito: el dueño viene con un estudio ya
