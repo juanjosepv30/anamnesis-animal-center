@@ -229,6 +229,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .mini{font-size:.6rem;font-weight:700;border-radius:99px;padding:1px 7px;white-space:nowrap}
 .mini-ag{background:#ede9fe;color:#6d28d9}
 .mini-esp{background:#e0f2fe;color:#0369a1}
+/* Congelado: recepción vio que hay una cita antes que este paciente. */
+.mini-frio{background:#fef3c7;color:#92400e;margin-left:4px}
+.q-frio{opacity:.6}
 /* max-width: un <select> se estira al ancho de su opción más larga y en el
    celular se sale de la pantalla ("Dra. Catherine Hernández — Endocrinología,
    Neonatología" mide más que un iPhone). */
@@ -476,14 +479,39 @@ function otroLoPuedeTomarPronto(r, hoy) {
   return medicos.some(m => m.medico !== miMedico && puedeTomar(m, r) && estaPorSalir(m.medico, hoy));
 }
 
+// La ventana de una cita: manda desde 15 min ANTES hasta 15 min DESPUÉS de
+// su hora. Fuera de eso entra por tiempo de espera, como todos.
+// El "después" es lo importante: antes la condición era solo "su hora ya
+// pasó", que se cumple para siempre — una cita de las 9 de la mañana
+// saltaba la cola a las 5 de la tarde. Llegar 3 horas tarde no puede darte
+// prioridad sobre alguien que lleva una hora sentado esperando.
+const TOLERANCIA_CITA = 15;   // minutos, antes y después
+
+function citaEnVentana(r) {
+  if (r.agendado !== 'si' || !r.horaCita) return false;
+  const t = horaToDate(r.horaCita);
+  if (!t) return false;
+  const min = (Date.now() - t.getTime()) / 60000;   // negativo = todavía no es la hora
+  return min >= -TOLERANCIA_CITA && min <= TOLERANCIA_CITA;
+}
+
+// Recepción le puso "no llamar antes de las HH:MM" porque hay una cita
+// antes que este paciente. Congelado hasta que esa ventana se cierre,
+// aunque haya llegado primero: su espera no le gana a una cita.
+function estaCongelado(r) {
+  if (!r.esperarHasta) return false;
+  const t = horaToDate(r.esperarHasta);
+  return !!t && Date.now() < t.getTime();
+}
+
 function pickNext(list, filaKey, yaLlamados) {
+  // Los congelados no se pueden llamar todavía.
+  list = list.filter(r => !estaCongelado(r));
   if (!list.length) return null;
 
-  // 1. Las citas programadas mandan a su hora
-  const soon = new Date(Date.now() + 15*60000);
-  const prog = list.filter(r => r.agendado === 'si' && r.horaCita)
+  // 1. Las citas mandan dentro de su ventana
+  const prog = list.filter(citaEnVentana)
     .map(r => ({ r: r, t: horaToDate(r.horaCita) }))
-    .filter(x => x.t && x.t <= soon)
     .sort((a,b) => a.t - b.t);
   if (prog.length) return prog[0].r;
 
@@ -981,9 +1009,13 @@ function renderSala() {
       const rc = serviceColor(r.service);
       const hora = fmtHora(r.horaCita);
       const ag = r.agendado === 'si' ? '<span class="mini mini-ag">'+(hora||'Agendado')+'</span>' : '';
-      body += '<div class="q-item q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
+      // Congelado: hay una cita antes que él. Hay que decirlo, o el médico
+      // ve a alguien esperando y no entiende por qué no puede llamarlo.
+      const frio = estaCongelado(r)
+        ? '<span class="mini mini-frio">⏸ hasta '+esc(fmtHora(r.esperarHasta))+'</span>' : '';
+      body += '<div class="q-item q-click'+(estaCongelado(r)?' q-frio':'')+'" onclick="goToAnamnesis('+r.rowIndex+')">'+
         '<div class="q-turno" style="color:'+rc+'">'+esc(r.turno||'—')+'</div>'+
-        '<div class="q-info"><div class="q-pet">'+esc(r.petName||'')+' '+ag+'</div>'+
+        '<div class="q-info"><div class="q-pet">'+esc(r.petName||'')+' '+ag+frio+'</div>'+
         '<div class="q-meta">'+esc(r.service||'')+
           (r.ownerName ? ' · 👤 '+esc(r.ownerName) : '')+
           ' · <span class="espera'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</span>'+

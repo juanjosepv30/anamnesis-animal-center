@@ -43,7 +43,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 .reg-form{background:var(--pl);border:1.5px solid #d8c9f5;border-radius:12px;padding:14px;margin-top:12px}
 .reg-sel{font-weight:700;font-size:.9rem;margin-bottom:10px;display:flex;align-items:center;gap:7px}
-.reg-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+/* auto-fit y no 3 fijas: los campos se acomodan solos cuando se agrega uno
+   más, y en el celular caen uno debajo del otro sin desbordar. */
+.reg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:12px}
+.lbl-tip{font-size:.62rem;font-weight:600;color:var(--ts);text-transform:none;letter-spacing:0;margin-top:3px}
 .reg-grid label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tm);display:block;margin-bottom:4px}
 .reg-grid select,.reg-grid input{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:9px 10px;font-size:.85rem;font-family:'DM Sans',sans-serif;outline:none;background:var(--wh)}
 @media(max-width:640px){.reg-grid{grid-template-columns:1fr}}
@@ -151,6 +154,28 @@ function buildHoraOptions(sel) {
   return h;
 }
 
+// Tolerancia de una cita: manda hasta 15 min después de su hora. Pasado
+// eso, el que llegó sin cita pasa. Tiene que coincidir con TOLERANCIA_CITA
+// del dashboard.
+var TOLERANCIA_CITA = 15;
+
+function sumarMinutos(hhmm, mins) {
+  var p = String(hhmm || '').split(':');
+  if (p.length !== 2) return '';
+  var t = parseInt(p[0],10)*60 + parseInt(p[1],10) + mins;
+  return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
+}
+
+// Le mostramos a recepción a qué hora se descongela, para que pueda
+// decírselo al cliente: "si no llega a las 3:15, usted pasa".
+function pintarDescongela() {
+  var cita = document.getElementById('regEsperar').value;
+  var el = document.getElementById('descongela');
+  el.textContent = cita
+    ? '→ Si no llega, pasa a las ' + sumarMinutos(cita, TOLERANCIA_CITA)
+    : '';
+}
+
 // Media hora más cercana a la hora actual.
 function nearestHalfHour() {
   var n = new Date();
@@ -227,6 +252,16 @@ function pickResult(r) {
         '</select></div>'+
         '<div><label>Especialidad / Doctor</label><select id="regSpec">'+buildSpecOptions()+'</select></div>'+
         '<div><label>Hora de la cita</label><select id="regHora">'+buildHoraOptions(hh)+'</select></div>'+
+        // Solo se llena cuando el doctor tiene una cita ANTES que este
+        // cliente. Se pone la hora de esa cita —lo que se ve en el
+        // calendario— y el sistema le suma los 15 minutos de tolerancia.
+        // Pedirle a alguien que calcule "3:00 + 15" es pedirle que se
+        // equivoque un martes a las 6 de la tarde.
+        '<div><label>¿Hay una cita antes? <span class="lbl-tip">(hora de esa cita)</span></label>'+
+          '<select id="regEsperar" onchange="pintarDescongela()">'+
+          '<option value="">— No, puede pasar cuando le toque —</option>'+
+          buildHoraOptions('')+'</select>'+
+          '<div class="lbl-tip" id="descongela"></div></div>'+
       '</div>'+
       '<div class="reg-actions">'+
         '<button class="btn-primary" onclick="doRegister()">Registrar como agendado →</button>'+
@@ -251,7 +286,13 @@ function doRegister() {
       owner: selected.owner || '',
       service: document.getElementById('regService').value,
       specialty: document.getElementById('regSpec').value.trim(),
-      horaCita: document.getElementById('regHora').value
+      horaCita: document.getElementById('regHora').value,
+      // Guardamos la hora YA sumada: el dashboard solo compara contra el
+      // reloj, no tiene que saber de tolerancias.
+      esperarHasta: (function(){
+        var c = document.getElementById('regEsperar').value;
+        return c ? sumarMinutos(c, TOLERANCIA_CITA) : '';
+      })()
     }
   };
   document.getElementById('regArea').innerHTML = '<div class="spinner"></div>';
