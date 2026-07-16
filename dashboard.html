@@ -1103,6 +1103,15 @@ function chequearCambios() {
     .catch(function(){});
 }
 
+// Android exige un service worker para dejar instalar la app de verdad.
+// El nuestro no cachea nada (ver sw.js): preferimos depender del internet
+// antes que mostrarle a un médico una versión vieja del sistema.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+
 setInterval(chequearCambios, 5000);
 setInterval(function(){ if (!document.querySelector('.rec.open')) loadRecords(true); }, 120000); // red de seguridad
 
