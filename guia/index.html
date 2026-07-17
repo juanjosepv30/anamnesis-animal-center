@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guía del sistema — Animal Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#faf7ff;--bg2:#f3eeff;--tx:#1a0a2e;--tm:#6b5c7e;--ts:#b0a4bf;
+  --wh:#fff;--bd:#e8dff5;--p:#7c3aed;--pl:#f5f0ff;--pd:#5b21b6;--ok:#16a34a;--warn:#dc2626;
+}
+html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+.hdr{background:var(--wh);border-bottom:1px solid var(--bd);padding:0 22px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hdr-brand{display:flex;align-items:center;gap:10px}
+.hdr-icon{width:34px;height:34px;border-radius:8px;background:var(--p);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem}
+.hdr-t{font-size:.95rem;font-weight:700}
+.hdr-s{font-size:.72rem;color:var(--tm)}
+.btn-print{border:1.5px solid var(--bd);border-radius:8px;padding:6px 14px;color:var(--tm);font-size:.78rem;font-weight:600;cursor:pointer;background:var(--wh);font-family:'DM Sans',sans-serif}
+
+.wrap{max-width:820px;margin:0 auto;padding:22px 16px 70px}
+.intro{font-size:.92rem;color:var(--tm);margin-bottom:20px;line-height:1.5}
+.intro b{color:var(--tx)}
+
+/* Selector de rol */
+.roles{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap}
+.role{flex:1;min-width:150px;border:1.5px solid var(--bd);background:var(--wh);border-radius:12px;padding:14px 16px;cursor:pointer;text-align:left;font-family:'DM Sans',sans-serif}
+.role.on{border-color:var(--p);background:var(--pl)}
+.role-t{font-size:1rem;font-weight:800;color:var(--tx)}
+.role.on .role-t{color:var(--pd)}
+.role-s{font-size:.75rem;color:var(--tm);margin-top:2px}
+
+.seccion{display:none}
+.seccion.on{display:block}
+.h2{font-size:1.15rem;font-weight:800;margin:6px 0 4px}
+.h2-sub{font-size:.82rem;color:var(--tm);margin-bottom:18px}
+
+/* Pasos numerados */
+.paso{display:flex;gap:14px;margin-bottom:16px;background:var(--wh);border:1px solid var(--bd);border-radius:12px;padding:15px 16px}
+.paso-n{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:var(--p);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:.95rem}
+.paso-c{flex:1}
+.paso-t{font-weight:700;font-size:.95rem;margin-bottom:3px}
+.paso-d{font-size:.86rem;color:var(--tm);line-height:1.5}
+.paso-d b{color:var(--tx)}
+.paso-d .pill{display:inline-block;background:var(--bg2);border-radius:6px;padding:1px 7px;font-weight:700;color:var(--pd);font-size:.82rem}
+
+/* Bloque de aclaración / regla */
+.nota{background:var(--pl);border-left:4px solid var(--p);border-radius:0 10px 10px 0;padding:13px 16px;font-size:.86rem;color:var(--tx);line-height:1.5;margin:6px 0 18px}
+.nota b{color:var(--pd)}
+.titulo-bloque{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ts);margin:24px 0 10px}
+
+/* Tabla de estados */
+.estados{background:var(--wh);border:1px solid var(--bd);border-radius:12px;overflow:hidden;margin-bottom:18px}
+.estado{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-top:1px solid var(--bd)}
+.estado:first-child{border-top:none}
+.estado-b{flex-shrink:0;font-size:.66rem;font-weight:700;border-radius:99px;padding:3px 10px;white-space:nowrap;margin-top:2px}
+.b-llen{background:#ede9fe;color:#5b21b6}
+.b-ok{background:#f0fdf4;color:#16a34a}
+.b-sin{background:#f1f5f9;color:#64748b}
+.estado-d{font-size:.85rem;color:var(--tm);line-height:1.45}
+.estado-d b{color:var(--tx)}
+
+@media print{
+  .hdr,.roles,.btn-print{display:none}
+  .seccion{display:block!important;page-break-after:always}
+  body{background:#fff}
+  .wrap{max-width:100%}
+}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-icon">📖</div>
+    <div><div class="hdr-t">Guía del sistema</div><div class="hdr-s">Animal Center</div></div>
+  </div>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+</div>
+
+<div class="wrap">
+  <p class="intro">
+    Esta es la guía para usar el sistema de sala de espera. <b>Elegí tu rol abajo</b> y seguí los pasos.
+    Cada uno solo tiene que aprender su parte.
+  </p>
+
+  <div class="roles">
+    <button class="role on" data-r="recepcion" onclick="verRol('recepcion')">
+      <div class="role-t">🏥 Recepción</div>
+      <div class="role-s">Registrar a los que llegan</div>
+    </button>
+    <button class="role" data-r="medicos" onclick="verRol('medicos')">
+      <div class="role-t">👨‍⚕️ Médicos</div>
+      <div class="role-s">Llamar y atender</div>
+    </button>
+    <button class="role" data-r="cliente" onclick="verRol('cliente')">
+      <div class="role-t">🐾 El cliente</div>
+      <div class="role-s">Qué le pasa a él</div>
+    </button>
+  </div>
+
+  <!-- ============ RECEPCIÓN ============ -->
+  <div class="seccion on" id="s-recepcion">
+    <div class="h2">Recepción — registrar a los que llegan</div>
+    <div class="h2-sub">Cuando un cliente llega, seguí estos 5 pasos. Toma menos de un minuto.</div>
+
+    <div class="paso"><div class="paso-n">1</div><div class="paso-c">
+      <div class="paso-t">Buscá al paciente</div>
+      <div class="paso-d">Escribí el <b>nombre del dueño</b>, la <b>mascota</b> o la <b>cédula</b>, y tocá <span class="pill">🔍 Buscar</span>. Con un solo dato alcanza.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">2</div><div class="paso-c">
+      <div class="paso-t">Elegilo de la lista — o registralo como nuevo</div>
+      <div class="paso-d">Si <b>aparece</b>, tocalo: sus datos (especie, raza, teléfono) vienen solos de la historia clínica.<br>
+      Si <b>no aparece</b>, tocá <span class="pill">+ Registrar cliente nuevo</span> y cargá los datos de la mascota a mano.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">3</div><div class="paso-c">
+      <div class="paso-t">Confirmá el WhatsApp del cliente</div>
+      <div class="paso-d">A ese número le llega el link para que el cliente llene su ficha desde el celular. Si el que trae la historia no sirve, <b>cambialo por el real</b>.<br>
+      ¿No tiene celular a mano (un adulto mayor, por ejemplo)? <b>Dejá el campo vacío</b>: se atiende igual, sin ficha.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">4</div><div class="paso-c">
+      <div class="paso-t">Elegí el servicio</div>
+      <div class="paso-d">Es obligatorio: <b>el botón de registrar no se activa</b> hasta que elijas uno.<br>
+      · Si es <b>Consulta o Control especializado</b>, elegí también el especialista.<br>
+      · Si el cliente <b>tiene cita agendada</b>, marcala.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">5</div><div class="paso-c">
+      <div class="paso-t">Registrar llegada</div>
+      <div class="paso-d">Listo. Al cliente le llega su <b>turno</b> y el <b>link</b> por WhatsApp, y el médico ya lo ve en su pantalla.</div>
+    </div></div>
+
+    <div class="titulo-bloque">La sala de espera — las 3 pestañas</div>
+
+    <div class="nota">
+      Cada tarjeta muestra <b>cuánto lleva esperando</b> el cliente (se pone naranja a los 30 min y rojo a los 45),
+      y el <b>estado de su registro</b>. Así ves de un vistazo quién ya está listo y quién no.
+    </div>
+
+    <div class="estados">
+      <div class="estado"><span class="estado-b b-llen">Haciendo registro</span><div class="estado-d">Está <b>llenando la ficha</b> en su celular. Todavía no terminó.</div></div>
+      <div class="estado"><span class="estado-b b-ok">Registro listo</span><div class="estado-d">Ya <b>completó su ficha</b>. El médico puede leerla.</div></div>
+      <div class="estado"><span class="estado-b b-sin">Sin registro</span><div class="estado-d">No dejó celular o no va a llenar la ficha. El médico lo <b>atiende sin registro</b>.</div></div>
+    </div>
+
+    <div class="paso"><div class="paso-n">↻</div><div class="paso-c">
+      <div class="paso-t">Si no le llegó el link</div>
+      <div class="paso-d">A veces el WhatsApp no llega (se cae internet, etc.). En la tarjeta de ese cliente tocá <span class="pill">↻ Reenviar registro</span> y se le manda de nuevo.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">✕</div><div class="paso-c">
+      <div class="paso-t">Si se va o no aparece</div>
+      <div class="paso-d">Tocá <span class="pill">Ausente</span>. Pasa a la pestaña <b>Ausentes</b> (ahí ves cuántos se van, dato útil).<br>
+      Si el cliente <b>vuelve</b>, en Ausentes tocá <span class="pill">← Devolver a la fila</span> y vuelve <b>de primero</b>, con su ficha lista.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">✓</div><div class="paso-c">
+      <div class="paso-t">Atendidos</div>
+      <div class="paso-d">En esa pestaña quedan los que ya pasaron. Es solo para consultar.</div>
+    </div></div>
+  </div>
+
+  <!-- ============ MÉDICOS ============ -->
+  <div class="seccion" id="s-medicos">
+    <div class="h2">Médicos — llamar y atender</div>
+    <div class="h2-sub">Tu pantalla te muestra tu cola de pacientes, del que más espera al que menos.</div>
+
+    <div class="paso"><div class="paso-n">1</div><div class="paso-c">
+      <div class="paso-t">Entrá y elegí tu nombre</div>
+      <div class="paso-d">Abrí la página de médicos y seleccioná tu nombre de la lista.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">2</div><div class="paso-c">
+      <div class="paso-t">Marcá "Estoy de turno"</div>
+      <div class="paso-d"><b>Solo los médicos generales.</b> Mientras no estés de turno, no te llegan las consultas generales. Los <b>especialistas</b> siempre reciben sus citas, no marcan turno.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">3</div><div class="paso-c">
+      <div class="paso-t">Elegí el consultorio y llamá</div>
+      <div class="paso-d">Antes de llamar, <b>elegí el consultorio</b> — el botón Llamar no se activa hasta que lo hagas (a vos, especialista, ya te aparece el tuyo). Luego tocá <span class="pill">🔔 Llamar</span>.<br>
+      Al cliente le llega un WhatsApp: <b>"pasá al consultorio X"</b>.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">4</div><div class="paso-c">
+      <div class="paso-t">Leé la anamnesis</div>
+      <div class="paso-d">Tocá la <b>tarjeta del paciente</b> para ver lo que el cliente respondió antes de entrar. Si dice "Sin registro", atendelo igual — no alcanzó a llenarla.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">5</div><div class="paso-c">
+      <div class="paso-t">Cerrá el turno</div>
+      <div class="paso-d">Cuando termines, tocá <span class="pill">✓ Atendido</span>.<br>
+      ¿No apareció? <span class="pill">🔔 Llamar otra vez</span> (le suena de nuevo en la pantalla de la sala) o <span class="pill">Ausente</span>.</div>
+    </div></div>
+
+    <div class="nota">
+      <b>Vos decidís, no el sistema.</b> Si el siguiente turno todavía no hizo su registro, podés pasarlo igual — no lo hagas esperar. La etiqueta solo te avisa que aún no lo llenó.
+    </div>
+  </div>
+
+  <!-- ============ CLIENTE ============ -->
+  <div class="seccion" id="s-cliente">
+    <div class="h2">El cliente — qué le pasa a él</div>
+    <div class="h2-sub">Esto es lo que vive el dueño de la mascota. Sirve para saber qué contarle.</div>
+
+    <div class="paso"><div class="paso-n">1</div><div class="paso-c">
+      <div class="paso-t">Le llega un WhatsApp de bienvenida</div>
+      <div class="paso-d">Apenas recepción lo registra, recibe un mensaje con <b>su turno</b> y un botón <span class="pill">Hacer registro</span>.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">2</div><div class="paso-c">
+      <div class="paso-t">Llena su ficha desde el celular</div>
+      <div class="paso-d">Toca el botón y responde unas preguntas sobre su mascota. <b>Toma 2 minutos.</b> Puede hacerlo sentado en la sala mientras espera.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">3</div><div class="paso-c">
+      <div class="paso-t">Espera a que lo llamen</div>
+      <div class="paso-d">Cuando el médico lo llama, le llega <b>otro WhatsApp</b> diciéndole a qué consultorio pasar. También aparece en la pantalla de la sala.</div>
+    </div></div>
+
+    <div class="nota">
+      Si el cliente <b>no trae celular</b> o no quiere usarlo, no pasa nada: recepción lo registra sin teléfono y lo atienden normal, como siempre.
+    </div>
+  </div>
+</div>
+
+<script>
+function verRol(r){
+  document.querySelectorAll('.role').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-r')===r); });
+  document.querySelectorAll('.seccion').forEach(function(s){ s.classList.toggle('on', s.id==='s-'+r); });
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>
