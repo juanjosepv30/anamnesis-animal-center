@@ -104,7 +104,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .badge-sin{background:#f1f5f9;color:#64748b}
 .wr-llenando{border-left-style:dashed!important;background:#faf9ff}
 /* Tiempo de espera: neutro al principio, ámbar y rojo cuando se acumula. */
-.wr-esp{color:var(--tm);font-weight:700}
+.wr-esp{font-size:.74rem;color:var(--tm);font-weight:700}
 .wr-esp.esp-medio{color:#b45309}
 .wr-esp.esp-mucho{color:#dc2626}
 .wr-btn{border:1.5px solid var(--bd);border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:600;cursor:pointer;background:var(--wh);color:var(--tm);font-family:'DM Sans',sans-serif;white-space:nowrap}
@@ -372,9 +372,9 @@ function claseEspera(ts){ var m=minsEsperando(ts); if(m===null)return''; if(m>=4
 // Estado del registro, para que recepción sepa de un vistazo si la ficha
 // está lista. Mismo criterio que ve el médico.
 function etiquetaReg(r){
-  if(r.estadoTurno==='llenando') return '<span class="badge badge-llen">✍️ Haciendo registro</span>';
-  if(r.complaint || r.detail)    return '<span class="badge badge-ok">✅ Registro listo</span>';
-  return '<span class="badge badge-sin">🚫 Sin registro</span>';
+  if(r.estadoTurno==='llenando') return '<span class="badge badge-llen">Haciendo registro</span>';
+  if(r.complaint || r.detail)    return '<span class="badge badge-ok">Registro listo</span>';
+  return '<span class="badge badge-sin">Sin registro</span>';
 }
 
 function serviceColor(s){
@@ -663,15 +663,15 @@ function wrItem(r, acts) {
   // Un solo badge: si lo están llamando, eso manda; si no, el estado del
   // registro. Se quitó "Agendado" — en esta pantalla no aporta.
   var badge = r.estadoTurno === 'llamando'
-    ? '<span class="badge badge-esp">🔔 Llamando</span>'
+    ? '<span class="badge badge-esp">Llamando</span>'
     : etiquetaReg(r);
   // Bloque de tiempos, arriba a la derecha: la hora de la cita (si tiene)
   // arriba, y cuánto lleva esperando debajo — son cosas distintas, por eso
   // separadas. La espera solo para los que siguen en la cola.
   var enCola = (!r.estadoTurno || r.estadoTurno==='esperando' || r.estadoTurno==='llenando' || r.estadoTurno==='llamando');
   var times = '';
-  if (r.horaCita) times += '<div class="wr-cita">🕐 '+esc(fmtHora(r.horaCita))+'</div>';
-  if (enCola)     times += '<div class="wr-esp'+claseEspera(r.timestamp)+'">⏳ '+esc(fmtEspera(r.timestamp))+'</div>';
+  if (r.horaCita) times += '<div class="wr-cita">Cita '+esc(fmtHora(r.horaCita))+'</div>';
+  if (enCola)     times += '<div class="wr-esp'+claseEspera(r.timestamp)+'">'+esc(fmtEspera(r.timestamp))+'</div>';
   return '<div class="wr-item'+(r.estadoTurno==='llenando'?' wr-llenando':'')+'" style="border-left-color:'+color+'">'+
     '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
     '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+'</div>'+
