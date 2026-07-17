@@ -80,11 +80,18 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .confirm .msg{font-size:.82rem;color:var(--tm)}
 
 /* Waiting room list */
-.wr-item{display:flex;align-items:center;gap:12px;border:1px solid var(--bd);border-radius:11px;padding:10px 13px;margin-bottom:7px;border-left:5px solid #94a3b8}
-.wr-turno{font-size:1.05rem;font-weight:700;min-width:56px;font-variant-numeric:tabular-nums}
-.wr-info{flex:1;min-width:0}
+.wr-item{display:flex;align-items:stretch;gap:12px;border:1px solid var(--bd);border-radius:11px;padding:10px 13px;margin-bottom:7px;border-left:5px solid #94a3b8}
+.wr-turno{font-size:1.05rem;font-weight:700;min-width:56px;font-variant-numeric:tabular-nums;display:flex;align-items:center}
+.wr-info{flex:1;min-width:0;align-self:center}
 .wr-name{font-weight:600;font-size:.9rem}
 .wr-meta{font-size:.73rem;color:var(--tm);margin-top:1px}
+/* Columna derecha: tiempos arriba, botones al medio, estado del registro
+   abajo en la esquina. */
+.wr-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:6px;text-align:right}
+.wr-times{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.wr-cita{font-size:.78rem;font-weight:700;color:var(--tm);white-space:nowrap}
+.wr-acts{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.wr-btn-reenviar{border-color:#a78bfa;color:#5b21b6;font-size:.68rem}
 .badge{font-size:.62rem;font-weight:700;border-radius:99px;padding:2px 9px;white-space:nowrap}
 .badge-ag{background:#ede9fe;color:#6d28d9}
 .badge-esp{background:#eff6ff;color:#2563eb}
@@ -650,24 +657,31 @@ function loadWaitingRoom(silent) {
   }).catch(function(){ document.getElementById('wrList').innerHTML = '<div class="empty">Error de conexión.</div>'; });
 }
 
-// Una fila de la lista. `btn` es el HTML del botón de acción (o '').
-function wrItem(r, btn) {
+// Una fila de la lista. `acts` es el HTML de los botones de acción (o '').
+function wrItem(r, acts) {
   var color = serviceColor(r.service);
   // Un solo badge: si lo están llamando, eso manda; si no, el estado del
   // registro. Se quitó "Agendado" — en esta pantalla no aporta.
   var badge = r.estadoTurno === 'llamando'
     ? '<span class="badge badge-esp">🔔 Llamando</span>'
     : etiquetaReg(r);
-  // Cuánto lleva esperando: solo para los que están en la cola. Un ausente
-  // o un atendido ya no acumula espera.
+  // Bloque de tiempos, arriba a la derecha: la hora de la cita (si tiene)
+  // arriba, y cuánto lleva esperando debajo — son cosas distintas, por eso
+  // separadas. La espera solo para los que siguen en la cola.
   var enCola = (!r.estadoTurno || r.estadoTurno==='esperando' || r.estadoTurno==='llenando' || r.estadoTurno==='llamando');
-  var espera = enCola ? ' · <span class="wr-esp'+claseEspera(r.timestamp)+'">⏳ '+esc(fmtEspera(r.timestamp))+'</span>' : '';
+  var times = '';
+  if (r.horaCita) times += '<div class="wr-cita">🕐 '+esc(fmtHora(r.horaCita))+'</div>';
+  if (enCola)     times += '<div class="wr-esp'+claseEspera(r.timestamp)+'">⏳ '+esc(fmtEspera(r.timestamp))+'</div>';
   return '<div class="wr-item'+(r.estadoTurno==='llenando'?' wr-llenando':'')+'" style="border-left-color:'+color+'">'+
     '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
-    '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+' '+badge+'</div>'+
-    '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.horaCita?' · 🕐 '+esc(fmtHora(r.horaCita)):'')+espera+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
-    (btn || '')+
-    '</div>';
+    '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+'</div>'+
+      '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
+    '<div class="wr-right">'+
+      (times ? '<div class="wr-times">'+times+'</div>' : '<div></div>')+
+      (acts  ? '<div class="wr-acts">'+acts+'</div>'  : '')+
+      '<div class="wr-badge">'+badge+'</div>'+
+    '</div>'+
+  '</div>';
 }
 
 // Un grupo con subtítulo (Especialidades / Generales), del que más espera
@@ -677,7 +691,14 @@ function wrGrupo(titulo, arr) {
   arr.sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
   var h = '<div class="wr-grp">'+titulo+' · '+arr.length+'</div>';
   arr.forEach(function(r){
-    h += wrItem(r, '<button class="wr-btn" onclick="markAusente('+r.rowIndex+',\'ausente\')">Ausente</button>');
+    var acts = '<button class="wr-btn" onclick="markAusente('+r.rowIndex+',\'ausente\')">Ausente</button>';
+    // Reenviar el link SOLO si tiene teléfono cargado y todavía no completó
+    // el registro (y no lo están llamando). Es el caso raro de que el primer
+    // mensaje no le llegó.
+    if (r.ownerPhone && !(r.complaint || r.detail) && r.estadoTurno !== 'llamando') {
+      acts += '<button class="wr-btn wr-btn-reenviar" onclick="reenviarReg('+r.rowIndex+')">↻ Reenviar registro</button>';
+    }
+    h += wrItem(r, acts);
   });
   return h;
 }
@@ -720,6 +741,21 @@ function markAusente(rowIndex, estado) {
     .then(r=>r.json()).then(function(res){
       if (res && res.ok) { showToast(estado==='ausente'?'Marcado ausente':'Devuelto a la fila'); loadWaitingRoom(true); }
       else { showToast((res && res.error) || 'Error al actualizar'); loadWaitingRoom(true); }
+    }).catch(function(){ showToast('Error de conexión'); });
+}
+
+// Reenvía el link del registro. El backend se niega si ya lo completó o no
+// tiene teléfono, y muestra el motivo tal cual. El guard `reenviando` evita
+// el doble toque en un celular lento.
+var reenviando = {};
+function reenviarReg(rowIndex) {
+  if (reenviando[rowIndex]) return;
+  reenviando[rowIndex] = true;
+  setTimeout(function(){ delete reenviando[rowIndex]; }, 8000);
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'reenviarRegistro', rowIndex: rowIndex }) })
+    .then(r=>r.json()).then(function(res){
+      if (res && res.ok) { showToast('Link reenviado 📲'); loadWaitingRoom(true); }
+      else { showToast((res && res.error) || 'No se pudo reenviar'); loadWaitingRoom(true); }
     }).catch(function(){ showToast('Error de conexión'); });
 }
 
