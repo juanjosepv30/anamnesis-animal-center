@@ -145,9 +145,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <div class="card-t">Registrar llegada</div>
       <div class="card-sub">Busca al paciente en Vetesoft, valida contra el calendar y regístralo en la sala. Sirve para los que tienen cita y para los que no.</div>
       <div class="search-row">
-        <input type="text" id="qOwner" placeholder="Nombre del dueño">
-        <input type="text" id="qPet" placeholder="Nombre de la mascota">
-        <input type="number" id="qCedula" placeholder="Cédula (opcional)">
+        <!-- La cédula va primera y con el foco: es única, así que encuentra
+             mejor que los nombres (que se repiten). Enter en cualquier campo
+             dispara la búsqueda, para no tener que ir hasta el botón. -->
+        <input type="number" id="qCedula" placeholder="Cédula" autofocus onkeydown="if(event.key==='Enter')doSearch()">
+        <input type="text" id="qOwner" placeholder="Nombre del dueño (opcional)" onkeydown="if(event.key==='Enter')doSearch()">
+        <input type="text" id="qPet" placeholder="Nombre de la mascota (opcional)" onkeydown="if(event.key==='Enter')doSearch()">
         <button onclick="doSearch()">🔍 Buscar</button>
       </div>
       <div class="results" id="results"></div>
