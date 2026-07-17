@@ -50,13 +50,25 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .reg-basic{font-size:.78rem;color:var(--tm);margin-bottom:12px}
 /* Doctor fijo (viajero, rayos): dato, no selector. */
 .reg-auto{font-size:.85rem;font-weight:600;padding:8px 10px;background:#f5f3ff;border-radius:7px;color:#5b21b6}
-/* auto-fit y no 3 fijas: los campos se acomodan solos cuando se agrega uno
-   más, y en el celular caen uno debajo del otro sin desbordar. */
-.reg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:12px}
-.lbl-tip{font-size:.62rem;font-weight:600;color:var(--ts);text-transform:none;letter-spacing:0;margin-top:3px}
-.reg-grid label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tm);display:block;margin-bottom:4px}
-.reg-grid select,.reg-grid input{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:9px 10px;font-size:.85rem;font-family:'DM Sans',sans-serif;outline:none;background:var(--wh)}
-@media(max-width:640px){.reg-grid{grid-template-columns:1fr}}
+/* Grid de columnas FIJAS (no auto-fit): así las columnas de las dos rejillas
+   —datos de mascota y servicio— quedan alineadas entre sí. Cada celda es una
+   columna flex (label arriba, campo abajo). */
+.reg-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 14px;margin-bottom:14px}
+.reg-grid>div{display:flex;flex-direction:column;min-width:0}
+/* La clave de que todo se vea alineado: el label reserva SIEMPRE el alto de
+   dos líneas y pega el texto abajo. Así un label de una línea y uno de dos
+   dejan el input arrancando a la misma altura. */
+.reg-grid label{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--tm);line-height:1.25;min-height:2.5em;display:flex;align-items:flex-end;margin-bottom:5px}
+.lbl-tip{font-size:.62rem;font-weight:600;color:var(--ts);text-transform:none;letter-spacing:0;margin-left:4px}
+/* Alto fijo para que selects e inputs midan exactamente igual. */
+.reg-grid select,.reg-grid input{width:100%;box-sizing:border-box;height:40px;border:1.5px solid var(--bd);
+  border-radius:8px;padding:0 10px;font-size:.85rem;font-family:'DM Sans',sans-serif;outline:none;background:var(--wh)}
+.reg-grid select:focus,.reg-grid input:focus{border-color:var(--p)}
+/* La hora, sola en su fila, no tiene que estirarse a lo ancho. */
+#boxHora{max-width:200px}
+@media(max-width:900px){.reg-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.reg-grid{grid-template-columns:1fr}.reg-grid label{min-height:0}}
 .reg-actions{display:flex;gap:8px}
 .btn-primary{flex:1;padding:11px;border:none;border-radius:9px;background:var(--p);color:#fff;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
 .btn-ghost{padding:11px 16px;border:1.5px solid var(--bd);border-radius:9px;background:var(--wh);color:var(--tm);font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
@@ -77,12 +89,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .badge-esp{background:#eff6ff;color:#2563eb}
 .badge-at{background:#f0fdf4;color:#16a34a}
 .badge-au{background:#fef2f2;color:#dc2626}
-/* Llenando la ficha en su celular: el médico todavía NO lo ve en su cola.
-   Se marca distinto porque se trata distinto — su botón no es "Ausente". */
+/* Haciendo su registro en el celular. Ya está en la cola del médico; el
+   color más suave es solo para que recepción vea que aún no terminó. */
 .badge-llen{background:#ede9fe;color:#5b21b6}
 .wr-llenando{border-left-style:dashed!important;background:#faf9ff}
 .wr-btn{border:1.5px solid var(--bd);border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:600;cursor:pointer;background:var(--wh);color:var(--tm);font-family:'DM Sans',sans-serif}
-.wr-btn-llen{border-color:#a78bfa;color:#5b21b6}
 .empty{text-align:center;padding:40px 20px;color:var(--tm);font-size:.85rem}
 .spinner{width:30px;height:30px;border:2.5px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:30px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -386,7 +397,7 @@ function abrirRegistro(r, esNuevo) {
         // Con teléfono, al cliente le llega el link y llena la ficha desde su
         // celular. Vacío, recepción se la llena a mano. Señores de 78,
         // celulares sin datos, gente que no quiere — ese camino no se toca.
-        '<div><label>WhatsApp del cliente <span class="lbl-tip">(en blanco = no se le manda nada)</span></label>'+
+        '<div><label>WhatsApp <span class="lbl-tip">(vacío = sin mensaje)</span></label>'+
           '<input id="regTel" type="tel" inputmode="numeric" maxlength="10" placeholder="3001234567" value="'+esc(telSugerido(r.phone))+'"></div>'+
         '<div id="boxTieneCita"><label>¿Tiene cita?</label><select id="regAgendado" onchange="pintarServicio()">'+
           '<option value="si">Sí, está en la agenda</option>'+
@@ -489,7 +500,7 @@ function doRegister() {
         var msg, em = '🎫';
         if (res.esperaFicha) {
           msg = 'Le llegó el link por WhatsApp 📲 Que llene la ficha desde el celular. ' +
-                'Si no la llena, lo pasás a la fila desde la lista de abajo.';
+                'El médico ya lo ve en la cola; si no la llena, lo atiende igual.';
         } else if (res.telIntentado) {
           // El WhatsApp falló pero el paciente entró a la fila igual: sin
           // este aviso todo "se ve bien" y el número malo sigue ahí.
@@ -535,56 +546,26 @@ function loadWaitingRoom(silent) {
       let estBadge = '';
       if (r.estadoTurno === 'llamando') estBadge = '<span class="badge badge-esp">Llamando</span>';
       else if (r.estadoTurno === 'ausente') estBadge = '<span class="badge badge-au">Ausente</span>';
-      // Sin este badge, el que está llenando la ficha se ve idéntico a
-      // cualquier otro y su botón dice "Ausente" — que es justo lo que NO
-      // hay que tocarle. Lo que se ve distinto se trata distinto.
-      else if (r.estadoTurno === 'llenando') estBadge = '<span class="badge badge-llen">✍️ Llenando ficha</span>';
-      const ausente  = r.estadoTurno === 'ausente';
-      const llenando = r.estadoTurno === 'llenando';
-      // El médico NO lo ve en su cola mientras llena. Si no llena —se fue,
-      // no entendió, no le da el celular— esta es la puerta de salida:
-      // entra a la fila sin anamnesis, como se trabajaba siempre.
-      const btn = llenando
-        ? '<button class="wr-btn wr-btn-llen" onclick="pasarALaFila('+r.rowIndex+')">Pasar a la fila →</button>'
-        : '<button class="wr-btn" onclick="markAusente('+r.rowIndex+','+(ausente?"'esperando'":"'ausente'")+')">'+(ausente?'Reactivar':'Ausente')+'</button>';
-      html += '<div class="wr-item'+(llenando?' wr-llenando':'')+'" style="border-left-color:'+color+'">'+
+      // El que está haciendo su registro ya está en la cola del médico
+      // (llamable). El badge es solo informativo: recepción ve que todavía
+      // no lo terminó, pero no tiene que hacer nada — el médico decide.
+      else if (r.estadoTurno === 'llenando') estBadge = '<span class="badge badge-llen">✍️ Haciendo registro</span>';
+      const ausente = r.estadoTurno === 'ausente';
+      html += '<div class="wr-item'+(r.estadoTurno==='llenando'?' wr-llenando':'')+'" style="border-left-color:'+color+'">'+
         '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
         '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+' '+ag+' '+estBadge+'</div>'+
         '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.horaCita?' · 🕐 '+esc(r.horaCita):'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
-        btn+
+        '<button class="wr-btn" onclick="markAusente('+r.rowIndex+','+(ausente?"'esperando'":"'ausente'")+')">'+(ausente?'Reactivar':'Ausente')+'</button>'+
         '</div>';
     });
     document.getElementById('wrList').innerHTML = html;
   }).catch(function(){ document.getElementById('wrList').innerHTML = '<div class="empty">Error de conexión.</div>'; });
 }
 
-// Rescate: lo pasa a la fila sin anamnesis. El backend avisa al médico y
-// se niega si el cliente ya mandó la ficha mientras tanto — por eso el
-// error se muestra tal cual viene, en vez de un "Error" genérico.
-// enViaje: el botón sigue vivo mientras el fetch viaja, y un doble toque
-// en un celular lento mandaría dos avisos del mismo paciente. El backend
-// también se defiende, pero no hay que hacerle pegar el grito: acá se
-// corta antes de salir.
-var enViaje = {};
-function pasarALaFila(rowIndex) {
-  if (enViaje[rowIndex]) return;
-  if (!confirm('El médico lo va a ver SIN anamnesis, como antes. ¿Lo pasamos a la fila?')) return;
-  enViaje[rowIndex] = true;
-  setTimeout(function(){ delete enViaje[rowIndex]; }, 8000);   // nunca se traba
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'pasarALaFila', rowIndex: rowIndex }) })
-    .then(r=>r.json()).then(function(res){
-      if (res && res.ok) { showToast('Pasó a la fila. El médico ya lo ve.'); loadWaitingRoom(true); }
-      else { showToast((res && res.error) || 'No se pudo pasar a la fila'); loadWaitingRoom(true); }
-    }).catch(function(){ showToast('Error de conexión'); });
-}
-
 function markAusente(rowIndex, estado) {
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: estado }) })
     .then(r=>r.json()).then(function(res){
       if (res && res.ok) { showToast('Actualizado'); loadWaitingRoom(true); }
-      // El backend puede negarse por un motivo concreto (p. ej. está
-      // llenando la ficha). Decirlo tal cual: "Error" no le enseña nada a
-      // nadie y esconde justo lo que hay que hacer.
       else { showToast((res && res.error) || 'Error al actualizar'); loadWaitingRoom(true); }
     }).catch(function(){ showToast('Error de conexión'); });
 }

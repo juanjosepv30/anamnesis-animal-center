@@ -232,10 +232,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* Congelado: recepción vio que hay una cita antes que este paciente. */
 .mini-frio{background:#fef3c7;color:#92400e;margin-left:4px}
 .q-frio{opacity:.6}
-/* Llenando la ficha en su celular. Se ve, pero no se puede llamar ni
-   abrir: apagado y sin cursor de mano, para que no invite a tocarlo. */
-.mini-llen{background:#ede9fe;color:#5b21b6;margin-left:4px}
-.q-llenando{opacity:.55;cursor:default;border-style:dashed}
+/* Etiquetas de registro. El paciente está en la cola y es llamable igual;
+   la etiqueta solo le dice al médico si el registro está o no. */
+.mini-llen{background:#ede9fe;color:#5b21b6;margin-left:4px}       /* haciendo registro */
+.mini-sinreg{background:#f1f5f9;color:#64748b;margin-left:4px}     /* sin registro */
 /* max-width: un <select> se estira al ancho de su opción más larga y en el
    celular se sale de la pantalla ("Dra. Catherine Hernández — Endocrinología,
    Neonatología" mide más que un iPhone). */
@@ -914,7 +914,11 @@ function renderSala() {
 
   filasVisibles.forEach(function(f) {
     const mine     = hoy.filter(r => recordFila(r) === f.key);
-    const esperando= mine.filter(r => (r.estadoTurno || 'esperando') === 'esperando');
+    // 'llenando' (haciendo su registro) entra a la MISMA cola que los demás:
+    // el médico lo llama cuando le toca, con registro o sin él. La etiqueta
+    // de la tarjeta le dice si el registro está listo (ver etiquetaRegistro).
+    const enEspera = e => e === 'esperando' || e === 'llenando' || !e;
+    const esperando= mine.filter(r => enEspera(r.estadoTurno));
     // El paciente que está atendiendo un médico es asunto suyo: al
     // compañero solo le sirve saber a quién sigue. Verlo en la pantalla de
     // otro es ruido y encima invita a pisarle el turno.
@@ -927,20 +931,17 @@ function renderSala() {
     const yaLlamados = mine.filter(r => r.estadoTurno === 'llamando' || r.estadoTurno === 'atendido');
     const next     = pickNext(esperando, f.key, yaLlamados);
 
-    // Llenando la ficha desde su celular. Ya tienen turno y su espera ya
-    // corre, pero todavía no hay nada que leer. Van aparte: NO entran a
-    // pickNext, porque llamarlos sería llamar a una ficha vacía.
-    const llenando = mine.filter(r => r.estadoTurno === 'llenando');
-
     const isCol = !!collapsed[f.key];
     let body = '';
 
+    // Cuántos de los que esperan todavía están haciendo su registro.
+    const haciendoReg = esperando.filter(r => r.estadoTurno === 'llenando').length;
     html += '<div class="fila"><div class="fila-hd" onclick="toggleFila(\''+f.key+'\')">'+
             '<span class="fila-t">'+f.label+'</span>'+
             '<span class="fila-hd-r">'+
               (llamando.length ? '<span class="fila-n">🔔 '+llamando.length+'</span>' : '')+
               '<span class="fila-n">'+esperando.length+' en espera</span>'+
-              (llenando.length ? '<span class="fila-n">✍️ '+llenando.length+'</span>' : '')+
+              (haciendoReg ? '<span class="fila-n">✍️ '+haciendoReg+'</span>' : '')+
               '<span class="fila-cv">'+(isCol ? '▸' : '▾')+'</span>'+
             '</span></div>';
 
@@ -991,7 +992,7 @@ function renderSala() {
         sugerencia +
         '<div class="q-click" onclick="goToAnamnesis('+next.rowIndex+')">'+
           '<div class="next-turno" style="color:'+nc+'">'+esc(next.turno||'—')+'</div>'+
-          '<div class="next-pet">'+esc(next.petName||'Sin nombre')+' '+ag+'</div>'+
+          '<div class="next-pet">'+esc(next.petName||'Sin nombre')+' '+ag+' '+etiquetaRegistro(next)+'</div>'+
           '<div class="next-meta">👤 '+esc(next.ownerName||'—')+' · '+esc(next.service||'')+
             (next.specialty?' · '+esc(next.specialty):'')+'</div>'+
           '<div class="next-espera'+claseEspera(next.timestamp)+'">⏳ Esperando '+fmtEspera(next.timestamp).replace(/^hace /,'')+'</div>'+
@@ -1025,29 +1026,12 @@ function renderSala() {
         ? '<span class="mini mini-frio">⏸ hasta '+esc(fmtHora(r.esperarHasta))+'</span>' : '';
       body += '<div class="q-item q-click'+(estaCongelado(r)?' q-frio':'')+'" onclick="goToAnamnesis('+r.rowIndex+')">'+
         '<div class="q-turno" style="color:'+rc+'">'+esc(r.turno||'—')+'</div>'+
-        '<div class="q-info"><div class="q-pet">'+esc(r.petName||'')+' '+ag+frio+'</div>'+
+        '<div class="q-info"><div class="q-pet">'+esc(r.petName||'')+' '+ag+frio+etiquetaRegistro(r)+'</div>'+
         '<div class="q-meta">'+esc(r.service||'')+
           (r.ownerName ? ' · 👤 '+esc(r.ownerName) : '')+
           ' · <span class="espera'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</span>'+
         '</div></div></div>';
     });
-
-    // Al final: los que están llenando la ficha en su celular. No se
-    // clickean —no hay anamnesis que abrir todavía— y no se pueden llamar.
-    // Pero se ven, y se ve cuánto llevan: si uno lleva 20 minutos "llenando"
-    // no está llenando nada, y alguien tiene que ir a preguntarle.
-    llenando
-      .sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp))
-      .forEach(function(r) {
-        body += '<div class="q-item q-llenando">'+
-          '<div class="q-turno">'+esc(r.turno||'—')+'</div>'+
-          '<div class="q-info"><div class="q-pet">'+esc(r.petName||'')+
-            ' <span class="mini mini-llen">✍️ llenando ficha</span></div>'+
-          '<div class="q-meta">'+esc(r.service||'')+
-            (r.ownerName ? ' · 👤 '+esc(r.ownerName) : '')+
-            ' · <span class="espera'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</span>'+
-          '</div></div></div>';
-      });
 
     // Si la fila está plegada, no mostramos el cuerpo (solo el encabezado).
     if (!isCol) html += '<div class="fila-bd">' + body + '</div>';
@@ -1262,6 +1246,17 @@ function claseEspera(ts) {
   if (m === null) return '';
   if (m >= 45) return ' esp-mucho';
   if (m >= 30) return ' esp-medio';
+  return '';
+}
+
+// La etiqueta de registro que el médico ve en cada tarjeta de la cola:
+//   ✍️ Haciendo registro → el cliente lo está llenando en su celular
+//   🚫 Sin registro      → no tiene teléfono o no va a llenarlo; se atiende así
+//   (con anamnesis)       → sin etiqueta: el registro está y se lee al abrir
+// Vale para las dos: el médico llama igual, la etiqueta solo lo informa.
+function etiquetaRegistro(r) {
+  if (r.estadoTurno === 'llenando') return '<span class="mini mini-llen">✍️ Haciendo registro</span>';
+  if (!r.complaint && !r.detail)    return '<span class="mini mini-sinreg">🚫 Sin registro</span>';
   return '';
 }
 
