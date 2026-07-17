@@ -384,15 +384,37 @@ function showError(msg) {
 }
 
 // ── Sala de espera: filas y consultorios ─────────────────────
-// Los 8 consultorios son flexibles: sirven para especialidad Y para
-// consulta general. Los 2 de vacunación son aparte (a veces se usan
-// para inyectología o consulta), por eso también están disponibles.
-const ROOMS_MAIN = ['Boom Boom','Piel','Ojitos','Meaw Meaw','Viajero','Gastro','General','Neonatos'];
+// Los consultorios son flexibles: sirven para especialidad Y para consulta
+// general. Los 2 de vacunación son aparte (a veces se usan para
+// inyectología o consulta), por eso también están disponibles.
+const ROOMS_MAIN = ['Boom Boom','Piel','Ojitos','Meaw Meaw','Endocrino','Gastro','Viajero','Rayos X','Eco','General'];
 const ROOMS_VAC  = ['Vacunación 1','Vacunación 2'];
 
 function roomsFor(filaKey) {
   // Cualquier fila puede usar cualquier consultorio.
   return ROOMS_MAIN.concat(ROOMS_VAC);
+}
+
+// El consultorio que MÁS probablemente use el médico para este paciente,
+// según su especialidad (o el servicio, para viajero y rayos). Se ofrece
+// preseleccionado para ahorrarle el clic y evitar que elija mal. Si no hay
+// uno claro (consulta general, etc.), devuelve '' → el médico elige a mano.
+const CONS_POR_ESP = {
+  'cardiologia':'Boom Boom', 'dermatologia':'Piel', 'oftalmologia':'Ojitos',
+  'medicina felina':'Meaw Meaw', 'gastroenterologia':'Gastro',
+  'endocrinologia':'Endocrino', 'neonatologia':'Endocrino',
+  // Angie hace imagenología. Cubre los dos caminos: el servicio propio
+  // "Rayos X y Ecografía" (más abajo, por service) Y la especialidad
+  // "Imagenología" dentro de una consulta/control especializado.
+  'imagenologia':'Rayos X'
+};
+function consultorioPreferido(r) {
+  var esp = normEsp(r.specialty || '');
+  if (CONS_POR_ESP[esp]) return CONS_POR_ESP[esp];
+  var s = String(r.service || '').toLowerCase();
+  if (s.indexOf('viajer') !== -1) return 'Viajero';
+  if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return 'Rayos X';
+  return '';
 }
 
 // Solo DOS filas: el médico general atiende consulta general, controles
@@ -972,8 +994,15 @@ function renderSala() {
       const ag = next.agendado === 'si'
         ? '<span class="mini mini-ag">Agendado'+(hora?' '+hora:'')+'</span>'
         : '<span class="mini mini-esp">Espontáneo</span>';
-      let opts = '';
-      roomsFor(f.key).forEach(function(rm){ opts += '<option value="'+rm+'">'+rm+'</option>'; });
+      // Ningún consultorio queda elegido por defecto, para que el médico no
+      // llame sin querer a la sala equivocada. La excepción: al especialista
+      // se le preselecciona SU consultorio (el que más usa), que igual puede
+      // cambiar. Sin preselección, Llamar arranca apagado hasta que elija.
+      const pref = consultorioPreferido(next);
+      let opts = '<option value=""'+(pref?'':' selected')+'>— Elegí consultorio —</option>';
+      roomsFor(f.key).forEach(function(rm){
+        opts += '<option value="'+rm+'"'+(rm===pref?' selected':'')+'>'+rm+'</option>';
+      });
       // Si atiende las dos filas, le decimos cuál va primero y por qué.
       // Es una sugerencia, no una orden: el botón queda habilitado igual.
       // El médico sabe si su paciente puede esperar diez minutos.
@@ -1001,11 +1030,11 @@ function renderSala() {
         // Con un paciente sin cerrar, Llamar queda apagado. No hace falta
         // explicarlo: su tarjeta está justo arriba con su propio ✓ Atendido.
         '<div class="next-ctrls">'+
-          '<select id="room-'+f.key+'"'+(miPacienteAbierto?' disabled':'')+'>'+opts+'</select>'+
-          '<button class="btn-call'+(miPacienteAbierto?' apagado':'')+'"'+
+          '<select id="room-'+f.key+'"'+(miPacienteAbierto?' disabled':' onchange="toggleLlamar(\''+f.key+'\')"')+'>'+opts+'</select>'+
+          '<button id="call-'+f.key+'" class="btn-call'+((miPacienteAbierto||!pref)?' apagado':'')+'"'+
             (miPacienteAbierto
               ? ' disabled title="Cierra primero a '+esc(miPacienteAbierto.petName||miPacienteAbierto.turno)+'"'
-              : ' style="background:'+nc+'" onclick="callNext('+next.rowIndex+',\''+f.key+'\')"')+
+              : ' style="background:'+nc+'"'+(pref?'':' disabled')+' onclick="callNext('+next.rowIndex+',\''+f.key+'\')"')+
           '>🔔 Llamar</button>'+
         '</div></div>';
     } else {
@@ -1087,9 +1116,23 @@ function goToAnamnesis(rowIndex) {
   }, 80);
 }
 
+// Habilita "Llamar" solo cuando hay consultorio elegido. Así nadie llama a
+// una sala en blanco: sin sala, no se le puede avisar al cliente a dónde ir.
+function toggleLlamar(filaKey) {
+  var sel = document.getElementById('room-'+filaKey);
+  var btn = document.getElementById('call-'+filaKey);
+  if (!sel || !btn) return;
+  var vacio = !sel.value;
+  btn.disabled = vacio;
+  btn.classList.toggle('apagado', vacio);
+}
+
 function callNext(rowIndex, filaKey) {
   const sel = document.getElementById('room-'+filaKey);
   const room = sel ? sel.value : '';
+  // Sin consultorio no se llama (el botón ya debería estar apagado; esto es
+  // la red por si algo se escapa).
+  if (!room) { showToast('Elegí el consultorio primero'); return; }
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room, medico: miMedico }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
