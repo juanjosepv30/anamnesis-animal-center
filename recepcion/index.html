@@ -86,14 +86,17 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* Waiting room list */
 .wr-item{display:flex;align-items:stretch;gap:12px;border:1px solid var(--bd);border-radius:11px;padding:10px 13px;margin-bottom:7px;border-left:5px solid #94a3b8}
 .wr-turno{font-size:1.05rem;font-weight:700;min-width:56px;font-variant-numeric:tabular-nums;display:flex;align-items:center}
-.wr-info{flex:1;min-width:0;align-self:center}
+.wr-info{flex:1;min-width:0}
+/* Badge de estado arriba a la izquierda, antes del nombre. */
+.wr-badge{margin-bottom:4px}
 .wr-name{font-weight:600;font-size:.9rem}
 .wr-meta{font-size:.73rem;color:var(--tm);margin-top:1px}
-/* Columna derecha: tiempos arriba, botones al medio, estado del registro
-   abajo en la esquina. */
-.wr-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:6px;text-align:right}
+/* Reenviar registro, debajo del nombre. */
+.wr-reenviar{margin-top:7px}
+/* Columna derecha: tiempos arriba, botón (Ausente) debajo. */
+.wr-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;text-align:right}
 .wr-times{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
-.wr-cita{font-size:.78rem;font-weight:700;color:var(--tm);white-space:nowrap}
+.wr-cita{font-size:.74rem;font-weight:700;color:var(--tm);white-space:nowrap}
 .wr-acts{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 .wr-btn-reenviar{border-color:#a78bfa;color:#5b21b6;font-size:.68rem}
 .badge{font-size:.62rem;font-weight:700;border-radius:99px;padding:2px 9px;white-space:nowrap}
@@ -668,29 +671,39 @@ function loadWaitingRoom(silent) {
   }).catch(function(){ document.getElementById('wrList').innerHTML = '<div class="empty">Error de conexión.</div>'; });
 }
 
-// Una fila de la lista. `acts` es el HTML de los botones de acción (o '').
+// Una fila de la lista. `acts` es el botón principal de la derecha (Ausente
+// o Devolver a la fila, según la pestaña). El de Reenviar lo pone wrItem
+// solo, debajo del nombre, cuando corresponde.
 function wrItem(r, acts) {
   var color = serviceColor(r.service);
-  // Un solo badge: si lo están llamando, eso manda; si no, el estado del
-  // registro. Se quitó "Agendado" — en esta pantalla no aporta.
+  // Badge de estado, arriba a la izquierda. Si lo están llamando eso manda;
+  // si no, el estado del registro.
   var badge = r.estadoTurno === 'llamando'
     ? '<span class="badge badge-esp">Llamando</span>'
     : etiquetaReg(r);
-  // Bloque de tiempos, arriba a la derecha: la hora de la cita (si tiene)
-  // arriba, y cuánto lleva esperando debajo — son cosas distintas, por eso
-  // separadas. La espera solo para los que siguen en la cola.
+  // Tiempos, arriba a la derecha: hora de la cita arriba, tiempo de espera
+  // debajo. La espera solo para los que siguen en la cola.
   var enCola = (!r.estadoTurno || r.estadoTurno==='esperando' || r.estadoTurno==='llenando' || r.estadoTurno==='llamando');
   var times = '';
   if (r.horaCita) times += '<div class="wr-cita">Cita '+esc(fmtHora(r.horaCita))+'</div>';
   if (enCola)     times += '<div class="wr-esp'+claseEspera(r.timestamp)+'">'+esc(fmtEspera(r.timestamp))+'</div>';
+  // Reenviar registro: debajo del nombre, solo si tiene teléfono y todavía
+  // no completó la ficha (y no lo están llamando ni se fue).
+  var reenviar = '';
+  if (r.ownerPhone && !(r.complaint||r.detail) && enCola && r.estadoTurno!=='llamando') {
+    reenviar = '<button class="wr-btn wr-btn-reenviar" onclick="reenviarReg('+r.rowIndex+')">↻ Reenviar registro</button>';
+  }
   return '<div class="wr-item'+(r.estadoTurno==='llenando'?' wr-llenando':'')+'" style="border-left-color:'+color+'">'+
     '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
-    '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+'</div>'+
-      '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
-    '<div class="wr-right">'+
-      (times ? '<div class="wr-times">'+times+'</div>' : '<div></div>')+
-      (acts  ? '<div class="wr-acts">'+acts+'</div>'  : '')+
+    '<div class="wr-info">'+
       '<div class="wr-badge">'+badge+'</div>'+
+      '<div class="wr-name">'+esc(r.petName||'Sin nombre')+'</div>'+
+      '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div>'+
+      (reenviar ? '<div class="wr-reenviar">'+reenviar+'</div>' : '')+
+    '</div>'+
+    '<div class="wr-right">'+
+      times +
+      (acts  ? '<div class="wr-acts">'+acts+'</div>'  : '')+
     '</div>'+
   '</div>';
 }
@@ -702,13 +715,9 @@ function wrGrupo(titulo, arr) {
   arr.sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
   var h = '<div class="wr-grp">'+titulo+' · '+arr.length+'</div>';
   arr.forEach(function(r){
+    // Solo el botón principal (Ausente). El de Reenviar lo agrega wrItem
+    // debajo del nombre.
     var acts = '<button class="wr-btn" onclick="markAusente('+r.rowIndex+',\'ausente\')">Ausente</button>';
-    // Reenviar el link SOLO si tiene teléfono cargado y todavía no completó
-    // el registro (y no lo están llamando). Es el caso raro de que el primer
-    // mensaje no le llegó.
-    if (r.ownerPhone && !(r.complaint || r.detail) && r.estadoTurno !== 'llamando') {
-      acts += '<button class="wr-btn wr-btn-reenviar" onclick="reenviarReg('+r.rowIndex+')">↻ Reenviar registro</button>';
-    }
     h += wrItem(r, acts);
   });
   return h;

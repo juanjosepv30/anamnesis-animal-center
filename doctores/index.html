@@ -67,13 +67,17 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .rec-emoji{width:38px;height:38px;border-radius:10px;background:var(--pl);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
 .rec.reviewed .rec-emoji{background:var(--bg2)}
 .rec-info{flex:1;min-width:0}
+.rec-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
+.rec-breed{font-weight:400;color:var(--tm);font-size:.82rem}
 .rec-name{font-size:.93rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .rv-badge{font-size:.62rem;background:var(--bg2);color:var(--ts);border-radius:99px;padding:2px 8px;font-weight:600}
 .hc-badge{font-size:.62rem;background:var(--p);color:#fff;border-radius:99px;padding:2px 9px;font-weight:700;letter-spacing:.2px}
 .turno-badge{font-size:.7rem;color:#fff;border-radius:7px;padding:2px 9px;font-weight:700;letter-spacing:.3px;font-variant-numeric:tabular-nums}
 .rec-meta{font-size:.74rem;color:var(--tm);margin-top:3px;display:flex;flex-wrap:wrap;gap:8px}
 .rec-service{background:var(--bg2);color:var(--p);border-radius:6px;padding:3px 9px;font-size:.68rem;font-weight:600;flex-shrink:0}
-.rec-time{font-size:.7rem;color:var(--ts);flex-shrink:0;text-align:right;line-height:1.4}
+.rec-time{font-size:.72rem;font-weight:700;color:var(--tm);flex-shrink:0;text-align:right}
+.rec-time.esp-medio{color:#b45309}
+.rec-time.esp-mucho{color:#dc2626}
 .rec-arrow{color:var(--ts);font-size:.65rem;flex-shrink:0;transition:transform .25s;margin-left:4px}
 .rec.open .rec-arrow{transform:rotate(180deg)}
 
@@ -176,8 +180,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .fila-cv{font-size:.7rem;opacity:.9;width:12px;text-align:center}
 .fila-bd{padding:12px 13px}
 .next-box{border:1.5px dashed var(--bd);border-radius:11px;padding:11px;margin-bottom:11px;background:var(--bg)}
+.next-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.next-tp{display:flex;align-items:baseline;gap:8px;min-width:0}
 .next-turno{font-size:1.5rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.next-pet{font-size:.85rem;font-weight:600;margin-top:3px}
+.next-pet{font-size:.95rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.next-reg{flex-shrink:0}
+.next-owner{font-size:.76rem;font-weight:600;margin-top:4px}
 .next-meta{font-size:.72rem;color:var(--tm);margin-top:2px}
 /* Tiempo de espera. A los 30 min se pone ámbar, a los 45 rojo: el médico
    no tiene que leer el número para darse cuenta de que alguien lleva rato. */
@@ -220,7 +228,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .q-turno{font-weight:700;font-size:.82rem;min-width:42px;font-variant-numeric:tabular-nums}
 .q-info{flex:1;min-width:0}
 .q-pet{font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.q-meta{font-size:.68rem;color:var(--tm);line-height:1.5}
+.q-meta{font-size:.68rem;color:var(--tm);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;text-align:right}
 .q-empty{font-size:.78rem;color:var(--ts);text-align:center;padding:14px 0}
 .q-click{cursor:pointer;flex:1;min-width:0;border-radius:8px;transition:opacity .15s}
 .q-click:hover{opacity:.72}
@@ -1020,11 +1029,14 @@ function renderSala() {
       body += '<div class="next-box'+(hayQueElegir && !esElRecomendado ? ' next-baja' : '')+'">'+
         sugerencia +
         '<div class="q-click" onclick="goToAnamnesis('+next.rowIndex+')">'+
-          '<div class="next-turno" style="color:'+nc+'">'+esc(next.turno||'—')+'</div>'+
-          '<div class="next-pet">'+esc(next.petName||'Sin nombre')+' '+ag+' '+etiquetaRegistro(next)+'</div>'+
-          '<div class="next-meta">👤 '+esc(next.ownerName||'—')+' · '+esc(next.service||'')+
-            (next.specialty?' · '+esc(next.specialty):'')+'</div>'+
-          '<div class="next-espera'+claseEspera(next.timestamp)+'">⏳ Esperando '+fmtEspera(next.timestamp).replace(/^hace /,'')+'</div>'+
+          '<div class="next-top">'+
+            '<div class="next-tp"><span class="next-turno" style="color:'+nc+'">'+esc(next.turno||'—')+'</span> '+
+              '<span class="next-pet">'+esc(next.petName||'Sin nombre')+'</span></div>'+
+            '<div class="next-reg">'+etiquetaRegistro(next)+'</div>'+
+          '</div>'+
+          '<div class="next-owner">👤 '+esc(next.ownerName||'—')+'</div>'+
+          '<div class="next-meta">'+esc(next.service||'')+(next.specialty?' · '+esc(next.specialty):'')+' '+ag+'</div>'+
+          '<div class="next-espera'+claseEspera(next.timestamp)+'">Esperando '+fmtEspera(next.timestamp).replace(/^hace /,'')+'</div>'+
           (next.complaint ? '<div class="next-motivo">“'+esc(String(next.complaint).slice(0,90))+(String(next.complaint).length>90?'…':'')+'”</div>' : '')+
         '</div>'+
         // Con un paciente sin cerrar, Llamar queda apagado. No hace falta
@@ -1055,11 +1067,14 @@ function renderSala() {
         ? '<span class="mini mini-frio">⏸ hasta '+esc(fmtHora(r.esperarHasta))+'</span>' : '';
       body += '<div class="q-item q-click'+(estaCongelado(r)?' q-frio':'')+'" onclick="goToAnamnesis('+r.rowIndex+')">'+
         '<div class="q-turno" style="color:'+rc+'">'+esc(r.turno||'—')+'</div>'+
-        '<div class="q-info"><div class="q-pet">'+esc(r.petName||'')+' '+ag+frio+etiquetaRegistro(r)+'</div>'+
-        '<div class="q-meta">'+esc(r.service||'')+
-          (r.ownerName ? ' · 👤 '+esc(r.ownerName) : '')+
-          ' · <span class="espera'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</span>'+
-        '</div></div></div>';
+        '<div class="q-info">'+
+          '<div class="q-pet">'+esc(r.petName||'')+' '+ag+frio+'</div>'+
+          '<div class="q-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+'</div>'+
+        '</div>'+
+        '<div class="q-side">'+
+          '<div class="q-reg">'+etiquetaRegistro(r)+'</div>'+
+          '<div class="espera'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</div>'+
+        '</div></div>';
     });
 
     // Si la fila está plegada, no mostramos el cuerpo (solo el encabezado).
@@ -1298,8 +1313,8 @@ function claseEspera(ts) {
 //   (con anamnesis)       → sin etiqueta: el registro está y se lee al abrir
 // Vale para las dos: el médico llama igual, la etiqueta solo lo informa.
 function etiquetaRegistro(r) {
-  if (r.estadoTurno === 'llenando') return '<span class="mini mini-llen">✍️ Haciendo registro</span>';
-  if (!r.complaint && !r.detail)    return '<span class="mini mini-sinreg">🚫 Sin registro</span>';
+  if (r.estadoTurno === 'llenando') return '<span class="mini mini-llen">Haciendo registro</span>';
+  if (!r.complaint && !r.detail)    return '<span class="mini mini-sinreg">Sin registro</span>';
   return '';
 }
 
@@ -1329,23 +1344,23 @@ function buildCard(r) {
   return `
 <div class="rec${reviewed?' reviewed':''}" id="rec-${rowIdx}" style="border-left:5px solid ${color}">
   <div class="rec-head" onclick="toggleRec(${rowIdx})">
-    <div class="rec-emoji">${em}</div>
     <div class="rec-info">
+      <div class="rec-top">
+        <span class="rec-service" style="background:${color}22;color:${color}">${esc(svcShort)}</span>
+        <span class="rec-time${claseEspera(r.timestamp)}">${fmtEspera(r.timestamp)}</span>
+      </div>
       <div class="rec-name">
         ${r.turno ? '<span class="turno-badge" style="background:'+color+'">'+esc(r.turno)+'</span>' : ''}
-        ${esc(r.petName||'Sin nombre')}
+        ${em} ${esc(r.petName||'Sin nombre')}
+        ${r.breed ? '<span class="rec-breed">· '+esc(r.breed)+'</span>' : ''}
         ${r.vetesoftHc ? '<span class="hc-badge">HC '+esc(r.vetesoftHc)+'</span>' : ''}
-        ${r.agendado === 'si' ? '<span class="mini mini-ag">Agendado</span>' : ''}
         ${reviewed ? '<span class="rv-badge">✓ Revisado</span>' : ''}
       </div>
       <div class="rec-meta">
         <span>👤 ${esc(r.ownerName||'—')}</span>
-        ${r.breed ? '<span>· '+esc(r.breed)+'</span>' : ''}
         ${r.consultorio ? '<span>· 🚪 '+esc(r.consultorio)+'</span>' : ''}
       </div>
     </div>
-    <span class="rec-service" style="background:${color}22;color:${color}">${esc(svcShort)}</span>
-    <div class="rec-time">${fmtEspera(r.timestamp)}<br><span style="opacity:.6">${fmtTime(r.timestamp)}</span></div>
     <div class="rec-arrow">▼</div>
   </div>
   <div class="rec-body">
