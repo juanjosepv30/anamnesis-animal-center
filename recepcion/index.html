@@ -43,6 +43,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .res-hc{background:var(--p);color:#fff;border-radius:99px;padding:1px 8px;font-size:.62rem;font-weight:700}
 .res-meta{font-size:.74rem;color:var(--tm);margin-top:2px}
 .res-note{font-size:.8rem;color:var(--tm);text-align:center;padding:10px;background:var(--bg);border-radius:9px;margin-top:10px}
+/* Botón "sin historia clínica" — siempre disponible bajo los resultados. */
+.btn-nuevo{border:1.5px dashed var(--p);background:var(--pl);color:var(--pd);border-radius:9px;padding:9px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;margin-top:8px}
+.btn-nuevo:hover{background:#ece4ff}
+.res-ninguno{text-align:center;font-size:.78rem;color:var(--tm);margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}
 
 .reg-form{background:var(--pl);border:1.5px solid #d8c9f5;border-radius:12px;padding:14px;margin-top:12px}
 .reg-sel{font-weight:700;font-size:.9rem;margin-bottom:4px;display:flex;align-items:center;gap:7px}
@@ -400,13 +404,15 @@ function doSearch() {
   const url = API_URL + '?action=search&petName=' + encodeURIComponent(pet) +
               '&ownerName=' + encodeURIComponent(owner) + '&cedula=' + encodeURIComponent(ced);
   fetch(url).then(r=>r.json()).then(function(res){
+    // El botón "sin historia clínica" va SIEMPRE — con o sin coincidencias.
+    // Si la búsqueda no encontró nada, es la única salida. Y si encontró
+    // parecidos pero ninguno es el cliente, también hay que poder registrar
+    // uno nuevo, o recepción se queda trabada mirando homónimos.
+    var btnNuevo = '<button class="btn-nuevo" onclick="registrarNuevo()">+ No tiene historia clínica — registrar nuevo</button>';
+
     if (!res || !res.ok || !res.results || !res.results.length) {
-      // Sin coincidencias no es un callejón: es un cliente nuevo. Antes acá
-      // se terminaba y recepción no tenía cómo registrarlo — chocaba contra
-      // una pared con el que más importa, el que nunca vino. Ahora sigue.
       document.getElementById('results').innerHTML =
-        '<div class="res-note">No está en Vetesoft. Puede ser un cliente nuevo.</div>'+
-        '<button class="btn-primary" style="margin-top:10px" onclick="registrarNuevo()">+ Registrar cliente nuevo</button>';
+        '<div class="res-note">No se encontró en Vetesoft.</div>' + btnNuevo;
       return;
     }
     let html = '';
@@ -416,6 +422,8 @@ function doSearch() {
       html += '<div class="res-item" onclick="pickResult(_r'+i+')"><div class="res-name">'+esc(r.petName||'')+hc+'</div>'+
               '<div class="res-meta">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+' | 👤 '+esc(r.owner||'')+(r.documento?' · CC '+esc(r.documento):'')+'</div></div>';
     });
+    // Al final de la lista: por si ninguno de los que aparecen es el cliente.
+    html += '<div class="res-ninguno">¿Ninguno es? ' + btnNuevo + '</div>';
     document.getElementById('results').innerHTML = html;
   }).catch(function(){
     document.getElementById('results').innerHTML = '<div class="res-note">Error de conexión con Vetesoft.</div>';
