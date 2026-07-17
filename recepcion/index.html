@@ -152,7 +152,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
              mejor que los nombres (que se repiten). Enter en cualquier campo
              dispara la búsqueda, para no tener que ir hasta el botón. -->
         <input type="number" id="qCedula" placeholder="Cédula" autofocus onkeydown="if(event.key==='Enter')doSearch()">
-        <input type="text" id="qPet" placeholder="Nombre de la mascota" onkeydown="if(event.key==='Enter')doSearch()">
+        <input type="text" id="qPet" placeholder="Nombre de la mascota (opcional)" onkeydown="if(event.key==='Enter')doSearch()">
         <input type="text" id="qOwner" placeholder="Nombre del dueño (opcional)" onkeydown="if(event.key==='Enter')doSearch()">
         <button onclick="doSearch()">🔍 Buscar</button>
       </div>
@@ -404,11 +404,10 @@ function doSearch() {
   const owner = document.getElementById('qOwner').value.trim();
   const pet   = document.getElementById('qPet').value.trim();
   const ced   = document.getElementById('qCedula').value.trim();
-  // Pedimos SIEMPRE cédula + nombre de la mascota. Así la búsqueda trae solo
-  // la mascota que el cliente mencionó, y no la lista de todas las que tiene
-  // a su nombre: alguna pudo haber fallecido y no queremos que recepción se
-  // la nombre al cliente sin querer.
-  if (!ced || !pet) { showToast('Escribe la cédula y el nombre de la mascota'); return; }
+  // La búsqueda arranca con solo la cédula y Enter: lo más práctico. Los
+  // pacientes fallecidos ya no aparecen (los filtra el backend), así que no
+  // hace falta exigir el nombre de la mascota para evitar nombrarlos.
+  if (!owner && !pet && !ced) { showToast('Ingresa al menos un dato'); return; }
   document.getElementById('regArea').innerHTML = '';
   document.getElementById('results').innerHTML = '<div class="spinner"></div>';
   const url = API_URL + '?action=search&petName=' + encodeURIComponent(pet) +
