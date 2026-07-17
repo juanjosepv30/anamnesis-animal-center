@@ -93,7 +93,17 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
    color más suave es solo para que recepción vea que aún no terminó. */
 .badge-llen{background:#ede9fe;color:#5b21b6}
 .wr-llenando{border-left-style:dashed!important;background:#faf9ff}
-.wr-btn{border:1.5px solid var(--bd);border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:600;cursor:pointer;background:var(--wh);color:var(--tm);font-family:'DM Sans',sans-serif}
+.wr-btn{border:1.5px solid var(--bd);border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:600;cursor:pointer;background:var(--wh);color:var(--tm);font-family:'DM Sans',sans-serif;white-space:nowrap}
+/* Pestañas de la sala de espera. */
+.wr-tabs{display:flex;gap:6px;margin:2px 0 12px;border-bottom:1.5px solid var(--bd)}
+.wr-tab{border:none;background:none;padding:8px 12px;font-size:.82rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:'DM Sans',sans-serif;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;display:flex;align-items:center;gap:6px}
+.wr-tab.active{color:var(--p);border-bottom-color:var(--p)}
+.wr-tabn{font-size:.7rem;background:var(--bg);color:var(--tm);border-radius:10px;padding:1px 7px;font-weight:700}
+.wr-tab.active .wr-tabn{background:var(--pl);color:var(--p)}
+/* Subtítulo de grupo dentro de "En espera". */
+.wr-grp{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--ts);margin:12px 0 6px}
+.wr-grp:first-child{margin-top:0}
+.wr-btn-volver{border-color:#a78bfa;color:#5b21b6}
 .empty{text-align:center;padding:40px 20px;color:var(--tm);font-size:.85rem}
 .spinner{width:30px;height:30px;border:2.5px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:30px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -128,7 +138,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
     <div class="card">
       <div class="card-t">Sala de espera · hoy</div>
-      <div class="card-sub" id="wrCount">Cargando...</div>
+      <div class="wr-tabs">
+        <button class="wr-tab active" data-tab="espera"    onclick="verTab('espera')">En espera <span class="wr-tabn" id="cEspera">0</span></button>
+        <button class="wr-tab"        data-tab="ausentes"  onclick="verTab('ausentes')">Ausentes <span class="wr-tabn" id="cAusentes">0</span></button>
+        <button class="wr-tab"        data-tab="atendidos" onclick="verTab('atendidos')">Atendidos <span class="wr-tabn" id="cAtendidos">0</span></button>
+      </div>
       <div id="wrList"><div class="spinner"></div></div>
     </div>
   </div>
@@ -527,45 +541,111 @@ function doRegister() {
     });
 }
 
-// ── Sala de espera de hoy ────────────────────────────────────
+// ── Sala de espera de hoy (con pestañas) ─────────────────────
+// Tres solapas, para que recepción no pierda de vista nada:
+//   En espera  → los que están en la cola (esperando/llamando/llenando),
+//                separados en especialidades y generales, como los médicos.
+//   Ausentes   → los que se fueron (o el médico no vio). Dato útil: cuántos
+//                se van por la espera. Desde acá se devuelven a la fila.
+//   Atendidos  → los que ya pasaron. Solo lectura.
+var wrRecords = [];
+var wrTab = 'espera';
+
+function verTab(t) {
+  wrTab = t;
+  var tabs = document.querySelectorAll('.wr-tab');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tab') === t);
+  renderTab();
+}
+
+// Especializado = va a un doctor puntual (especialista, viajero→Fredy,
+// rayos→Angie, o control con especialista). El resto, general. Mismo
+// criterio con el que los médicos separan sus dos filas.
+function esEspecializado(r) {
+  var s = String(r.service || '').toLowerCase();
+  if (s.indexOf('especial') !== -1) return true;
+  if (s.indexOf('control') !== -1 && r.specialty) return true;
+  if (s.indexOf('viajer') !== -1 || s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return true;
+  return false;
+}
+
 function loadWaitingRoom(silent) {
   if (!silent) document.getElementById('wrList').innerHTML = '<div class="spinner"></div>';
   fetch(API_URL + '?action=records').then(r=>r.json()).then(function(res){
     if (!res || !res.ok) { document.getElementById('wrList').innerHTML = '<div class="empty">Error al cargar.</div>'; return; }
-    const today = new Date();
-    const list = (res.records||[]).filter(function(r){
-      const d = new Date(r.timestamp);
-      return !isNaN(d) && d.toDateString() === today.toDateString() && r.estadoTurno !== 'atendido';
+    var today = new Date();
+    wrRecords = (res.records || []).filter(function(r){
+      var d = new Date(r.timestamp);
+      return !isNaN(d) && d.toDateString() === today.toDateString();
     });
-    document.getElementById('wrCount').textContent = list.length + ' en sala de espera';
-    if (!list.length) { document.getElementById('wrList').innerHTML = '<div class="empty">Nadie en sala de espera todavía.</div>'; return; }
-    let html = '';
-    list.forEach(function(r){
-      const color = serviceColor(r.service);
-      const ag = r.agendado === 'si' ? '<span class="badge badge-ag">Agendado</span>' : '';
-      let estBadge = '';
-      if (r.estadoTurno === 'llamando') estBadge = '<span class="badge badge-esp">Llamando</span>';
-      else if (r.estadoTurno === 'ausente') estBadge = '<span class="badge badge-au">Ausente</span>';
-      // El que está haciendo su registro ya está en la cola del médico
-      // (llamable). El badge es solo informativo: recepción ve que todavía
-      // no lo terminó, pero no tiene que hacer nada — el médico decide.
-      else if (r.estadoTurno === 'llenando') estBadge = '<span class="badge badge-llen">✍️ Haciendo registro</span>';
-      const ausente = r.estadoTurno === 'ausente';
-      html += '<div class="wr-item'+(r.estadoTurno==='llenando'?' wr-llenando':'')+'" style="border-left-color:'+color+'">'+
-        '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
-        '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+' '+ag+' '+estBadge+'</div>'+
-        '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.horaCita?' · 🕐 '+esc(r.horaCita):'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
-        '<button class="wr-btn" onclick="markAusente('+r.rowIndex+','+(ausente?"'esperando'":"'ausente'")+')">'+(ausente?'Reactivar':'Ausente')+'</button>'+
-        '</div>';
-    });
-    document.getElementById('wrList').innerHTML = html;
+    renderTab();
   }).catch(function(){ document.getElementById('wrList').innerHTML = '<div class="empty">Error de conexión.</div>'; });
+}
+
+// Una fila de la lista. `btn` es el HTML del botón de acción (o '').
+function wrItem(r, btn) {
+  var color = serviceColor(r.service);
+  var ag = r.agendado === 'si' ? '<span class="badge badge-ag">Agendado</span>' : '';
+  var estBadge = '';
+  if (r.estadoTurno === 'llamando') estBadge = '<span class="badge badge-esp">Llamando</span>';
+  else if (r.estadoTurno === 'llenando') estBadge = '<span class="badge badge-llen">✍️ Haciendo registro</span>';
+  return '<div class="wr-item'+(r.estadoTurno==='llenando'?' wr-llenando':'')+'" style="border-left-color:'+color+'">'+
+    '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
+    '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+' '+ag+' '+estBadge+'</div>'+
+    '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.horaCita?' · 🕐 '+esc(r.horaCita):'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
+    (btn || '')+
+    '</div>';
+}
+
+// Un grupo con subtítulo (Especialidades / Generales), del que más espera
+// al que menos.
+function wrGrupo(titulo, arr) {
+  if (!arr.length) return '';
+  arr.sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
+  var h = '<div class="wr-grp">'+titulo+' · '+arr.length+'</div>';
+  arr.forEach(function(r){
+    h += wrItem(r, '<button class="wr-btn" onclick="markAusente('+r.rowIndex+',\'ausente\')">Ausente</button>');
+  });
+  return h;
+}
+
+function renderTab() {
+  var espera    = wrRecords.filter(function(r){ var e=r.estadoTurno||'esperando'; return e==='esperando'||e==='llamando'||e==='llenando'; });
+  var ausentes  = wrRecords.filter(function(r){ return r.estadoTurno==='ausente'; });
+  var atendidos = wrRecords.filter(function(r){ return r.estadoTurno==='atendido'; });
+
+  document.getElementById('cEspera').textContent    = espera.length;
+  document.getElementById('cAusentes').textContent  = ausentes.length;
+  document.getElementById('cAtendidos').textContent = atendidos.length;
+
+  var el = document.getElementById('wrList');
+  var html = '';
+
+  if (wrTab === 'espera') {
+    if (!espera.length) { el.innerHTML = '<div class="empty">Nadie en espera todavía.</div>'; return; }
+    html += wrGrupo('🩺 Especialidades', espera.filter(esEspecializado));
+    html += wrGrupo('🐾 Generales',      espera.filter(function(r){ return !esEspecializado(r); }));
+
+  } else if (wrTab === 'ausentes') {
+    if (!ausentes.length) { el.innerHTML = '<div class="empty">Ningún ausente hoy.</div>'; return; }
+    ausentes.sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
+    ausentes.forEach(function(r){
+      // Devolver a la fila conserva su hora de llegada → vuelve de primero.
+      html += wrItem(r, '<button class="wr-btn wr-btn-volver" onclick="markAusente('+r.rowIndex+',\'esperando\')">← Devolver a la fila</button>');
+    });
+
+  } else { // atendidos
+    if (!atendidos.length) { el.innerHTML = '<div class="empty">Nadie atendido todavía.</div>'; return; }
+    atendidos.sort(function(a,b){ return new Date(b.timestamp) - new Date(a.timestamp); });
+    atendidos.forEach(function(r){ html += wrItem(r, ''); });
+  }
+  el.innerHTML = html;
 }
 
 function markAusente(rowIndex, estado) {
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: estado }) })
     .then(r=>r.json()).then(function(res){
-      if (res && res.ok) { showToast('Actualizado'); loadWaitingRoom(true); }
+      if (res && res.ok) { showToast(estado==='ausente'?'Marcado ausente':'Devuelto a la fila'); loadWaitingRoom(true); }
       else { showToast((res && res.error) || 'Error al actualizar'); loadWaitingRoom(true); }
     }).catch(function(){ showToast('Error de conexión'); });
 }
