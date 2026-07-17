@@ -152,8 +152,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
              mejor que los nombres (que se repiten). Enter en cualquier campo
              dispara la búsqueda, para no tener que ir hasta el botón. -->
         <input type="number" id="qCedula" placeholder="Cédula" autofocus onkeydown="if(event.key==='Enter')doSearch()">
+        <input type="text" id="qPet" placeholder="Nombre de la mascota" onkeydown="if(event.key==='Enter')doSearch()">
         <input type="text" id="qOwner" placeholder="Nombre del dueño (opcional)" onkeydown="if(event.key==='Enter')doSearch()">
-        <input type="text" id="qPet" placeholder="Nombre de la mascota (opcional)" onkeydown="if(event.key==='Enter')doSearch()">
         <button onclick="doSearch()">🔍 Buscar</button>
       </div>
       <div class="results" id="results"></div>
@@ -196,7 +196,7 @@ const SPECIALTIES = [
 ];
 
 function buildSpecOptions() {
-  var h = '<option value="">— Elegí especialidad —</option>';
+  var h = '<option value="">— Elige la especialidad —</option>';
   SPECIALTIES.forEach(function(s){
     h += '<option value="'+s.name+'">'+s.name+' — '+s.doctor+'</option>';
   });
@@ -229,7 +229,7 @@ function servicioCfg(v) {
 function buildServiceOptions() {
   // Arranca sin servicio elegido: recepción tiene que elegir a conciencia,
   // no aceptar un default. Hasta que elija, el botón Registrar está apagado.
-  return '<option value="">— Elegí el servicio —</option>' +
+  return '<option value="">— Elige el servicio —</option>' +
     SERVICIOS.map(function(s){
       return '<option value="'+s.v+'">'+(s.label || s.v)+'</option>';
     }).join('');
@@ -404,7 +404,11 @@ function doSearch() {
   const owner = document.getElementById('qOwner').value.trim();
   const pet   = document.getElementById('qPet').value.trim();
   const ced   = document.getElementById('qCedula').value.trim();
-  if (!owner && !pet && !ced) { showToast('Ingresá al menos un dato'); return; }
+  // Pedimos SIEMPRE cédula + nombre de la mascota. Así la búsqueda trae solo
+  // la mascota que el cliente mencionó, y no la lista de todas las que tiene
+  // a su nombre: alguna pudo haber fallecido y no queremos que recepción se
+  // la nombre al cliente sin querer.
+  if (!ced || !pet) { showToast('Escribe la cédula y el nombre de la mascota'); return; }
   document.getElementById('regArea').innerHTML = '';
   document.getElementById('results').innerHTML = '<div class="spinner"></div>';
   const url = API_URL + '?action=search&petName=' + encodeURIComponent(pet) +
@@ -538,7 +542,7 @@ function doRegister() {
   // sería una consulta especializada sin doctor, que no rutea a nadie.
   var specialty = cfg.doctor === 'elige' ? document.getElementById('regSpec').value.trim() : '';
   if (cfg.doctor === 'elige' && !specialty) {
-    showToast('Elegí la especialidad / doctor');
+    showToast('Elige la especialidad / doctor');
     return;
   }
 
@@ -608,7 +612,7 @@ function doRegister() {
           // El WhatsApp falló pero el paciente entró a la fila igual: sin
           // este aviso todo "se ve bien" y el número malo sigue ahí.
           em  = '⚠️';
-          msg = 'NO se pudo mandar el WhatsApp — revisá el número. ' +
+          msg = 'NO se pudo mandar el WhatsApp — revisa el número. ' +
                 'Igual quedó en la sala de espera y el médico ya lo ve, como siempre.';
         } else {
           msg = 'Registrado en la sala de espera' +

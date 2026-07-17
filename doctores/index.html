@@ -135,7 +135,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .turno-tgl:disabled{opacity:.5;cursor:wait}
 /* ── Bienvenida al empezar el turno ──
    El médico abre la app y lo primero que ve es la pregunta que importa:
-   ¿arrancamos? Un solo botón grande. El selector de quién sos va abajo,
+   ¿arrancamos? Un solo botón grande. El selector de quién eres va abajo,
    porque casi siempre ya está elegido de la vez anterior. */
 /* No es un pop-up: es la pantalla de entrada. Va SIEMPRE primero, así que
    tapa el dashboard por completo. Antes se veía translúcida y con el
@@ -881,18 +881,18 @@ function bienvenidaListo() {
 // ── ¿Cuál de las dos filas primero? ──────────────────────────
 // Solo aplica al médico que atiende las dos (Tatiana es gastro y general).
 //
-// LA REGLA, en palabras de la clínica: llamá al que más tiempo lleva
+// LA REGLA, en palabras de la clínica: llama al que más tiempo lleva
 // esperando. Excepción: si a ese lo va a poder tomar otro médico en pocos
-// minutos, saltá al que solo vos podés atender.
+// minutos, salta al que solo tú puedes atender.
 //
 // El criterio es el TIEMPO DE ESPERA DEL PACIENTE, no la categoría. Que un
 // paciente sea "solo tuyo" no le da prioridad por sí solo: solo importa
 // cuando cambia cuánto va a esperar alguien. Si la otra doctora acaba de
 // entrar a consulta, la general se queda 30 minutos varada y hay que
-// tomarla. Si está por salir, la va a tomar ella y podés ir a lo tuyo.
+// tomarla. Si está por salir, la va a tomar ella y puedes ir a lo tuyo.
 function decidirEntreFilas(hoy, filasVisibles) {
   // Sin identidad no hay a quién aconsejar: "otro médico está por
-  // desocuparse" no significa nada si no sabemos quién sos.
+  // desocuparse" no significa nada si no sabemos quién eres.
   if (!miMedico) return null;
   if (filasVisibles.length < 2) return null;   // una sola fila: no hay nada que decidir
 
@@ -908,7 +908,7 @@ function decidirEntreFilas(hoy, filasVisibles) {
   cands.sort(porLlegada);
   const masViejo = cands[0], elOtro = cands[1];
 
-  // Al que más espera lo toma otro en breve → andá al que solo podés vos.
+  // Al que más espera lo toma otro en breve → ve al que solo puedes tú.
   if (otroLoPuedeTomarPronto(masViejo, hoy) && !otroLoPuedeTomarPronto(elOtro, hoy)) {
     return elOtro;
   }
@@ -1008,7 +1008,7 @@ function renderSala() {
       // se le preselecciona SU consultorio (el que más usa), que igual puede
       // cambiar. Sin preselección, Llamar arranca apagado hasta que elija.
       const pref = consultorioPreferido(next);
-      let opts = '<option value=""'+(pref?'':' selected')+'>— Elegí consultorio —</option>';
+      let opts = '<option value=""'+(pref?'':' selected')+'>— Elige el consultorio —</option>';
       roomsFor(f.key).forEach(function(rm){
         opts += '<option value="'+rm+'"'+(rm===pref?' selected':'')+'>'+rm+'</option>';
       });
@@ -1147,7 +1147,7 @@ function callNext(rowIndex, filaKey) {
   const room = sel ? sel.value : '';
   // Sin consultorio no se llama (el botón ya debería estar apagado; esto es
   // la red por si algo se escapa).
-  if (!room) { showToast('Elegí el consultorio primero'); return; }
+  if (!room) { showToast('Elige el consultorio primero'); return; }
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room, medico: miMedico }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
