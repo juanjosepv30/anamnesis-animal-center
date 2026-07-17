@@ -71,6 +71,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 @media(max-width:560px){.reg-grid{grid-template-columns:1fr}.reg-grid label{min-height:0}}
 .reg-actions{display:flex;gap:8px}
 .btn-primary{flex:1;padding:11px;border:none;border-radius:9px;background:var(--p);color:#fff;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-primary.apagado,.btn-primary:disabled{background:var(--bd);color:var(--ts);cursor:not-allowed}
 .btn-ghost{padding:11px 16px;border:1.5px solid var(--bd);border-radius:9px;background:var(--wh);color:var(--tm);font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
 
 .confirm{background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:16px;text-align:center;margin-top:12px}
@@ -203,9 +204,12 @@ function servicioCfg(v) {
 }
 
 function buildServiceOptions() {
-  return SERVICIOS.map(function(s){
-    return '<option value="'+s.v+'">'+(s.label || s.v)+'</option>';
-  }).join('');
+  // Arranca sin servicio elegido: recepción tiene que elegir a conciencia,
+  // no aceptar un default. Hasta que elija, el botón Registrar está apagado.
+  return '<option value="">— Elegí el servicio —</option>' +
+    SERVICIOS.map(function(s){
+      return '<option value="'+s.v+'">'+(s.label || s.v)+'</option>';
+    }).join('');
 }
 
 // Horas de cita: solo en punto y y-media (06:00 → 22:00).
@@ -241,7 +245,21 @@ function sumarMinutos(hhmm, mins) {
 // miraba el texto del servicio con indexOf; ahora lee la config, que es la
 // única fuente de verdad (ver SERVICIOS).
 function pintarServicio() {
-  var cfg = servicioCfg(document.getElementById('regService').value);
+  var svc = document.getElementById('regService').value;
+
+  // Sin servicio elegido no se muestra nada más ni se puede registrar: hay
+  // que elegir primero. Esconde doctor y agenda, y apaga el botón.
+  if (!svc) {
+    ['boxSpec','boxAutoDoc','boxTieneCita','boxHora','boxEsperar'].forEach(function(id){
+      document.getElementById(id).style.display = 'none';
+    });
+    document.getElementById('regSpec').value = '';
+    document.querySelector('.btn-primary').textContent = 'Registrar llegada →';
+    actualizarBotonRegistro();
+    return;
+  }
+
+  var cfg = servicioCfg(svc);
 
   // ── Doctor ──
   // 'elige' → selector de especialista visible.
@@ -271,6 +289,18 @@ function pintarServicio() {
     : 'Registrar llegada →';
   if (conCita) document.getElementById('regEsperar').value = '';
   pintarDescongela();
+  actualizarBotonRegistro();
+}
+
+// Apaga el botón Registrar hasta que el formulario esté completo: hay que
+// elegir servicio, y si el servicio pide especialista, también elegirlo.
+// Así no se registra a medias.
+function actualizarBotonRegistro() {
+  var svc = document.getElementById('regService').value;
+  var cfg = svc ? servicioCfg(svc) : null;
+  var falta = !svc || (cfg && cfg.doctor === 'elige' && !document.getElementById('regSpec').value);
+  var btn = document.querySelector('.btn-primary');
+  if (btn) { btn.disabled = !!falta; btn.classList.toggle('apagado', !!falta); }
 }
 
 // Le mostramos a recepción a qué hora se descongela, para que pueda
@@ -405,7 +435,7 @@ function abrirRegistro(r, esNuevo) {
         '<div><label>Servicio</label><select id="regService" onchange="pintarServicio()">'+buildServiceOptions()+'</select></div>'+
         // El selector de especialista solo aparece para los servicios que lo
         // eligen (ver SERVICIOS). pintarServicio() lo muestra o lo esconde.
-        '<div id="boxSpec"><label>Especialidad / Doctor</label><select id="regSpec">'+buildSpecOptions()+'</select></div>'+
+        '<div id="boxSpec"><label>Especialidad / Doctor</label><select id="regSpec" onchange="actualizarBotonRegistro()">'+buildSpecOptions()+'</select></div>'+
         // Viajero y Rayos van con un doctor fijo: se muestra, no se elige.
         '<div id="boxAutoDoc" style="display:none"><label>Doctor asignado</label><div class="reg-auto">👨‍⚕️ <span id="autoDocName"></span></div></div>'+
         // Con teléfono, al cliente le llega el link y llena la ficha desde su
