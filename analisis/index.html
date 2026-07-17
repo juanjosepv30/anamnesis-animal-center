@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis — Animal Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#faf7ff;--bg2:#f3eeff;--tx:#1a0a2e;--tm:#6b5c7e;--ts:#b0a4bf;
+  --wh:#fff;--bd:#e8dff5;--p:#7c3aed;--pl:#f5f0ff;--pd:#5b21b6;--ok:#16a34a;--warn:#dc2626;
+}
+html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+
+.hdr{background:var(--wh);border-bottom:1px solid var(--bd);padding:0 22px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hdr-brand{display:flex;align-items:center;gap:10px}
+.hdr-icon{width:34px;height:34px;border-radius:8px;overflow:hidden;background:var(--p);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem}
+.hdr-t{font-size:.95rem;font-weight:700}
+.hdr-s{font-size:.72rem;color:var(--tm)}
+.btn-ref{border:1.5px solid var(--bd);border-radius:8px;padding:6px 14px;color:var(--tm);font-size:.78rem;font-weight:600;cursor:pointer;background:var(--wh);font-family:'DM Sans',sans-serif}
+
+.wrap{max-width:920px;margin:0 auto;padding:18px 16px 60px}
+.card{background:var(--wh);border:1px solid var(--bd);border-radius:14px;padding:18px;margin-bottom:16px}
+.card-t{font-size:1rem;font-weight:800;margin-bottom:2px}
+.card-sub{font-size:.8rem;color:var(--tm);margin-bottom:16px}
+
+/* Controles */
+.ctrl-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.ctrl label{display:block;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tm);margin-bottom:6px}
+.seg{display:inline-flex;background:var(--bg2);border-radius:9px;padding:3px}
+.seg button{border:none;background:none;padding:7px 13px;font-size:.8rem;font-weight:700;color:var(--tm);cursor:pointer;border-radius:7px;font-family:'DM Sans',sans-serif}
+.seg button.on{background:var(--wh);color:var(--p);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+/* Tarjetas de resumen (KPIs) */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:4px}
+.kpi{background:var(--pl);border-radius:11px;padding:14px}
+.kpi-n{font-size:1.6rem;font-weight:800;color:var(--pd);line-height:1}
+.kpi-l{font-size:.72rem;color:var(--tm);margin-top:5px;font-weight:600}
+
+/* Barras horizontales (por servicio) */
+.hbar{margin-bottom:11px}
+.hbar-top{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;margin-bottom:4px}
+.hbar-name{font-weight:700}
+.hbar-val{font-weight:800;color:var(--tx)}
+.hbar-val small{color:var(--tm);font-weight:600}
+.hbar-track{height:12px;background:var(--bg2);border-radius:7px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:7px;transition:width .4s}
+.trend{font-size:.72rem;font-weight:800;margin-left:6px}
+.up{color:var(--ok)} .down{color:var(--warn)} .flat{color:var(--ts)}
+
+/* Barras verticales (línea de tiempo) */
+.vbars{display:flex;align-items:flex-end;gap:6px;height:170px;padding-top:10px;overflow-x:auto}
+.vbar{flex:1;min-width:26px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.vbar-fill{width:100%;max-width:44px;background:var(--p);border-radius:6px 6px 0 0;min-height:2px;transition:height .4s;position:relative}
+.vbar-n{font-size:.7rem;font-weight:800;color:var(--pd);margin-bottom:3px}
+.vbar-x{font-size:.64rem;color:var(--tm);margin-top:6px;text-align:center;white-space:nowrap;font-weight:600}
+
+.empty{text-align:center;padding:34px 20px;color:var(--tm);font-size:.85rem}
+.spinner{width:30px;height:30px;border:2.5px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:30px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.note{font-size:.72rem;color:var(--ts);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-icon">📊</div>
+    <div><div class="hdr-t">Análisis</div><div class="hdr-s">Animal Center</div></div>
+  </div>
+  <button class="btn-ref" onclick="cargar()">↻ Actualizar</button>
+</div>
+
+<div class="wrap">
+  <!-- Controles -->
+  <div class="card">
+    <div class="ctrl-row">
+      <div class="ctrl">
+        <label>Período</label>
+        <div class="seg" id="segRango">
+          <button data-v="30"  onclick="setRango(30)">30 días</button>
+          <button data-v="90"  onclick="setRango(90)">3 meses</button>
+          <button data-v="365" class="on" onclick="setRango(365)">12 meses</button>
+          <button data-v="0"   onclick="setRango(0)">Todo</button>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Ver por</label>
+        <div class="seg" id="segGran">
+          <button data-v="dia"    onclick="setGran('dia')">Día</button>
+          <button data-v="semana" onclick="setGran('semana')">Semana</button>
+          <button data-v="mes"    class="on" onclick="setGran('mes')">Mes</button>
+          <button data-v="anio"   onclick="setGran('anio')">Año</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="contenido"><div class="spinner"></div></div>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
+
+var STATS = [];        // datos crudos del backend
+var rangoDias = 365;   // 0 = todo
+var gran = 'mes';
+
+// Color estable por servicio (para que cada barra sea siempre del mismo color).
+function colorSvc(s){
+  s=(s||'').toLowerCase();
+  if(s.indexOf('control')!==-1)return'#2563eb';
+  if(s.indexOf('especial')!==-1)return'#f97316';
+  if(s.indexOf('vacun')!==-1)return'#8e3f9e';
+  if(s.indexOf('inyect')!==-1)return'#eab308';
+  if(s.indexOf('viajer')!==-1)return'#0ea5e9';
+  if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1)return'#be123c';
+  if(s.indexOf('general')!==-1)return'#16a34a';
+  return'#7c3aed';
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── Buckets de tiempo ────────────────────────────────────────
+// Devuelve {k: clave ordenable, lbl: etiqueta corta} para una fecha según
+// la granularidad elegida.
+function bucket(d, g){
+  var y=d.getFullYear(), m=d.getMonth(), day=d.getDate();
+  var MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  if(g==='anio')   return {k:String(y), lbl:String(y)};
+  if(g==='mes')    return {k:y+'-'+String(m+1).padStart(2,'0'), lbl:MES[m]+" '"+String(y).slice(2)};
+  if(g==='semana'){
+    // Lunes de esa semana como ancla.
+    var t=new Date(d); var dow=(t.getDay()+6)%7; t.setDate(t.getDate()-dow);
+    return {k:t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'),
+            lbl:t.getDate()+' '+MES[t.getMonth()]};
+  }
+  // día
+  return {k:y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0'), lbl:day+' '+MES[m]};
+}
+
+function enRango(d, dias){
+  if(!dias) return true;
+  var lim=new Date(); lim.setDate(lim.getDate()-dias);
+  return d>=lim;
+}
+
+function setRango(v){ rangoDias=v; marcar('segRango',v); render(); }
+function setGran(v){ gran=v; marcar('segGran',v); render(); }
+function marcar(seg,v){
+  document.querySelectorAll('#'+seg+' button').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-v')==String(v));
+  });
+}
+
+function cargar(){
+  document.getElementById('contenido').innerHTML='<div class="spinner"></div>';
+  fetch(API_URL+'?action=stats').then(function(r){return r.json();}).then(function(res){
+    if(!res||!res.ok){ document.getElementById('contenido').innerHTML='<div class="card"><div class="empty">No se pudo cargar.</div></div>'; return; }
+    STATS=(res.data||[]).map(function(x){ x._d=new Date(x.t); return x; }).filter(function(x){ return !isNaN(x._d); });
+    render();
+  }).catch(function(){ document.getElementById('contenido').innerHTML='<div class="card"><div class="empty">Error de conexión.</div></div>'; });
+}
+
+function render(){
+  var cont=document.getElementById('contenido');
+  var enV=STATS.filter(function(x){ return enRango(x._d, rangoDias); });
+
+  if(!STATS.length){
+    cont.innerHTML='<div class="card"><div class="empty">Todavía no hay datos para analizar.<br>'+
+      'A medida que registres pacientes, acá vas a ver cómo crecen tus servicios, dónde se espera más y cuántos se van.</div></div>';
+    return;
+  }
+
+  cont.innerHTML =
+    kpisHtml(enV) +
+    crecimientoHtml(enV) +
+    esperasHtml(enV) +
+    ausentesHtml(enV);
+}
+
+// ── KPIs ─────────────────────────────────────────────────────
+function kpisHtml(rows){
+  var total=rows.length;
+  var conEspera=rows.filter(function(x){return x.wait!=null;});
+  var prom = conEspera.length ? Math.round(conEspera.reduce(function(a,x){return a+x.wait;},0)/conEspera.length) : null;
+  var aus = rows.filter(function(x){return x.est==='ausente';}).length;
+  var tasaAus = total ? Math.round(aus/total*100) : 0;
+  return '<div class="card"><div class="kpis">'+
+    kpi(total, 'pacientes')+
+    kpi(prom==null?'—':prom+"'", 'espera promedio')+
+    kpi(tasaAus+'%', 'se fueron (ausentes)')+
+  '</div></div>';
+}
+function kpi(n,l){ return '<div class="kpi"><div class="kpi-n">'+esc(n)+'</div><div class="kpi-l">'+esc(l)+'</div></div>'; }
+
+// ── 1. Crecimiento: qué servicio crece ───────────────────────
+function crecimientoHtml(rows){
+  // Línea de tiempo: total por bucket.
+  var buckets={}; var orden=[];
+  rows.forEach(function(x){
+    var b=bucket(x._d, gran);
+    if(!(b.k in buckets)){ buckets[b.k]={lbl:b.lbl,n:0}; orden.push(b.k); }
+    buckets[b.k].n++;
+  });
+  orden.sort();
+  var maxN=1; orden.forEach(function(k){ if(buckets[k].n>maxN)maxN=buckets[k].n; });
+  var vb='';
+  orden.forEach(function(k){
+    var h=Math.round(buckets[k].n/maxN*140);
+    vb+='<div class="vbar"><div class="vbar-n">'+buckets[k].n+'</div>'+
+        '<div class="vbar-fill" style="height:'+h+'px"></div>'+
+        '<div class="vbar-x">'+esc(buckets[k].lbl)+'</div></div>';
+  });
+
+  // Ranking por servicio + crecimiento vs período anterior igual.
+  var actual=cuentaPorSvc(rows);
+  var prev={};
+  if(rangoDias){
+    var iniAnt=new Date(); iniAnt.setDate(iniAnt.getDate()-rangoDias*2);
+    var finAnt=new Date(); finAnt.setDate(finAnt.getDate()-rangoDias);
+    prev=cuentaPorSvc(STATS.filter(function(x){ return x._d>=iniAnt && x._d<finAnt; }));
+  }
+  var svcs=Object.keys(actual).sort(function(a,b){ return actual[b]-actual[a]; });
+  var maxS=1; svcs.forEach(function(s){ if(actual[s]>maxS)maxS=actual[s]; });
+  var hb='';
+  svcs.forEach(function(s){
+    var n=actual[s], p=prev[s]||0;
+    var trend='';
+    if(rangoDias && p>0){
+      var pct=Math.round((n-p)/p*100);
+      var cls=pct>0?'up':(pct<0?'down':'flat');
+      trend='<span class="trend '+cls+'">'+(pct>0?'▲ +':(pct<0?'▼ ':'• '))+Math.abs(pct)+'%</span>';
+    } else if(rangoDias && n>0){ trend='<span class="trend up">nuevo</span>'; }
+    hb+='<div class="hbar"><div class="hbar-top">'+
+      '<span class="hbar-name">'+esc(s||'—')+trend+'</span>'+
+      '<span class="hbar-val">'+n+'</span></div>'+
+      '<div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(n/maxS*100)+'%;background:'+colorSvc(s)+'"></div></div></div>';
+  });
+
+  return '<div class="card">'+
+    '<div class="card-t">📈 Qué servicio crece</div>'+
+    '<div class="card-sub">Volumen de pacientes en el tiempo, y cada servicio comparado con el período anterior.</div>'+
+    (orden.length?('<div class="vbars">'+vb+'</div>'):'<div class="empty">Sin pacientes en este período.</div>')+
+    (svcs.length?('<div style="margin-top:18px">'+hb+'</div>'):'')+
+    (rangoDias?'<div class="note">▲▼ = cambio vs los '+rangoDias+' días anteriores.</div>':'')+
+  '</div>';
+}
+
+// ── 2. Esperas: dónde se espera más ──────────────────────────
+function esperasHtml(rows){
+  var sum={}, cnt={};
+  rows.forEach(function(x){
+    if(x.wait==null) return;
+    var s=x.svc||'—';
+    sum[s]=(sum[s]||0)+x.wait; cnt[s]=(cnt[s]||0)+1;
+  });
+  var svcs=Object.keys(sum);
+  svcs.forEach(function(s){ sum[s]=Math.round(sum[s]/cnt[s]); });
+  svcs.sort(function(a,b){ return sum[b]-sum[a]; });
+  var maxW=1; svcs.forEach(function(s){ if(sum[s]>maxW)maxW=sum[s]; });
+  var hb='';
+  svcs.forEach(function(s){
+    hb+='<div class="hbar"><div class="hbar-top">'+
+      '<span class="hbar-name">'+esc(s)+'</span>'+
+      '<span class="hbar-val">'+sum[s]+"' <small>("+cnt[s]+')</small></span></div>'+
+      '<div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(sum[s]/maxW*100)+'%;background:'+colorSvc(s)+'"></div></div></div>';
+  });
+  return '<div class="card">'+
+    '<div class="card-t">⏳ Dónde se espera más</div>'+
+    '<div class="card-sub">Minutos promedio de espera, de la llegada hasta que el médico lo llama. Entre paréntesis, cuántos pacientes.</div>'+
+    (svcs.length?hb:'<div class="empty">Todavía nadie fue llamado en este período.</div>')+
+  '</div>';
+}
+
+// ── 3. Ausentes: cuántos se van ──────────────────────────────
+function ausentesHtml(rows){
+  var tot={}, aus={};
+  rows.forEach(function(x){
+    var s=x.svc||'—';
+    tot[s]=(tot[s]||0)+1;
+    if(x.est==='ausente') aus[s]=(aus[s]||0)+1;
+  });
+  var svcs=Object.keys(aus);
+  svcs.sort(function(a,b){ return (aus[b]/tot[b])-(aus[a]/tot[a]); });
+  var hb='';
+  svcs.forEach(function(s){
+    var pct=Math.round(aus[s]/tot[s]*100);
+    hb+='<div class="hbar"><div class="hbar-top">'+
+      '<span class="hbar-name">'+esc(s)+'</span>'+
+      '<span class="hbar-val">'+pct+'% <small>('+aus[s]+' de '+tot[s]+')</small></span></div>'+
+      '<div class="hbar-track"><div class="hbar-fill" style="width:'+pct+'%;background:'+colorSvc(s)+'"></div></div></div>';
+  });
+  return '<div class="card">'+
+    '<div class="card-t">🚶 Cuántos se van</div>'+
+    '<div class="card-sub">Pacientes marcados ausentes (se fueron o no aparecieron), por servicio. Una tasa alta suele ser señal de mucha espera.</div>'+
+    (svcs.length?hb:'<div class="empty">Nadie se marcó ausente en este período. 👏</div>')+
+  '</div>';
+}
+
+function cuentaPorSvc(rows){
+  var c={}; rows.forEach(function(x){ var s=x.svc||'—'; c[s]=(c[s]||0)+1; }); return c;
+}
+
+cargar();
+</script>
+</body>
+</html>
