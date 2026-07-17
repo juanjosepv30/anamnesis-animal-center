@@ -93,7 +93,13 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* Haciendo su registro en el celular. Ya está en la cola del médico; el
    color más suave es solo para que recepción vea que aún no terminó. */
 .badge-llen{background:#ede9fe;color:#5b21b6}
+.badge-ok{background:#f0fdf4;color:#16a34a}
+.badge-sin{background:#f1f5f9;color:#64748b}
 .wr-llenando{border-left-style:dashed!important;background:#faf9ff}
+/* Tiempo de espera: neutro al principio, ámbar y rojo cuando se acumula. */
+.wr-esp{color:var(--tm);font-weight:700}
+.wr-esp.esp-medio{color:#b45309}
+.wr-esp.esp-mucho{color:#dc2626}
 .wr-btn{border:1.5px solid var(--bd);border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:600;cursor:pointer;background:var(--wh);color:var(--tm);font-family:'DM Sans',sans-serif;white-space:nowrap}
 /* Pestañas de la sala de espera. */
 .wr-tabs{display:flex;gap:6px;margin:2px 0 12px;border-bottom:1.5px solid var(--bd)}
@@ -341,6 +347,27 @@ function fmtHora(h){
   var d=new Date(h);
   if(!isNaN(d)) return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
   return String(h);
+}
+
+// Cuánto lleva esperando el cliente, desde que llegó. Es el dato operativo
+// de recepción: no la hora de la cita (esa es 🕐), sino el tiempo que ya
+// acumuló en sala. Igual que el dashboard del médico.
+function minsEsperando(ts){ var d=new Date(ts); return isNaN(d)?null:Math.floor((Date.now()-d.getTime())/60000); }
+function fmtEspera(ts){
+  var m=minsEsperando(ts); if(m===null) return '';
+  if(m<1) return 'recién llegó';
+  if(m<60) return 'hace '+m+' min';
+  var h=Math.floor(m/60), r=m%60;
+  return 'hace '+h+' h'+(r?' '+r+' min':'');
+}
+function claseEspera(ts){ var m=minsEsperando(ts); if(m===null)return''; if(m>=45)return' esp-mucho'; if(m>=30)return' esp-medio'; return''; }
+
+// Estado del registro, para que recepción sepa de un vistazo si la ficha
+// está lista. Mismo criterio que ve el médico.
+function etiquetaReg(r){
+  if(r.estadoTurno==='llenando') return '<span class="badge badge-llen">✍️ Haciendo registro</span>';
+  if(r.complaint || r.detail)    return '<span class="badge badge-ok">✅ Registro listo</span>';
+  return '<span class="badge badge-sin">🚫 Sin registro</span>';
 }
 
 function serviceColor(s){
@@ -626,14 +653,19 @@ function loadWaitingRoom(silent) {
 // Una fila de la lista. `btn` es el HTML del botón de acción (o '').
 function wrItem(r, btn) {
   var color = serviceColor(r.service);
-  var ag = r.agendado === 'si' ? '<span class="badge badge-ag">Agendado</span>' : '';
-  var estBadge = '';
-  if (r.estadoTurno === 'llamando') estBadge = '<span class="badge badge-esp">Llamando</span>';
-  else if (r.estadoTurno === 'llenando') estBadge = '<span class="badge badge-llen">✍️ Haciendo registro</span>';
+  // Un solo badge: si lo están llamando, eso manda; si no, el estado del
+  // registro. Se quitó "Agendado" — en esta pantalla no aporta.
+  var badge = r.estadoTurno === 'llamando'
+    ? '<span class="badge badge-esp">🔔 Llamando</span>'
+    : etiquetaReg(r);
+  // Cuánto lleva esperando: solo para los que están en la cola. Un ausente
+  // o un atendido ya no acumula espera.
+  var enCola = (!r.estadoTurno || r.estadoTurno==='esperando' || r.estadoTurno==='llenando' || r.estadoTurno==='llamando');
+  var espera = enCola ? ' · <span class="wr-esp'+claseEspera(r.timestamp)+'">⏳ '+esc(fmtEspera(r.timestamp))+'</span>' : '';
   return '<div class="wr-item'+(r.estadoTurno==='llenando'?' wr-llenando':'')+'" style="border-left-color:'+color+'">'+
     '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
-    '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+' '+ag+' '+estBadge+'</div>'+
-    '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.horaCita?' · 🕐 '+esc(fmtHora(r.horaCita)):'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
+    '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+' '+badge+'</div>'+
+    '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.horaCita?' · 🕐 '+esc(fmtHora(r.horaCita)):'')+espera+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
     (btn || '')+
     '</div>';
 }
