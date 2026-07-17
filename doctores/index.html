@@ -232,6 +232,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* Congelado: recepción vio que hay una cita antes que este paciente. */
 .mini-frio{background:#fef3c7;color:#92400e;margin-left:4px}
 .q-frio{opacity:.6}
+/* Llenando la ficha en su celular. Se ve, pero no se puede llamar ni
+   abrir: apagado y sin cursor de mano, para que no invite a tocarlo. */
+.mini-llen{background:#ede9fe;color:#5b21b6;margin-left:4px}
+.q-llenando{opacity:.55;cursor:default;border-style:dashed}
 /* max-width: un <select> se estira al ancho de su opción más larga y en el
    celular se sale de la pantalla ("Dra. Catherine Hernández — Endocrinología,
    Neonatología" mide más que un iPhone). */
@@ -923,6 +927,11 @@ function renderSala() {
     const yaLlamados = mine.filter(r => r.estadoTurno === 'llamando' || r.estadoTurno === 'atendido');
     const next     = pickNext(esperando, f.key, yaLlamados);
 
+    // Llenando la ficha desde su celular. Ya tienen turno y su espera ya
+    // corre, pero todavía no hay nada que leer. Van aparte: NO entran a
+    // pickNext, porque llamarlos sería llamar a una ficha vacía.
+    const llenando = mine.filter(r => r.estadoTurno === 'llenando');
+
     const isCol = !!collapsed[f.key];
     let body = '';
 
@@ -931,6 +940,7 @@ function renderSala() {
             '<span class="fila-hd-r">'+
               (llamando.length ? '<span class="fila-n">🔔 '+llamando.length+'</span>' : '')+
               '<span class="fila-n">'+esperando.length+' en espera</span>'+
+              (llenando.length ? '<span class="fila-n">✍️ '+llenando.length+'</span>' : '')+
               '<span class="fila-cv">'+(isCol ? '▸' : '▾')+'</span>'+
             '</span></div>';
 
@@ -1021,6 +1031,23 @@ function renderSala() {
           ' · <span class="espera'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</span>'+
         '</div></div></div>';
     });
+
+    // Al final: los que están llenando la ficha en su celular. No se
+    // clickean —no hay anamnesis que abrir todavía— y no se pueden llamar.
+    // Pero se ven, y se ve cuánto llevan: si uno lleva 20 minutos "llenando"
+    // no está llenando nada, y alguien tiene que ir a preguntarle.
+    llenando
+      .sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp))
+      .forEach(function(r) {
+        body += '<div class="q-item q-llenando">'+
+          '<div class="q-turno">'+esc(r.turno||'—')+'</div>'+
+          '<div class="q-info"><div class="q-pet">'+esc(r.petName||'')+
+            ' <span class="mini mini-llen">✍️ llenando ficha</span></div>'+
+          '<div class="q-meta">'+esc(r.service||'')+
+            (r.ownerName ? ' · 👤 '+esc(r.ownerName) : '')+
+            ' · <span class="espera'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</span>'+
+          '</div></div></div>';
+      });
 
     // Si la fila está plegada, no mostramos el cuerpo (solo el encabezado).
     if (!isCol) html += '<div class="fila-bd">' + body + '</div>';
@@ -1240,8 +1267,11 @@ function claseEspera(ts) {
 
 function serviceColor(s) {
   s = (s || '').toLowerCase();
-  if (s.indexOf('especial') !== -1) return '#f97316';
+  // Control primero: "Control especializado" tiene las dos palabras y se
+  // agrupa (azul) con los controles. El ruteo (serviceFila/destinatarios)
+  // sí lo manda con el especialista — eso es aparte y correcto.
   if (s.indexOf('control')  !== -1) return '#2563eb';
+  if (s.indexOf('especial') !== -1) return '#f97316';
   if (s.indexOf('vacun')    !== -1) return '#8e3f9e';
   if (s.indexOf('inyect')   !== -1) return '#eab308';
   if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return '#be123c';

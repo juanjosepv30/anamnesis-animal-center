@@ -131,8 +131,10 @@ function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(
 
 function serviceColor(s){
   s=(s||'').toLowerCase();
-  if(s.indexOf('especial')!==-1)return'#f97316';
+  // Control primero: "Control especializado" tiene las dos palabras y se
+  // agrupa (azul) con los controles, no con la naranja de especializada.
   if(s.indexOf('control')!==-1)return'#2563eb';
+  if(s.indexOf('especial')!==-1)return'#f97316';
   if(s.indexOf('vacun')!==-1)return'#8e3f9e';
   if(s.indexOf('inyect')!==-1)return'#eab308';
   if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1)return'#be123c';

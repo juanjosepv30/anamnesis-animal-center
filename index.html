@@ -190,10 +190,18 @@ var F = {
   vomit:'', diarrhea:'', energy:'', cough:'', breathing:'',
   urine:'', skin:'', pain:'', vaccines:'', deworming:'',
   medications:'', history:'', allergies:'', diet:'', notes:'', detail:'',
-  vetesoftId:'', vetesoftHc:''
+  vetesoftId:'', vetesoftHc:'',
+  // Si el cliente entró por el link del saludo de WhatsApp, acá viaja el
+  // ID de la fila que recepción ya le abrió. El backend completa ESA fila
+  // en vez de crear una nueva — así el que no tiene historia clínica no
+  // termina con dos turnos. Vacío = llegó solo, y todo sigue como siempre.
+  _rowId: (new URLSearchParams(location.search)).get('r') || ''
 };
 
 var vsFound = false;
+// true cuando el cliente entró por el link del saludo (?r=) y recepción ya
+// cargó identidad, mascota y servicio. Prende recién cuando la ficha cargó.
+var desdeRecepcion = false;
 var GEN = ['Consulta general'];
 var GEN_ESP = ['Consulta general','Consulta especializada'];
 
@@ -650,13 +658,33 @@ var QUESTIONS = [
 var activeIndices = [];
 var currentPos = -1;
 
+// Preguntas que recepción ya respondió: quién es, qué mascota, a qué
+// servicio viene y con qué especialista. Cuando el cliente entra por el
+// link (?r=), no se le vuelven a preguntar — ya están en la ficha.
+var RECEPCION_SKIP = { _ident:1, _vetesoft:1, species:1, breed:1, age:1, sex:1,
+                       service:1, ctrl_tipo:1, specialty:1 };
+
+// Recepción distingue "Control especializado" de "Control general" —el
+// dashboard los rutea y colorea distinto—, pero las PREGUNTAS de control
+// son las mismas para los dos: son el seguimiento del tratamiento. El
+// formulario las tiene marcadas onlyServices:['Control'], así que acá
+// colapsamos las dos variantes a 'Control' SOLO para elegir qué preguntar.
+// F.service NO se toca: se reenvía tal cual, o le borraríamos al dashboard
+// la distinción que recepción cargó.
+function servicioParaPreguntas() {
+  var s = F.service || '';
+  return s.indexOf('Control') !== -1 ? 'Control' : s;
+}
+
 function buildActiveIndices() {
   activeIndices = [];
+  var svc = servicioParaPreguntas();
   for (var i = 0; i < QUESTIONS.length; i++) {
     var q = QUESTIONS[i];
+    if (desdeRecepcion && RECEPCION_SKIP[q.id]) continue;
     if (q.onlyIfNotFound && vsFound) continue;
     if (q.showIf && !q.showIf()) continue;
-    if (q.onlyServices && q.onlyServices.indexOf(F.service) === -1) continue;
+    if (q.onlyServices && q.onlyServices.indexOf(svc) === -1) continue;
     if (q.onlySpecialty && F.specialty !== q.onlySpecialty) continue;
     if (q.conditional) {
       var parts = q.conditional.split('===');
@@ -916,9 +944,81 @@ function showSendError() {
   document.getElementById('screens').innerHTML = '<div class="screen active" style="justify-content:center;align-items:center;text-align:center"><div style="font-size:2.5rem;margin-bottom:12px">⚠️</div><div style="font-size:1rem;font-weight:700;color:var(--tx);margin-bottom:16px">Hubo un error al enviar.<br>Por favor intentá de nuevo.</div><button onclick="doSubmit()" style="padding:14px 24px;background:var(--p);color:#fff;border:none;border-radius:12px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:Nunito,sans-serif">Reintentar</button></div>';
 }
 
+// La ficha se pide apenas abre la página, pero el cliente puede tocar
+// "Empezar" antes de que llegue. Si empieza sin la ficha, el formulario no
+// sabría que recepción ya respondió y le repreguntaría todo. Entonces
+// esperamos: es una fracción de segundo y evita un formulario incoherente.
+var fichaPendiente = false;
+var formEmpezado = false;
 function startForm() {
+  if (fichaPendiente) {
+    var b = document.querySelector('.start-btn');
+    if (b) { b.disabled = true; b.textContent = 'Cargando…'; }
+    setTimeout(startForm, 150);
+    return;
+  }
+  formEmpezado = true;
   document.getElementById('startScreen').style.display = 'none';
   buildActiveIndices(); currentPos = 0; renderQuestion(0);
+}
+
+// Si el cliente entró por el link del saludo (?r=), traemos la ficha que
+// recepción abrió: sabemos quién es, su mascota y a qué servicio viene, así
+// que esas preguntas se saltan. El endpoint es público y devuelve SOLO
+// datos que el dueño ya conoce de su mascota (nunca teléfono ni cédula).
+//
+// Si la ficha no existe (link viejo o mal) NO rompemos: el cliente sigue el
+// formulario completo de siempre. Peor es dejarlo sin poder llenar nada.
+function cargarFicha() {
+  if (!F._rowId) return;                       // entrada normal, sin link
+  fichaPendiente = true;
+  // Red de seguridad: si el fetch se cuelga (celular con mala señal), el
+  // botón quedaría en "Cargando…" para siempre. A los 8s lo destrabamos y
+  // el cliente sigue con el formulario completo. Mejor repreguntar algo que
+  // ya sabíamos, que dejarlo sin poder empezar.
+  var corte = setTimeout(function(){ fichaPendiente = false; }, 8000);
+  fetch(API_URL + '?action=ficha&r=' + encodeURIComponent(F._rowId))
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (!res || !res.ok) return;             // link viejo → flujo normal
+      // Si la ficha llegó TARDE (fetch lento, el timeout ya destrabó el
+      // botón y el cliente empezó), no le movemos las preguntas debajo de
+      // los pies: ya está en el formulario completo, que lo termine así.
+      if (formEmpezado) return;
+      if (res.yaLlena) { pantallaYaLlena(res); return; }
+      desdeRecepcion = true;
+      F.service   = res.service   || '';
+      F.specialty = res.specialty || '';
+      F.species   = res.species   || '';
+      F.breed     = res.breed     || '';
+      F.sex       = res.sex       || '';
+      F.age       = res.age       || '';
+      F.petName   = res.petName   || '';
+      F.ownerName = res.ownerName || '';
+      personalizarInicio(res);
+    })
+    .catch(function(){ /* sin red: flujo normal, no se rompe nada */ })
+    // Pase lo que pase, se destraba el botón: la ficha llegó, falló, o el
+    // link era viejo. En los tres casos el cliente puede empezar.
+    .finally(function(){ clearTimeout(corte); fichaPendiente = false; });
+}
+
+// Le ponemos nombre a la pantalla de inicio: el cliente ya sabe que es su
+// mascota la que espera, y ver "Rocky" en vez de "tu mascota" da confianza.
+function personalizarInicio(res) {
+  var h1 = document.querySelector('.start-h1');
+  if (h1 && res.petName) h1.innerHTML = 'La ficha de<br><span>' + escHtml(res.petName) + '</span>';
+}
+
+// Ya mandó la ficha (reabrió el mismo mensaje de WhatsApp). No la hacemos
+// llenar de nuevo: se lo decimos y listo.
+function pantallaYaLlena(res) {
+  var s = document.getElementById('startScreen');
+  if (!s) return;
+  s.innerHTML = '<div class="start-logo">✅</div>' +
+    '<h1 class="start-h1">Ya recibimos<br><span>tu ficha</span></h1>' +
+    '<p class="start-sub">' + (res.turno ? 'Tu turno es <b>' + escHtml(res.turno) + '</b>. ' : '') +
+    'El médico ya la tiene. Espera a que te llamen 🐾</p>';
 }
 
 // Fecha de hoy en formato yyyy-mm-dd (para el mínimo del selector de fecha).
@@ -929,6 +1029,11 @@ function todayISO(){
 
 function escHtml(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escAttr(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+// Arranca la carga de la ficha apenas abre la página, mientras el cliente
+// mira la pantalla de bienvenida. Para cuando toque "Empezar", la ficha ya
+// llegó y las preguntas de recepción están saltadas.
+cargarFicha();
 </script>
 </body>
 </html>

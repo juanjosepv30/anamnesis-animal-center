@@ -45,7 +45,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .res-note{font-size:.8rem;color:var(--tm);text-align:center;padding:10px;background:var(--bg);border-radius:9px;margin-top:10px}
 
 .reg-form{background:var(--pl);border:1.5px solid #d8c9f5;border-radius:12px;padding:14px;margin-top:12px}
-.reg-sel{font-weight:700;font-size:.9rem;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.reg-sel{font-weight:700;font-size:.9rem;margin-bottom:4px;display:flex;align-items:center;gap:7px}
+/* Datos que vienen de Vetesoft: se muestran, no se editan. */
+.reg-basic{font-size:.78rem;color:var(--tm);margin-bottom:12px}
+/* Doctor fijo (viajero, rayos): dato, no selector. */
+.reg-auto{font-size:.85rem;font-weight:600;padding:8px 10px;background:#f5f3ff;border-radius:7px;color:#5b21b6}
 /* auto-fit y no 3 fijas: los campos se acomodan solos cuando se agrega uno
    más, y en el celular caen uno debajo del otro sin desbordar. */
 .reg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:12px}
@@ -73,7 +77,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .badge-esp{background:#eff6ff;color:#2563eb}
 .badge-at{background:#f0fdf4;color:#16a34a}
 .badge-au{background:#fef2f2;color:#dc2626}
+/* Llenando la ficha en su celular: el médico todavía NO lo ve en su cola.
+   Se marca distinto porque se trata distinto — su botón no es "Ausente". */
+.badge-llen{background:#ede9fe;color:#5b21b6}
+.wr-llenando{border-left-style:dashed!important;background:#faf9ff}
 .wr-btn{border:1.5px solid var(--bd);border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:600;cursor:pointer;background:var(--wh);color:var(--tm);font-family:'DM Sans',sans-serif}
+.wr-btn-llen{border-color:#a78bfa;color:#5b21b6}
 .empty{text-align:center;padding:40px 20px;color:var(--tm);font-size:.85rem}
 .spinner{width:30px;height:30px;border:2.5px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:30px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -138,11 +147,40 @@ const SPECIALTIES = [
 ];
 
 function buildSpecOptions() {
-  var h = '<option value="">— No aplica —</option>';
+  var h = '<option value="">— Elegí especialidad —</option>';
   SPECIALTIES.forEach(function(s){
     h += '<option value="'+s.name+'">'+s.name+' — '+s.doctor+'</option>';
   });
   return h;
+}
+
+// ── El servicio manda ────────────────────────────────────────
+// Una sola tabla decide, por servicio, si recepción elige doctor y si hay
+// agenda. Es la regla del dueño hecha config: agregar o cambiar un servicio
+// es tocar acá, no repartir "if (servicio === ...)" por todo el archivo.
+//   doctor 'elige'  → recepción selecciona especialista, y puede agendar
+//   doctor 'auto'   → un solo doctor fijo (viajero→Freddy, rayos→Angie)
+//   doctor 'ninguno'→ por orden de llegada, sin especialista
+var SERVICIOS = [
+  { v:'Consulta especializada', doctor:'elige',   agenda:true  },
+  { v:'Control especializado',  doctor:'elige',   agenda:true  },
+  { v:'Consulta general',       doctor:'ninguno', agenda:false },
+  { v:'Control general',        doctor:'ninguno', agenda:false },
+  { v:'Vacunación',             doctor:'ninguno', agenda:false },
+  { v:'Inyectología',           doctor:'ninguno', agenda:false },
+  { v:'Viajero',                doctor:'auto', fijo:'Dr. Freddy Vera',   agenda:false, label:'Viajero / certificado' },
+  { v:'Rayos X y Ecografía',    doctor:'auto', fijo:'Dra. Angie Valero', agenda:false }
+];
+
+function servicioCfg(v) {
+  for (var i = 0; i < SERVICIOS.length; i++) if (SERVICIOS[i].v === v) return SERVICIOS[i];
+  return SERVICIOS[0];
+}
+
+function buildServiceOptions() {
+  return SERVICIOS.map(function(s){
+    return '<option value="'+s.v+'">'+(s.label || s.v)+'</option>';
+  }).join('');
 }
 
 // Horas de cita: solo en punto y y-media (06:00 → 22:00).
@@ -174,38 +212,39 @@ function sumarMinutos(hhmm, mins) {
 // Freddy —los dos son especialistas— pero esos servicios no se reservan
 // por hora: el cliente llega y se atiende. Por eso esta función NO es
 // espejo de recordFila, que responde otra pregunta (a qué cola va).
-function trabajaConAgenda(service, specialty) {
-  var s = String(service || '').toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '');
-  if (s.indexOf('especial') !== -1) return true;
-  if (s.indexOf('control') !== -1 && specialty) return true;
-  return false;   // rayos x, ecografía, viajero, general, vacunación,
-                  // inyectología y control general: por orden de llegada
-}
+// El servicio decide todo: quién es el doctor y si hay agenda. Antes esto
+// miraba el texto del servicio con indexOf; ahora lee la config, que es la
+// única fuente de verdad (ver SERVICIOS).
+function pintarServicio() {
+  var cfg = servicioCfg(document.getElementById('regService').value);
 
-// Con cita → se pide su hora. Sin cita → se pregunta si hay una antes.
-// Mostrar los dos campos a la vez invita a llenar el que no es.
-function pintarTipoCita() {
-  var svc  = document.getElementById('regService').value;
-  var spec = (document.getElementById('regSpec').value || '').trim();
-  var conAgenda = trabajaConAgenda(svc, spec);
+  // ── Doctor ──
+  // 'elige' → selector de especialista visible.
+  // 'auto'  → un solo doctor, no se elige: se muestra como dato.
+  // 'ninguno' → no aparece nada.
+  document.getElementById('boxSpec').style.display    = cfg.doctor === 'elige' ? '' : 'none';
+  document.getElementById('boxAutoDoc').style.display = cfg.doctor === 'auto'  ? '' : 'none';
+  if (cfg.doctor === 'auto') {
+    document.getElementById('autoDocName').textContent = cfg.fijo;
+  }
+  if (cfg.doctor !== 'elige') document.getElementById('regSpec').value = '';
 
-  // Sin agenda no hay nada que preguntar: entra por orden de llegada.
-  document.getElementById('boxTieneCita').style.display = conAgenda ? '' : 'none';
-  if (!conAgenda) {
+  // ── Agenda ──
+  // Solo los servicios con agenda preguntan por cita. El resto entra por
+  // orden de llegada: preguntar "¿tiene cita?" ahí es hacer pensar de más.
+  document.getElementById('boxTieneCita').style.display = cfg.agenda ? '' : 'none';
+  if (!cfg.agenda) {
     document.getElementById('regAgendado').value = 'no';
     document.getElementById('regEsperar').value  = '';
   }
 
-  var conCita = conAgenda && document.getElementById('regAgendado').value === 'si';
+  var conCita = cfg.agenda && document.getElementById('regAgendado').value === 'si';
   document.getElementById('boxHora').style.display    = conCita ? '' : 'none';
-  document.getElementById('boxEsperar').style.display = (conAgenda && !conCita) ? '' : 'none';
+  document.getElementById('boxEsperar').style.display = (cfg.agenda && !conCita) ? '' : 'none';
   document.querySelector('.btn-primary').textContent  = conCita
     ? 'Registrar como agendado →'
     : 'Registrar llegada →';
-  if (conCita) {                       // limpiamos lo que no aplica
-    document.getElementById('regEsperar').value = '';
-  }
+  if (conCita) document.getElementById('regEsperar').value = '';
   pintarDescongela();
 }
 
@@ -240,8 +279,10 @@ function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(
 
 function serviceColor(s){
   s=(s||'').toLowerCase();
-  if(s.indexOf('especial')!==-1)return'#f97316';
+  // Control primero: "Control especializado" tiene las dos palabras, y como
+  // control se agrupa (azul) con los demás controles, no con la naranja.
   if(s.indexOf('control')!==-1)return'#2563eb';
+  if(s.indexOf('especial')!==-1)return'#f97316';
   if(s.indexOf('vacun')!==-1)return'#8e3f9e';
   if(s.indexOf('inyect')!==-1)return'#eab308';
   if(s.indexOf('general')!==-1)return'#16a34a';
@@ -260,7 +301,12 @@ function doSearch() {
               '&ownerName=' + encodeURIComponent(owner) + '&cedula=' + encodeURIComponent(ced);
   fetch(url).then(r=>r.json()).then(function(res){
     if (!res || !res.ok || !res.results || !res.results.length) {
-      document.getElementById('results').innerHTML = '<div class="res-note">No se encontraron coincidencias en Vetesoft. Verificá los datos o probá solo con el nombre de la mascota.</div>';
+      // Sin coincidencias no es un callejón: es un cliente nuevo. Antes acá
+      // se terminaba y recepción no tenía cómo registrarlo — chocaba contra
+      // una pared con el que más importa, el que nunca vino. Ahora sigue.
+      document.getElementById('results').innerHTML =
+        '<div class="res-note">No está en Vetesoft. Puede ser un cliente nuevo.</div>'+
+        '<button class="btn-primary" style="margin-top:10px" onclick="registrarNuevo()">+ Registrar cliente nuevo</button>';
       return;
     }
     let html = '';
@@ -276,39 +322,80 @@ function doSearch() {
   });
 }
 
-// ── Seleccionar paciente → formulario de registro ────────────
-function pickResult(r) {
+// Vetesoft nos devuelve el teléfono del propietario, pero puede ser un
+// fijo, un número viejo o el del vecino. Solo proponemos lo que parece un
+// celular colombiano; lo demás lo escribe recepción mirando al cliente.
+// Un dato prellenado que nadie mira es peor que un campo vacío: el vacío
+// al menos obliga a preguntar.
+function telSugerido(t) {
+  var d = String(t || '').replace(/[^0-9]/g, '');
+  if (d.length === 12 && d.indexOf('57') === 0) d = d.slice(2);
+  return (d.length === 10 && d.charAt(0) === '3') ? d : '';
+}
+
+// ── Cliente encontrado en Vetesoft ──
+function pickResult(r) { abrirRegistro(r, false); }
+
+// ── Cliente nuevo, sin historia clínica ──
+// Arranca del dato que recepción ya tecleó en la búsqueda. La mascota se
+// carga a mano acá porque no hay de dónde sacarla — es la única diferencia
+// con el que tiene HC.
+function registrarNuevo() {
+  abrirRegistro({
+    id:'', registro:'', esNuevo:true,
+    petName: document.getElementById('qPet').value.trim(),
+    owner:   document.getElementById('qOwner').value.trim(),
+    documento: document.getElementById('qCedula').value.trim(),
+    species:'', breed:'', sex:'', age:'', phone:''
+  }, true);
+}
+
+// ── Formulario de registro (los dos caminos comparten este) ──
+function abrirRegistro(r, esNuevo) {
   selected = r;
   document.getElementById('results').innerHTML = '';
-  const hh = nearestHalfHour();
+  var hh = nearestHalfHour();
+
+  // Datos de la mascota: si tiene HC vienen de Vetesoft y solo se muestran;
+  // si es nuevo, recepción los carga (con la mascota enfrente el dato sale
+  // bien). La edad de Vetesoft ya viene calculada de la fecha de nacimiento.
+  var cabecera = esNuevo
+    ? '<div class="reg-grid">'+
+        '<div><label>Nombre del dueño</label><input id="regOwner" type="text" value="'+esc(r.owner)+'"></div>'+
+        '<div><label>Cédula <span class="lbl-tip">(opcional)</span></label><input id="regCed" type="text" inputmode="numeric" value="'+esc(r.documento)+'"></div>'+
+        '<div><label>Nombre de la mascota</label><input id="regPet" type="text" value="'+esc(r.petName)+'"></div>'+
+        '<div><label>Especie</label><select id="regSpecies"><option value="Canino">Perro</option><option value="Felino">Gato</option></select></div>'+
+        '<div><label>Raza <span class="lbl-tip">(opcional)</span></label><input id="regBreed" type="text" placeholder="Ej: Mestizo"></div>'+
+        '<div><label>Sexo</label><select id="regSex"><option value="Macho">Macho</option><option value="Hembra">Hembra</option></select></div>'+
+        '<div><label>Edad <span class="lbl-tip">(opcional)</span></label><input id="regAge" type="text" placeholder="Ej: 3 años"></div>'+
+      '</div>'
+    : '<div class="reg-sel">✅ '+esc(r.petName)+' — '+esc(r.owner)+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
+      '<div class="reg-basic">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+
+        (r.sex?' · '+esc(r.sex):'')+(r.age?' · '+esc(r.age):'')+'</div>';
+
   document.getElementById('regArea').innerHTML =
     '<div class="reg-form">'+
-      '<div class="reg-sel">✅ '+esc(r.petName||'')+' — '+esc(r.owner||'')+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
+      cabecera+
       '<div class="reg-grid">'+
-        '<div><label>Servicio</label><select id="regService" onchange="pintarTipoCita()">'+
-          '<option value="Consulta especializada">Consulta especializada</option>'+
-          '<option value="Control">Control</option>'+
-          '<option value="Rayos X y Ecografía">Rayos X y Ecografía</option>'+
-          '<option value="Consulta general">Consulta general</option>'+
-          '<option value="Vacunación">Vacunación</option>'+
-          '<option value="Inyectología">Inyectología</option>'+
-          '<option value="Viajero">Viajero / certificado</option>'+
-        '</select></div>'+
-        '<div><label>Especialidad / Doctor</label><select id="regSpec" onchange="pintarTipoCita()">'+buildSpecOptions()+'</select></div>'+
-        // Solo los especialistas trabajan con agenda. Una consulta general
-        // o una vacunación no se agendan: el cliente llega y ya. Preguntar
-        // "¿tiene cita?" ahí es hacer pensar en algo que no aplica.
-        // Los dos casos son excluyentes: o trae cita, o llega sin cita y
-        // puede quedar detrás de una.
-        '<div id="boxTieneCita"><label>¿Tiene cita?</label><select id="regAgendado" onchange="pintarTipoCita()">'+
+        '<div><label>Servicio</label><select id="regService" onchange="pintarServicio()">'+buildServiceOptions()+'</select></div>'+
+        // El selector de especialista solo aparece para los servicios que lo
+        // eligen (ver SERVICIOS). pintarServicio() lo muestra o lo esconde.
+        '<div id="boxSpec"><label>Especialidad / Doctor</label><select id="regSpec">'+buildSpecOptions()+'</select></div>'+
+        // Viajero y Rayos van con un doctor fijo: se muestra, no se elige.
+        '<div id="boxAutoDoc" style="display:none"><label>Doctor asignado</label><div class="reg-auto">👨‍⚕️ <span id="autoDocName"></span></div></div>'+
+        // Con teléfono, al cliente le llega el link y llena la ficha desde su
+        // celular. Vacío, recepción se la llena a mano. Señores de 78,
+        // celulares sin datos, gente que no quiere — ese camino no se toca.
+        '<div><label>WhatsApp del cliente <span class="lbl-tip">(en blanco = no se le manda nada)</span></label>'+
+          '<input id="regTel" type="tel" inputmode="numeric" maxlength="10" placeholder="3001234567" value="'+esc(telSugerido(r.phone))+'"></div>'+
+        '<div id="boxTieneCita"><label>¿Tiene cita?</label><select id="regAgendado" onchange="pintarServicio()">'+
           '<option value="si">Sí, está en la agenda</option>'+
           '<option value="no">No, el doctor aceptó atenderlo</option>'+
         '</select></div>'+
         '<div id="boxHora"><label>Hora de su cita</label><select id="regHora">'+buildHoraOptions(hh)+'</select></div>'+
-        // Para el SIN cita: se pone la hora de la cita que hay antes que él
-        // —lo que se ve en el calendario— y el sistema le suma los 15 min.
-        // Pedirle que calcule "3:00 + 15" es pedirle que se equivoque un
-        // martes a las 6 de la tarde.
+        // Sin cita: se pone la hora de la cita que hay antes —lo que se ve en
+        // el calendario— y el sistema le suma los 15 min. Pedirle que calcule
+        // "3:00 + 15" es pedirle que se equivoque a las 6 de la tarde.
         '<div id="boxEsperar" style="display:none"><label>¿Hay una cita antes? <span class="lbl-tip">(hora de esa cita)</span></label>'+
           '<select id="regEsperar" onchange="pintarDescongela()">'+
           '<option value="">— No, puede pasar cuando le toque —</option>'+
@@ -316,13 +403,12 @@ function pickResult(r) {
           '<div class="lbl-tip" id="descongela"></div></div>'+
       '</div>'+
       '<div class="reg-actions">'+
-        '<button class="btn-primary" onclick="doRegister()">Registrar como agendado →</button>'+
+        '<button class="btn-primary" onclick="doRegister()">Registrar llegada →</button>'+
         '<button class="btn-ghost" onclick="cancelReg()">Cancelar</button>'+
       '</div>'+
     '</div>';
-  // El formulario arranca en "Consulta especializada": hay que dejar los
-  // campos coherentes de entrada, no solo cuando alguien toca algo.
-  pintarTipoCita();
+  // Dejamos los campos coherentes de entrada, no solo cuando alguien toca algo.
+  pintarServicio();
 }
 
 function cancelReg(){ selected=null; document.getElementById('regArea').innerHTML=''; }
@@ -330,17 +416,51 @@ function cancelReg(){ selected=null; document.getElementById('regArea').innerHTM
 // ── Registrar llegada ────────────────────────────────────────
 function doRegister() {
   if (!selected) return;
+  var esNuevo = !!selected.esNuevo;
+  var service = document.getElementById('regService').value;
+  var cfg = servicioCfg(service);
+
+  // El servicio que elige especialista no se puede registrar sin uno:
+  // sería una consulta especializada sin doctor, que no rutea a nadie.
+  var specialty = cfg.doctor === 'elige' ? document.getElementById('regSpec').value.trim() : '';
+  if (cfg.doctor === 'elige' && !specialty) {
+    showToast('Elegí la especialidad / doctor');
+    return;
+  }
+
+  // Los datos de la mascota: del formulario si es nuevo, de Vetesoft si tiene
+  // HC. Recepción es dueña de esto (ver la regla en el backend).
+  var mascota = esNuevo ? {
+    petName: document.getElementById('regPet').value.trim(),
+    owner:   document.getElementById('regOwner').value.trim(),
+    documento: document.getElementById('regCed').value.trim(),
+    species: document.getElementById('regSpecies').value,
+    breed:   document.getElementById('regBreed').value.trim(),
+    sex:     document.getElementById('regSex').value,
+    age:     document.getElementById('regAge').value.trim()
+  } : {
+    petName: selected.petName || '', owner: selected.owner || '',
+    documento: selected.documento || '', species: selected.species || '',
+    breed: selected.breed || '', sex: selected.sex || '', age: selected.age || ''
+  };
+  if (esNuevo && (!mascota.petName || !mascota.owner)) {
+    showToast('Falta el nombre del dueño y de la mascota');
+    return;
+  }
+
   const payload = {
     action: 'registerArrival',
     data: {
       vetesoftId: selected.id ? String(selected.id) : '',
       vetesoftHc: selected.registro || '',
-      petName: selected.petName || '',
-      species: selected.species || '',
-      breed: selected.breed || '',
-      owner: selected.owner || '',
-      service: document.getElementById('regService').value,
-      specialty: document.getElementById('regSpec').value.trim(),
+      petName: mascota.petName,
+      species: mascota.species,
+      breed: mascota.breed,
+      sex: mascota.sex,
+      age: mascota.age,
+      owner: mascota.owner,
+      service: service,
+      specialty: specialty,
       agendado: document.getElementById('regAgendado').value,
       // La hora de cita solo viaja si de verdad tiene cita: si no, le
       // estaríamos dando prioridad de agendado a alguien que llegó sin ella.
@@ -352,16 +472,38 @@ function doRegister() {
         if (document.getElementById('regAgendado').value === 'si') return '';
         var c = document.getElementById('regEsperar').value;
         return c ? sumarMinutos(c, TOLERANCIA_CITA) : '';
-      })()
+      })(),
+      // Si va vacío, el backend no manda nada y el paciente entra directo
+      // a la fila, como toda la vida.
+      phone: document.getElementById('regTel').value.trim()
     }
   };
   document.getElementById('regArea').innerHTML = '<div class="spinner"></div>';
   fetch(API_URL, { method:'POST', body: JSON.stringify(payload) })
     .then(r=>r.json()).then(function(res){
       if (res && res.ok) {
+        // Lo que ve recepción tiene que ser lo que de verdad pasó. Si el
+        // saludo no salió, la recepcionista está por mandar al cliente a
+        // esperar un mensaje que nunca va a llegar — y eso hay que decirlo
+        // ahora, con el cliente todavía enfrente del mostrador.
+        var msg, em = '🎫';
+        if (res.esperaFicha) {
+          msg = 'Le llegó el link por WhatsApp 📲 Que llene la ficha desde el celular. ' +
+                'Si no la llena, lo pasás a la fila desde la lista de abajo.';
+        } else if (res.telIntentado) {
+          // El WhatsApp falló pero el paciente entró a la fila igual: sin
+          // este aviso todo "se ve bien" y el número malo sigue ahí.
+          em  = '⚠️';
+          msg = 'NO se pudo mandar el WhatsApp — revisá el número. ' +
+                'Igual quedó en la sala de espera y el médico ya lo ve, como siempre.';
+        } else {
+          msg = 'Registrado en la sala de espera' +
+                (res.linked ? ' y enlazado con su anamnesis' : '') + '. El médico ya lo ve.';
+        }
         document.getElementById('regArea').innerHTML =
-          '<div class="confirm"><div class="em">🎫</div><div class="turno">'+esc(res.turno)+'</div>'+
-          '<div class="msg">Registrado en la sala de espera'+(res.linked?' y enlazado con su anamnesis':'')+'. El médico ya lo ve.</div></div>';
+          '<div class="confirm"><div class="em">'+em+'</div>'+
+          '<div class="turno">'+esc(res.turno)+'</div>'+
+          '<div class="msg">'+msg+'</div></div>';
         document.getElementById('qOwner').value=''; document.getElementById('qPet').value=''; document.getElementById('qCedula').value='';
         selected = null;
         loadWaitingRoom(true);
@@ -393,23 +535,57 @@ function loadWaitingRoom(silent) {
       let estBadge = '';
       if (r.estadoTurno === 'llamando') estBadge = '<span class="badge badge-esp">Llamando</span>';
       else if (r.estadoTurno === 'ausente') estBadge = '<span class="badge badge-au">Ausente</span>';
-      const ausente = r.estadoTurno === 'ausente';
-      html += '<div class="wr-item" style="border-left-color:'+color+'">'+
+      // Sin este badge, el que está llenando la ficha se ve idéntico a
+      // cualquier otro y su botón dice "Ausente" — que es justo lo que NO
+      // hay que tocarle. Lo que se ve distinto se trata distinto.
+      else if (r.estadoTurno === 'llenando') estBadge = '<span class="badge badge-llen">✍️ Llenando ficha</span>';
+      const ausente  = r.estadoTurno === 'ausente';
+      const llenando = r.estadoTurno === 'llenando';
+      // El médico NO lo ve en su cola mientras llena. Si no llena —se fue,
+      // no entendió, no le da el celular— esta es la puerta de salida:
+      // entra a la fila sin anamnesis, como se trabajaba siempre.
+      const btn = llenando
+        ? '<button class="wr-btn wr-btn-llen" onclick="pasarALaFila('+r.rowIndex+')">Pasar a la fila →</button>'
+        : '<button class="wr-btn" onclick="markAusente('+r.rowIndex+','+(ausente?"'esperando'":"'ausente'")+')">'+(ausente?'Reactivar':'Ausente')+'</button>';
+      html += '<div class="wr-item'+(llenando?' wr-llenando':'')+'" style="border-left-color:'+color+'">'+
         '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
         '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+' '+ag+' '+estBadge+'</div>'+
         '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.horaCita?' · 🕐 '+esc(r.horaCita):'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
-        '<button class="wr-btn" onclick="markAusente('+r.rowIndex+','+(ausente?"'esperando'":"'ausente'")+')">'+(ausente?'Reactivar':'Ausente')+'</button>'+
+        btn+
         '</div>';
     });
     document.getElementById('wrList').innerHTML = html;
   }).catch(function(){ document.getElementById('wrList').innerHTML = '<div class="empty">Error de conexión.</div>'; });
 }
 
+// Rescate: lo pasa a la fila sin anamnesis. El backend avisa al médico y
+// se niega si el cliente ya mandó la ficha mientras tanto — por eso el
+// error se muestra tal cual viene, en vez de un "Error" genérico.
+// enViaje: el botón sigue vivo mientras el fetch viaja, y un doble toque
+// en un celular lento mandaría dos avisos del mismo paciente. El backend
+// también se defiende, pero no hay que hacerle pegar el grito: acá se
+// corta antes de salir.
+var enViaje = {};
+function pasarALaFila(rowIndex) {
+  if (enViaje[rowIndex]) return;
+  if (!confirm('El médico lo va a ver SIN anamnesis, como antes. ¿Lo pasamos a la fila?')) return;
+  enViaje[rowIndex] = true;
+  setTimeout(function(){ delete enViaje[rowIndex]; }, 8000);   // nunca se traba
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'pasarALaFila', rowIndex: rowIndex }) })
+    .then(r=>r.json()).then(function(res){
+      if (res && res.ok) { showToast('Pasó a la fila. El médico ya lo ve.'); loadWaitingRoom(true); }
+      else { showToast((res && res.error) || 'No se pudo pasar a la fila'); loadWaitingRoom(true); }
+    }).catch(function(){ showToast('Error de conexión'); });
+}
+
 function markAusente(rowIndex, estado) {
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: estado }) })
     .then(r=>r.json()).then(function(res){
       if (res && res.ok) { showToast('Actualizado'); loadWaitingRoom(true); }
-      else showToast('Error al actualizar');
+      // El backend puede negarse por un motivo concreto (p. ej. está
+      // llenando la ficha). Decirlo tal cual: "Error" no le enseña nada a
+      // nadie y esconde justo lo que hay que hacer.
+      else { showToast((res && res.error) || 'Error al actualizar'); loadWaitingRoom(true); }
     }).catch(function(){ showToast('Error de conexión'); });
 }
 
