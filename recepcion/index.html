@@ -685,7 +685,7 @@ function wrItem(r, acts) {
   // debajo. La espera solo para los que siguen en la cola.
   var enCola = (!r.estadoTurno || r.estadoTurno==='esperando' || r.estadoTurno==='llenando' || r.estadoTurno==='llamando');
   var times = '';
-  if (r.horaCita) times += '<div class="wr-cita">Cita '+esc(fmtHora(r.horaCita))+'</div>';
+  if (r.horaCita) times += '<div class="wr-cita">Cita de las '+esc(fmtHora(r.horaCita))+'</div>';
   if (enCola)     times += '<div class="wr-esp'+claseEspera(r.timestamp)+'">'+esc(fmtEspera(r.timestamp))+'</div>';
   // Reenviar registro: debajo del nombre, solo si tiene teléfono y todavía
   // no completó la ficha (y no lo están llamando ni se fue).
