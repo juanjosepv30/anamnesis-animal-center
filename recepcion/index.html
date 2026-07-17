@@ -332,6 +332,17 @@ function iniciar() {
 
 function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// La hora de cita se guarda "HH:MM" pero Sheets la devuelve como un
+// timestamp 1899 (1899-12-30T...). Lo pasamos a "HH:MM", igual que el
+// dashboard, para que recepción no vea el timestamp crudo.
+function fmtHora(h){
+  if(!h) return '';
+  if(typeof h==='string' && /^\d{1,2}:\d{2}$/.test(h)) return h;
+  var d=new Date(h);
+  if(!isNaN(d)) return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  return String(h);
+}
+
 function serviceColor(s){
   s=(s||'').toLowerCase();
   // Control primero: "Control especializado" tiene las dos palabras, y como
@@ -622,7 +633,7 @@ function wrItem(r, btn) {
   return '<div class="wr-item'+(r.estadoTurno==='llenando'?' wr-llenando':'')+'" style="border-left-color:'+color+'">'+
     '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
     '<div class="wr-info"><div class="wr-name">'+esc(r.petName||'Sin nombre')+' '+ag+' '+estBadge+'</div>'+
-    '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.horaCita?' · 🕐 '+esc(r.horaCita):'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
+    '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.horaCita?' · 🕐 '+esc(fmtHora(r.horaCita)):'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div></div>'+
     (btn || '')+
     '</div>';
 }
