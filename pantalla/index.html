@@ -281,7 +281,23 @@ function pintar(llamando, esperando){
 
 reloj();
 setInterval(reloj, 20000);
-setInterval(cargar, 8000);   // refresco rápido: es una pantalla en vivo
+
+// Detección casi en vivo: en vez de traer TODOS los registros cada 8s (lento),
+// sondeamos una versión BARATA cada 2s y solo recargamos cuando algo cambió.
+// Así un llamado suena en ~2s en lugar de tardar hasta 8s.
+var ultimaVersion = null;
+function chequearVersion(){
+  fetch(API_URL + '?action=version')
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (!res || !res.ok) return;
+      if (ultimaVersion === null) { ultimaVersion = res.v; return; }
+      if (res.v !== ultimaVersion) { ultimaVersion = res.v; cargar(); }
+    })
+    .catch(function(){});
+}
+setInterval(chequearVersion, 2000);   // casi en vivo
+setInterval(cargar, 30000);           // red de seguridad por si se pierde un cambio
 cargar();
 </script>
 </body>
