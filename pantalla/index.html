@@ -152,9 +152,10 @@ function leerTurno(t){
 function hablarTurno(r){
   if (!('speechSynthesis' in window)) return;
   var turno = leerTurno(r.turno);
-  var room  = r.consultorio ? (', pase al consultorio ' + r.consultorio) : '';
-  // Se repite el turno para que se entienda sobre la música.
-  var frase = 'Turno ' + turno + '. Turno ' + turno + room + '.';
+  var room  = r.consultorio ? ('pase al consultorio ' + r.consultorio) : 'pase adelante';
+  var pet   = r.petName ? (', con ' + r.petName) : '';
+  // Ej: "Turno E 4, pase al consultorio Boom Boom, con Mila."
+  var frase = 'Turno ' + turno + ', ' + room + pet + '.';
   try {
     var u = new SpeechSynthesisUtterance(frase);
     u.lang = 'es-CO'; u.rate = 0.92; u.pitch = 1; u.volume = 1;
