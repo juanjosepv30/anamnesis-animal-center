@@ -92,6 +92,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .wr-name{font-weight:600;font-size:.9rem}
 .wr-meta{font-size:.73rem;color:var(--tm);margin-top:1px}
 .wr-medico{font-size:.74rem;font-weight:700;color:var(--pd);margin-top:3px}
+.wr-motivo{font-size:.73rem;color:var(--tm);font-style:italic;margin-top:3px;line-height:1.35}
+.wr-atn{background:#f0fdf4}
 /* Reenviar registro, debajo del nombre. */
 .wr-reenviar{margin-top:7px}
 /* Columna derecha: tiempos arriba, botón (Ausente) debajo. */
@@ -109,6 +111,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
    color más suave es solo para que recepción vea que aún no terminó. */
 .badge-llen{background:#ede9fe;color:#5b21b6}
 .badge-ok{background:#f0fdf4;color:#16a34a}
+.badge-atn{background:#dcfce7;color:#15803d}
 .badge-sin{background:#f1f5f9;color:#64748b}
 .wr-llenando{border-left-style:dashed!important;background:#faf9ff}
 /* Tiempo de espera: neutro al principio, ámbar y rojo cuando se acumula. */
@@ -127,6 +130,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .wr-grp-atn{color:var(--ok)}
 .wr-grp:first-child{margin-top:0}
 .wr-btn-volver{border-color:#a78bfa;color:#5b21b6}
+.wr-btn-atn{border-color:#86efac;color:#15803d}
 .empty{text-align:center;padding:40px 20px;color:var(--tm);font-size:.85rem}
 .spinner{width:30px;height:30px;border:2.5px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:30px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -855,16 +859,49 @@ function wrGrupo(titulo, arr) {
   arr.sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
   var h = '<div class="wr-grp">'+titulo+' · '+arr.length+'</div>';
   arr.forEach(function(r){
-    // Solo el botón principal (Ausente). El de Reenviar lo agrega wrItem
-    // debajo del nombre.
-    var acts = '<button class="wr-btn" onclick="markAusente('+r.rowIndex+',\'ausente\')">Ausente</button>';
+    // Dos acciones: "Pasó con el médico" (→ atendiendo) para cuando recepción
+    // ve que ya no está en la sala, y "Ausente" para el que se fue. El de
+    // Reenviar lo agrega wrItem debajo del nombre.
+    var acts = '<button class="wr-btn wr-btn-atn" onclick="markAtendiendo('+r.rowIndex+')">✓ Pasó con el médico</button>'+
+               '<button class="wr-btn" onclick="markAusente('+r.rowIndex+',\'ausente\')">Ausente</button>';
     h += wrItem(r, acts);
   });
   return h;
 }
 
+// Tarjeta del que está siendo atendido: turno, mascota, quién lo atiende,
+// dónde y para qué vino. Sin botones — el médico la cierra con "Atendido".
+function wrItemAtendiendo(r) {
+  var color = serviceColor(r.service);
+  var quienDonde = '';
+  if (r.medicoAsignado) quienDonde = '🩺 ' + esc(r.medicoAsignado) + (r.consultorio ? ' · 🚪 ' + esc(r.consultorio) : '');
+  else if (r.consultorio) quienDonde = '🚪 ' + esc(r.consultorio);
+  var motivo = (r.complaint || r.detail || '').toString().trim();
+  var motivoHtml = motivo ? '<div class="wr-motivo">“'+esc(motivo.slice(0,90))+(motivo.length>90?'…':'')+'”</div>' : '';
+  return '<div class="wr-item wr-atn" style="border-left-color:'+color+'">'+
+    '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
+    '<div class="wr-info">'+
+      '<div class="wr-badge"><span class="badge badge-atn">Atendiendo</span></div>'+
+      '<div class="wr-name">'+esc(r.petName||'Sin nombre')+'</div>'+
+      '<div class="wr-meta">'+esc(r.service||'')+(r.specialty?' · '+esc(r.specialty):'')+'</div>'+
+      (quienDonde ? '<div class="wr-medico">'+quienDonde+'</div>' : '')+
+      motivoHtml +
+    '</div>'+
+  '</div>';
+}
+
+function markAtendiendo(rowIndex) {
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendiendo' }) })
+    .then(r=>r.json()).then(function(res){
+      if (res && res.ok) { showToast('Pasó con el médico'); loadWaitingRoom(true); }
+      else { showToast((res && res.error) || 'Error al actualizar'); loadWaitingRoom(true); }
+    }).catch(function(){ showToast('Error de conexión'); });
+}
+
 function renderTab() {
-  var espera    = wrRecords.filter(function(r){ var e=r.estadoTurno||'esperando'; return e==='esperando'||e==='llamando'||e==='llenando'; });
+  // "En proceso": los que están en la clínica sin cerrar. Incluye 'atendiendo'
+  // (recepción confirmó que ya pasó con el médico).
+  var espera    = wrRecords.filter(function(r){ var e=r.estadoTurno||'esperando'; return e==='esperando'||e==='llamando'||e==='llenando'||e==='atendiendo'; });
   var ausentes  = wrRecords.filter(function(r){ return r.estadoTurno==='ausente'; });
   var atendidos = wrRecords.filter(function(r){ return r.estadoTurno==='atendido'; });
 
@@ -877,14 +914,15 @@ function renderTab() {
 
   if (wrTab === 'espera') {
     if (!espera.length) { el.innerHTML = '<div class="empty">Nadie en espera todavía.</div>'; return; }
-    // Siendo atendido (ya los llamó un médico) va aparte y arriba: recepción
-    // ve de un vistazo quién sigue esperando de verdad y quién ya está adentro.
-    var atendiendo = espera.filter(function(r){ return r.estadoTurno === 'llamando'; });
-    var enFila     = espera.filter(function(r){ return r.estadoTurno !== 'llamando'; });
+    // Siendo atendido = los que recepción ya marcó 'atendiendo' (pasaron con
+    // el médico). Va aparte y arriba, con la tarjeta completa: turno, mascota,
+    // quién y dónde lo atiende, y para qué vino.
+    var atendiendo = espera.filter(function(r){ return r.estadoTurno === 'atendiendo'; });
+    var enFila     = espera.filter(function(r){ return r.estadoTurno !== 'atendiendo'; });
     if (atendiendo.length) {
       atendiendo.sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
       html += '<div class="wr-grp wr-grp-atn">🩺 Siendo atendido · ' + atendiendo.length + '</div>';
-      atendiendo.forEach(function(r){ html += wrItem(r, ''); });   // sin botón: lo maneja el médico
+      atendiendo.forEach(function(r){ html += wrItemAtendiendo(r); });
     }
     html += wrGrupo('🩺 Especialidades', enFila.filter(esEspecializado));
     html += wrGrupo('🐾 Generales',      enFila.filter(function(r){ return !esEspecializado(r); }));

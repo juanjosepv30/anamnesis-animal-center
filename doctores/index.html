@@ -268,6 +268,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .mini-ag{background:#ede9fe;color:#6d28d9}
 .mini-cita{background:#ede9fe;color:#6d28d9}
 .mini-esp{background:#e0f2fe;color:#0369a1}
+.mini-atn{background:#dcfce7;color:#15803d}
 /* En consulta ahora — awareness read-only de quién está siendo atendido. */
 .consulta-strip{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:9px 12px;margin-bottom:12px}
 .cs-t{font-size:.7rem;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
@@ -525,7 +526,7 @@ function umbralSalida(service) {
 
 // Libre ahora, o a punto de estarlo.
 function estaPorSalir(medico, hoy) {
-  const enConsulta = hoy.find(x => x.estadoTurno === 'llamando' && x.calledBy === medico);
+  const enConsulta = hoy.find(x => (x.estadoTurno === 'llamando' || x.estadoTurno === 'atendiendo') && x.calledBy === medico);
   if (!enConsulta) return true;                 // no está atendiendo a nadie
   if (!enConsulta.calledAt) return false;       // lo llamó sin identificarse: no sabemos
   const min = (Date.now() - new Date(enConsulta.calledAt)) / 60000;
@@ -818,7 +819,7 @@ function decidirEntreFilas(hoy, filasVisibles) {
   const cands = filasVisibles.map(function(f) {
     const mine = hoy.filter(r => recordFila(r) === f.key);
     const esp  = mine.filter(r => (r.estadoTurno || 'esperando') === 'esperando');
-    const ya   = mine.filter(r => r.estadoTurno === 'llamando' || r.estadoTurno === 'atendido');
+    const ya   = mine.filter(r => r.estadoTurno === 'llamando' || r.estadoTurno === 'atendiendo' || r.estadoTurno === 'atendido');
     return pickNext(esp, f.key, ya);
   }).filter(Boolean);
 
@@ -850,7 +851,7 @@ function renderSala() {
   // Awareness read-only: quién está siendo atendido ahora en toda la clínica.
   // Excluye a mi propio paciente (ese ya lo veo en su tarjeta con botones).
   const enConsulta = allRecords.filter(r => isSameDay(r.timestamp, today) &&
-    r.estadoTurno === 'llamando' && (!miMedico || r.calledBy !== miMedico));
+    (r.estadoTurno === 'llamando' || r.estadoTurno === 'atendiendo') && (!miMedico || r.calledBy !== miMedico));
   let stripHtml = '';
   if (enConsulta.length) {
     enConsulta.sort((a,b) => new Date(a.calledAt||a.timestamp) - new Date(b.calledAt||b.timestamp));
@@ -876,7 +877,7 @@ function renderSala() {
   // al que no cierra, y entonces deja de avisarle. Ahora no puede seguir
   // sin cerrar, así que el olvido se nota en el acto.
   const miPacienteAbierto = miMedico
-    ? hoy.find(r => r.estadoTurno === 'llamando' && r.calledBy === miMedico)
+    ? hoy.find(r => (r.estadoTurno === 'llamando' || r.estadoTurno === 'atendiendo') && r.calledBy === miMedico)
     : null;
 
   filasVisibles.forEach(function(f) {
@@ -891,11 +892,11 @@ function renderSala() {
     // otro es ruido y encima invita a pisarle el turno.
     // Si no hay identidad ("ver todos") se muestran todos, y si nadie firmó
     // el llamado tampoco lo escondemos: sería peor perderlo de vista.
-    const llamando = mine.filter(r => r.estadoTurno === 'llamando' &&
+    const llamando = mine.filter(r => (r.estadoTurno === 'llamando' || r.estadoTurno === 'atendiendo') &&
       (!miMedico || !r.calledBy || r.calledBy === miMedico));
     // Los que ya pasaron hoy por esta fila: sirven para mantener la
     // proporción del intercalado a lo largo del día.
-    const yaLlamados = mine.filter(r => r.estadoTurno === 'llamando' || r.estadoTurno === 'atendido');
+    const yaLlamados = mine.filter(r => r.estadoTurno === 'llamando' || r.estadoTurno === 'atendiendo' || r.estadoTurno === 'atendido');
     const next     = pickNext(esperando, f.key, yaLlamados);
 
     const isCol = !!collapsed[f.key];
@@ -918,9 +919,10 @@ function renderSala() {
       // Ausente es la salida para el que no apareció: sin esto el médico
       // queda trabado y termina marcando "Atendido" a alguien que nunca
       // atendió, que es peor — ensucia el dato y no queda registro real.
+      var atnBadge = r.estadoTurno === 'atendiendo' ? ' <span class="mini mini-atn">Atendiendo</span>' : '';
       body += '<div class="calling"><div class="calling-top">'+
         '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
-          '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
+          '<div class="calling-t">'+esc(r.turno||'')+atnBadge+'</div>'+
           '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
         '</div>'+
         '<div class="calling-btns">'+
