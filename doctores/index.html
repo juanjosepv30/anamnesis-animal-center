@@ -41,6 +41,30 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .badge-pending.show{display:inline}
 .btn-hdr{border:1.5px solid var(--bd);border-radius:8px;padding:6px 14px;color:var(--tm);font-size:.78rem;font-weight:600;cursor:pointer;background:var(--wh);font-family:'DM Sans',sans-serif;transition:all .2s}
 .btn-hdr:hover{border-color:var(--p);color:var(--p)}
+#hdrIcon{cursor:pointer}
+/* Chip del médico: verde = está recibiendo notificaciones (especialista, o
+   general que recepción puso de turno). Sin verde = puede entrar y mirar,
+   pero no le llegan avisos de consulta general. */
+.medico-chip{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--bd);border-radius:8px;padding:6px 12px;background:var(--wh);color:var(--tm);font-size:.8rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;max-width:190px}
+.medico-chip:hover{border-color:var(--p)}
+.medico-chip .mc-dot{width:9px;height:9px;border-radius:50%;background:var(--bd);flex-shrink:0}
+.medico-chip .mc-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.medico-chip.activo{color:#15803d;border-color:#86efac;background:#f0fdf4}
+.medico-chip.activo .mc-dot{background:#16a34a}
+/* Modal de identidad */
+.idm-bg{position:fixed;inset:0;background:rgba(20,10,35,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:18px}
+.idm{background:var(--wh);border-radius:18px;width:100%;max-width:400px;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.idm-t{font-size:1.15rem;font-weight:700;color:var(--tx);padding:20px 22px 4px}
+.idm-sub{font-size:.82rem;color:var(--tm);line-height:1.5;padding:0 22px 12px}
+.idm-lista{overflow-y:auto;padding:0 12px;flex:1}
+.idm-op{display:flex;flex-direction:column;gap:1px;padding:11px 12px;border-radius:11px;cursor:pointer;border:1.5px solid transparent}
+.idm-op:hover{background:var(--bg2)}
+.idm-op.sel{background:#f0fdf4;border-color:#86efac}
+.idm-op-n{font-size:.9rem;font-weight:700;color:var(--tx)}
+.idm-op-e{font-size:.73rem;color:var(--tm)}
+.idm-todos{font-weight:600;color:var(--tm)}
+.idm-cerrar{margin:6px 18px 18px;background:var(--bg2);border:none;border-radius:12px;padding:13px;font-size:.9rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:'DM Sans',sans-serif}
+.idm-cerrar:hover{background:var(--bd)}
 
 /* ── Search bar ── */
 .srch{background:var(--wh);border-bottom:1px solid var(--bd);padding:10px 24px;position:sticky;top:60px;z-index:99}
@@ -284,17 +308,14 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 </head>
 <body>
 
-<div class="bienv" id="bienvenida" style="display:none">
-  <div class="bienv-box">
-    <img class="bienv-logo" src="/img/icono-192.png" alt="" onerror="this.remove()">
-    <div class="bienv-h">¿Listo para trabajar?</div>
-    <div class="bienv-sub" id="bienvSub">Al entrar de turno te avisamos por WhatsApp cuando llegue un paciente tuyo.</div>
-    <button class="bienv-btn" id="bienvBtn" onclick="bienvenidaListo()">Sí, estoy de turno</button>
-    <div class="bienv-quien">
-      <label class="bienv-lbl" for="bienvMedico">¿Quién eres?</label>
-      <select class="bienv-sel" id="bienvMedico" onchange="bienvenidaEligio(this.value)"></select>
-    </div>
-    <button class="bienv-luego" onclick="cerrarBienvenida()">Ahora no, solo quiero mirar</button>
+<!-- ¿Quién eres? Se abre al tocar el chip del nombre. Solo elige identidad
+     (el turno lo maneja recepción). Queda guardado en el dispositivo. -->
+<div class="idm-bg" id="identModal" style="display:none" onclick="if(event.target===this)cerrarIdentidad()">
+  <div class="idm">
+    <div class="idm-t">¿Quién eres?</div>
+    <div class="idm-sub">Elige tu nombre. Queda guardado en este celular para siempre.</div>
+    <div class="idm-lista" id="identLista"></div>
+    <button class="idm-cerrar" onclick="cerrarIdentidad()">Cerrar</button>
   </div>
 </div>
 
@@ -304,7 +325,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 <header class="hdr">
   <div class="hdr-brand">
-    <div class="hdr-brand-icon" id="hdrIcon"><img src="/img/paw.jpg" alt="Animal Center" style="width:100%;height:100%;object-fit:cover;border-radius:8px" onerror="this.remove();document.getElementById('hdrIcon').textContent='🐾'"></div>
+    <!-- La huella recarga: si el médico ve datos viejos, toca el logo. -->
+    <div class="hdr-brand-icon" id="hdrIcon" onclick="loadRecords()" title="Toca para actualizar"><img src="/img/paw.jpg" alt="Animal Center" style="width:100%;height:100%;object-fit:cover;border-radius:8px" onerror="this.remove();document.getElementById('hdrIcon').textContent='🐾'"></div>
     <div>
       <div class="hdr-brand-text">Animal Center</div>
       <div class="hdr-brand-sub" id="lastUpdated">Cargando registros...</div>
@@ -312,7 +334,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
   </div>
   <div class="hdr-right">
     <span class="badge-pending" id="pendingCount"></span>
-    <button class="btn-hdr" onclick="loadRecords()">↻ Actualizar</button>
+    <!-- El nombre del médico que está viendo la página. Verde = está
+         recibiendo notificaciones. Clic para cambiar de médico. -->
+    <button class="medico-chip" id="medicoChip" onclick="abrirIdentidad()">
+      <span class="mc-dot"></span><span class="mc-name">Elige tu nombre</span>
+    </button>
   </div>
 </header>
 
@@ -323,15 +349,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <button class="fbtn" id="f-pending" onclick="setView('pending')">📋 Anamnesis</button>
       <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Atendidas</button>
     </div>
-    <div class="srch-wrap">
-      <span class="srch-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="Buscar por mascota o propietario..." oninput="renderAll()">
-    </div>
     <input type="date" id="dateFilter" class="date-filter" style="display:none" onchange="renderAll()">
-    <select id="miMedico" class="date-filter" onchange="setMiMedico(this.value)" title="Ves solo los pacientes que te corresponden">
-      <option value="">👁 Ver todos los pacientes</option>
-    </select>
-    <button id="btnTurno" class="turno-tgl" style="display:none" onclick="toggleTurno()"></button>
   </div>
   <div class="srch-inner legend" style="margin-top:8px">
     <span class="lg"><span class="lg-dot" style="background:#16a34a"></span>General</span>
@@ -368,7 +386,7 @@ function loadRecords(silent) {
         allRecords = res.records || [];
         if (aplicaEsteTurno(pedidoEn)) deTurno = res.deTurno || [];
         document.getElementById('pruebaAviso').style.display = res.modoPrueba ? '' : 'none';
-        pintarTurno();
+        pintarMedicoChip();   // el turno llega acá y define el color del chip
         renderAll();
         updateCounts();
         deducirMedico();    // si vino del WhatsApp, ya sabemos quién es
@@ -606,7 +624,14 @@ function normEsp(s) {
 
 function misEspecialidades() {
   const m = medicos.find(x => x.medico === miMedico);
-  return m ? m.especialidades.map(normEsp) : [];
+  let esp = m ? m.especialidades.map(normEsp) : [];
+  // Si recepción te puso de turno general en esta jornada, cubrís 'general'
+  // aunque seas especialista puro (Wilmer/Alberto ayudando en la sala). Con
+  // esto ves la fila general y te llegan sus pacientes, sin tocar la hoja.
+  if (miMedico && deTurno.indexOf(miMedico) !== -1 && esp.indexOf('general') === -1) {
+    esp = esp.concat('general');
+  }
+  return esp;
 }
 
 // Quién debe atender este paciente. Es el MISMO criterio que usa
@@ -647,85 +672,67 @@ function misFilas() {
 function setMiMedico(v) {
   miMedico = v;
   try { localStorage.setItem('ac_medico', v); } catch (e) {}
-  pintarTurno();
+  pintarMedicoChip();
   renderSala();
   updateCounts();
 }
 
-// ── Turno: entro / salgo ─────────────────────────────────────
-// Solo a los que marcaron entrada les llega el WhatsApp. Se apaga solo
-// cada medianoche, así nadie amanece recibiendo mensajes de su día libre.
-// Si NADIE de tu fila marcó turno, el aviso sale para todos igual que
-// antes: el sistema no puede quedarse mudo con un paciente esperando.
+// ── Identidad del médico (chip del header) ───────────────────
+// Verde = está recibiendo notificaciones. Un especialista (tenga o no
+// también 'general') siempre recibe sus citas, así que va verde siempre.
+// Un general puro solo va verde si recepción lo puso de turno.
+function esActivo() {
+  if (!miMedico) return false;
+  const m = medicos.find(x => x.medico === miMedico);
+  const raw = m ? m.especialidades.map(normEsp) : [];
+  const esEspecialista = raw.some(e => e && e !== 'general');
+  const enTurno = deTurno.indexOf(miMedico) !== -1;
+  return esEspecialista || enTurno;
+}
+
+function pintarMedicoChip() {
+  const c = document.getElementById('medicoChip');
+  if (!c) return;
+  const activo = esActivo();
+  c.className = 'medico-chip' + (activo ? ' activo' : '');
+  c.innerHTML = '<span class="mc-dot"></span><span class="mc-name">' +
+    esc(miMedico || 'Elige tu nombre') + '</span>';
+}
+
+function abrirIdentidad() {
+  const cont = document.getElementById('identLista');
+  cont.innerHTML =
+    medicos.map(function(m){
+      const sel = m.medico === miMedico ? ' sel' : '';
+      const arg = "'" + String(m.medico).replace(/\\/g,'\\\\').replace(/'/g,"\\'") + "'";
+      return '<div class="idm-op'+sel+'" onclick="elegirIdentidad('+arg+')">'+
+        '<span class="idm-op-n">'+esc(m.medico)+'</span>'+
+        '<span class="idm-op-e">'+esc(m.especialidades.join(', '))+'</span></div>';
+    }).join('') +
+    '<div class="idm-op idm-todos" onclick="elegirIdentidad(\'\')">👁 Ver todo sin identificarme</div>';
+  document.getElementById('identModal').style.display = 'flex';
+}
+
+function cerrarIdentidad() {
+  document.getElementById('identModal').style.display = 'none';
+}
+
+function elegirIdentidad(v) {
+  setMiMedico(v);
+  cerrarIdentidad();
+  if (v) showToast('Abriste como ' + v.replace(/^Dra?\.\s*/, ''));
+}
+
+// ── Turno ────────────────────────────────────────────────────
+// Quién cubre consulta general en esta jornada. YA NO lo marca el médico:
+// lo define recepción desde su pantalla (pop-up de médicos de turno). Acá
+// solo se lee, para saber si a este médico le toca ver la sala general.
 let deTurno = [];
 
-// Cuándo marcó turno el médico. Los pedidos que salieron ANTES de eso
-// traen un estado viejo: si los dejamos aplicar, le pisan lo que acaba de
-// hacer y la puerta se le vuelve a abrir en la cara.
+// Refresco optimista: los pedidos que salieron ANTES del último cambio
+// traen un estado viejo. Se conserva por si el dato de turno llega tarde.
 let turnoTocadoEn = 0;
 function aplicaEsteTurno(pedidoEn) { return pedidoEn > turnoTocadoEn; }
-
-// ¿Este médico rota por turnos? Solo los generales. Los especialistas
-// trabajan por cita y están siempre habilitados: para ellos el turno no
-// existe y no hay que preguntarles nada.
-function soyGeneral() {
-  return misEspecialidades().indexOf('general') !== -1;
-}
-
-function estoyDeTurno() {
-  return !!miMedico && deTurno.indexOf(miMedico) !== -1;
-}
-
-function pintarTurno() {
-  const b = document.getElementById('btnTurno');
-  // Sin identidad, o si es especialista, el botón no tiene sentido: él no
-  // entra ni sale de turno, siempre recibe sus citas.
-  if (!miMedico || !soyGeneral()) { b.style.display = 'none'; return; }
-  const on = estoyDeTurno();
-  b.style.display = '';
-  b.className = 'turno-tgl' + (on ? ' on' : '');
-  b.textContent = on ? 'Estoy de turno' : 'Fuera de turno';
-  b.title = on
-    ? 'Te estamos avisando por WhatsApp. Toca para salir de turno.'
-    : 'No te estamos avisando. Toca para entrar de turno.';
-}
-
-// El botón de arriba alterna. La bienvenida NO: su botón dice "estoy de
-// turno" y eso jamás puede darte de baja. Por eso el estado va explícito y
-// no se deduce de dónde estabas.
-function toggleTurno() {
-  return ponerTurno(!estoyDeTurno());
-}
-
-// Devuelve la promesa para que la bienvenida pueda esperar a que termine
-// antes de cerrarse: si no, cierra el pop-up y el médico no sabe si quedó.
-function ponerTurno(quiero) {
-  if (!miMedico) return Promise.resolve();
-  if (quiero === estoyDeTurno()) return Promise.resolve();   // ya está así
-  const b = document.getElementById('btnTurno');
-  b.disabled = true;
-  return fetch(API_URL, {
-    method: 'POST',
-    body: JSON.stringify({ action: 'setTurno', medico: miMedico, activo: quiero })
-  })
-    .then(r => r.json())
-    .then(function(res){
-      if (!res || !res.ok) { showToast('No se pudo cambiar el turno'); return; }
-      // Esto es lo más fresco que existe: lo acaba de decidir el médico.
-      // A partir de acá, cualquier respuesta que salió antes se descarta.
-      turnoTocadoEn = Date.now();
-      deTurno = res.deTurno || [];
-      pintarTurno();
-      renderSala();
-      const p = res.pendientes || 0;
-      showToast(quiero
-        ? (p ? 'Entraste de turno — te mandamos ' + p + ' paciente' + (p > 1 ? 's' : '') + ' que estaba' + (p > 1 ? 'n' : '') + ' esperando'
-             : 'Entraste de turno — te avisamos por WhatsApp')
-        : 'Saliste de turno — no te vamos a molestar');
-    })
-    .catch(function(){ showToast('Error de conexión'); })
-    .then(function(){ b.disabled = false; });
-}
 
 // La lista de médicos casi nunca cambia, y pedirla tarda ~2s. La guardamos
 // en el celular para que la puerta sea usable de inmediato. Igual se pide
@@ -750,11 +757,7 @@ function cargarMedicos() {
       // quién es sin esperar la lista de pacientes.
       if (aplicaEsteTurno(pedidoEn)) deTurno = res.deTurno || [];
       document.getElementById('pruebaAviso').style.display = res.modoPrueba ? '' : 'none';
-      const sel = document.getElementById('miMedico');
-      sel.innerHTML = '<option value="">👁 Ver todos los pacientes</option>' +
-        medicos.map(m => '<option value="'+esc(m.medico)+'">'+
-          esc(m.medico)+' — '+esc(m.especialidades.join(', '))+'</option>').join('');
-      if (miMedico) sel.value = miMedico;
+      pintarMedicoChip();   // el color depende del turno, que llega acá
     })
     .catch(function(){});
 }
@@ -773,110 +776,10 @@ function deducirMedico() {
   const cand = medicos.filter(m => m.especialidades.map(normEsp).some(e => tgt.indexOf(e) !== -1));
   if (cand.length === 1) {
     setMiMedico(cand[0].medico);
-    document.getElementById('miMedico').value = cand[0].medico;
     showToast('Abriste como ' + cand[0].medico);
   }
 }
 
-// ── Bienvenida al empezar el turno ───────────────────────────
-// El médico llega, abre la app y lo primero que ve es la pregunta que
-// importa: ¿arrancamos? Sin esto tenía que descubrir solo un botón chico
-// arriba, y si no lo tocaba no le llegaba ningún aviso en todo el día.
-// Solo aparece si NO está de turno: al que ya está trabajando no se le
-// interrumpe.
-let bienvMostrada = false;
-
-function verBienvenida() {
-  if (bienvMostrada) return;
-  if (!medicos.length) return;          // sin directorio no hay a quién elegir
-
-  // Si viene del WhatsApp (…?t=E-04) ya marcó turno al empezar el día: no
-  // hay que volver a preguntarle. Viene a llamar a alguien, no a loguearse.
-  try { if (new URLSearchParams(location.search).get('t')) return; } catch (e) {}
-
-  // Ya sabemos quién es y no tiene nada que marcar → afuera la puerta.
-  if (miMedico && !soyGeneral()) { cerrarBienvenida(); return; }   // especialista
-  if (miMedico && estoyDeTurno()) { cerrarBienvenida(); return; }
-  bienvMostrada = true;
-
-  const sel = document.getElementById('bienvMedico');
-  sel.innerHTML = '<option value="">— Elige tu nombre —</option>' +
-    medicos.map(m => '<option value="'+esc(m.medico)+'">'+
-      esc(m.medico)+' — '+esc(m.especialidades.join(', '))+'</option>').join('');
-  sel.value = miMedico || '';
-  sel.disabled = false;
-  pintarBienvenida();
-  document.getElementById('bienvenida').style.display = 'flex';
-}
-
-// La puerta se abre ANTES de pedir nada: el médico ve de una que el
-// sistema le está preguntando quién es, no una pantalla cargando.
-// Los pacientes tardan el doble que los médicos y no hacen falta acá.
-function puertaInicial() {
-  try { if (new URLSearchParams(location.search).get('t')) return; } catch (e) {}
-  document.getElementById('bienvenida').style.display = 'flex';
-
-  // Con la lista guardada del día anterior ya puede elegir su nombre sin
-  // esperar nada. Si no hay caché (primera vez), muestra que está cargando.
-  medicosDelCache();
-  if (medicos.length) {
-    const sel = document.getElementById('bienvMedico');
-    sel.innerHTML = '<option value="">— Elige tu nombre —</option>' +
-      medicos.map(m => '<option value="'+esc(m.medico)+'">'+
-        esc(m.medico)+' — '+esc(m.especialidades.join(', '))+'</option>').join('');
-    sel.value = miMedico || '';
-    sel.disabled = false;
-    pintarBienvenida();
-    return;
-  }
-  const b = document.getElementById('bienvBtn');
-  b.disabled = true;
-  b.textContent = 'Un momento...';
-  document.getElementById('bienvSub').textContent = 'Cargando los médicos...';
-  document.getElementById('bienvMedico').disabled = true;
-}
-
-function pintarBienvenida() {
-  const b = document.getElementById('bienvBtn');
-  b.disabled = !miMedico;
-  b.textContent = miMedico ? 'Sí, estoy de turno' : 'Primero elige tu nombre';
-  document.getElementById('bienvSub').textContent = miMedico
-    ? 'Al entrar de turno te avisamos por WhatsApp cuando llegue un paciente tuyo.'
-    : 'Elige tu nombre abajo para poder entrar de turno.';
-}
-
-function bienvenidaEligio(v) {
-  setMiMedico(v);
-  if (!miMedico) { pintarBienvenida(); return; }
-
-  // El especialista no marca turno: trabaja por cita y siempre recibe.
-  if (!soyGeneral()) {
-    cerrarBienvenida();
-    showToast('Listo. Te avisamos siempre que llegue una cita tuya');
-    return;
-  }
-  // Ya estaba de turno (volvió a abrir la app, entró desde el WhatsApp):
-  // no hay nada que preguntarle, ya está trabajando.
-  if (estoyDeTurno()) {
-    cerrarBienvenida();
-    showToast('Ya estabas de turno, ' + miMedico.replace(/^Dra?\.\s*/, ''));
-    return;
-  }
-  pintarBienvenida();
-}
-
-function cerrarBienvenida() {
-  document.getElementById('bienvenida').style.display = 'none';
-}
-
-function bienvenidaListo() {
-  if (!miMedico) return;
-  const b = document.getElementById('bienvBtn');
-  b.disabled = true;
-  b.textContent = 'Entrando...';
-  // ENTRAR, nunca alternar: este botón dice "estoy de turno".
-  ponerTurno(true).then(cerrarBienvenida);
-}
 
 // ── ¿Cuál de las dos filas primero? ──────────────────────────
 // Solo aplica al médico que atiende las dos (Tatiana es gastro y general).
@@ -925,8 +828,8 @@ function renderSala() {
   const filasVisibles = FILAS.filter(f => verFilas.indexOf(f.key) !== -1);
 
   // Acá había un aviso de "fuera de turno: no te llegan avisos". Se quitó:
-  // era un cartel sin salida. Al que no marcó turno hay que darle el botón,
-  // no el susto — de eso se encarga el pop-up de bienvenida.
+  // el turno lo maneja recepción ahora. El chip del header (verde/gris) ya
+  // le dice al médico si está recibiendo notificaciones o solo mirando.
   let html = '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
 
   // Cuando un médico tiene las dos filas (Tatiana es gastro Y general),
@@ -1208,14 +1111,9 @@ function markAtendido(rowIndex) {
 
 function renderAll() {
   if (activeView === 'sala') { renderSala(); return; }
-  const q = document.getElementById('searchInput').value.toLowerCase();
   const today = new Date();
   const dfVal = document.getElementById('dateFilter').value;
   let records = allRecords.filter(r => {
-    const matchQ = !q ||
-      (r.petName||'').toLowerCase().includes(q) ||
-      (r.ownerName||'').toLowerCase().includes(q);
-    if (!matchQ) return false;
     const isReviewed = r.status === 'revisado';
     if (activeView === 'pending') {
       // Solo pendientes del día de hoy
@@ -1549,20 +1447,19 @@ if ('serviceWorker' in navigator) {
 // de ellos depende también a quién sugerimos llamar (un médico que estaba
 // "a 10 min de salir" ya salió). Sin esto el médico ve números congelados.
 setInterval(function(){
-  if (activeView === 'sala' && document.getElementById('bienvenida').style.display === 'none') renderSala();
+  if (activeView === 'sala') renderSala();
 }, 60000);
 
 setInterval(chequearCambios, 5000);
 setInterval(function(){ if (!document.querySelector('.rec.open')) loadRecords(true); }, 120000); // red de seguridad
 
 // ── Arranque ──
-// 1. La puerta se abre YA: el médico ve la pregunta, no un spinner.
-// 2. Los médicos llegan en ~1.4s y con eso la puerta ya es usable.
-// 3. Los pacientes (~3s) cargan EN PARALELO, detrás. Cuando el médico
-//    termina de marcar turno, el dashboard ya está listo.
-// Antes esto iba encadenado y el pop-up tardaba 4.4s en aparecer.
-puertaInicial();
-cargarMedicos().then(verBienvenida);
+// Ya no hay puerta de "quién eres / de turno": el médico entra directo. Su
+// nombre queda guardado en el dispositivo (selector de arriba), y si viene
+// del WhatsApp (?t=E-04) se autoselecciona. El turno lo define recepción.
+medicosDelCache();          // carga la lista cacheada, sin esperar
+pintarMedicoChip();         // muestra el nombre guardado de una
+cargarMedicos();
 loadRecords();
 </script>
 </body>

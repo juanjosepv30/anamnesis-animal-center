@@ -130,6 +130,26 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--tx);color:#fff;border-radius:10px;padding:10px 20px;font-size:.82rem;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
 .toast.show{opacity:1}
+.hdr-acts{display:flex;gap:8px;align-items:center}
+.btn-turno-cfg{background:var(--pl);color:var(--pd);border:1.5px solid var(--bd);border-radius:10px;padding:9px 14px;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-turno-cfg:hover{background:#ede4ff}
+.modal-bg{position:fixed;inset:0;background:rgba(26,10,46,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:18px}
+.modal{background:var(--wh);border-radius:18px;width:100%;max-width:440px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal-t{font-size:1.15rem;font-weight:700;color:var(--tx);padding:20px 22px 4px}
+.modal-sub{font-size:.83rem;color:var(--tm);line-height:1.5;padding:0 22px 14px}
+.turnos-lista{overflow-y:auto;padding:0 14px;flex:1}
+.turno-item{display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:11px;cursor:pointer;border:1.5px solid transparent}
+.turno-item:hover{background:var(--bg2)}
+.turno-item.on{background:var(--pl);border-color:var(--bd)}
+.turno-item input{width:20px;height:20px;accent-color:var(--p);flex-shrink:0;cursor:pointer}
+.turno-nom{font-size:.9rem;font-weight:600;color:var(--tx)}
+.turno-esp{font-size:.74rem;color:var(--tm);margin-top:1px}
+.modal-acts{display:flex;gap:10px;padding:14px 22px 20px;border-top:1px solid var(--bd)}
+.modal-cancel{flex:0 0 auto;background:none;border:none;color:var(--tm);font-size:.86rem;font-weight:600;padding:12px 16px;cursor:pointer;border-radius:10px}
+.modal-cancel:hover{background:var(--bg2)}
+.modal-ok{flex:1;background:var(--p);color:#fff;border:none;border-radius:12px;padding:13px;font-size:.92rem;font-weight:700;cursor:pointer}
+.modal-ok:hover{background:var(--pd)}
+.modal-ok:disabled{opacity:.6;cursor:default}
 </style>
 </head>
 <body>
@@ -140,8 +160,26 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <div class="hdr-icon" id="hdrIcon"><img src="/img/paw.jpg" alt="" onerror="this.remove();document.getElementById('hdrIcon').textContent='🐾'"></div>
       <div><div class="hdr-t">Recepción</div><div class="hdr-s" id="hdrSub">Sala de espera</div></div>
     </div>
-    <button class="btn-ref" onclick="loadWaitingRoom()">↻ Actualizar</button>
+    <div class="hdr-acts">
+      <button class="btn-turno-cfg" onclick="abrirTurnos()">🩺 Médicos de turno</button>
+      <button class="btn-ref" onclick="loadWaitingRoom()">↻ Actualizar</button>
+    </div>
   </header>
+
+  <!-- Médicos de turno: recepción define quién cubre consulta general en la
+       jornada actual. Aparece solo al abrir la página si la jornada todavía
+       no se configuró; después se entra por el botón del header. -->
+  <div class="modal-bg" id="turnosModal" style="display:none">
+    <div class="modal">
+      <div class="modal-t" id="turnosTitulo">Médicos de turno</div>
+      <div class="modal-sub" id="turnosSub">Marca quién atiende consulta general en este turno. Les empiezan a llegar las notificaciones al instante.</div>
+      <div class="turnos-lista" id="turnosLista"></div>
+      <div class="modal-acts">
+        <button class="modal-cancel" onclick="cerrarTurnos()">Cancelar</button>
+        <button class="modal-ok" id="turnosGuardar" onclick="guardarTurnosSel()">Guardar</button>
+      </div>
+    </div>
+  </div>
 
   <div class="wrap">
     <div class="card">
@@ -349,8 +387,104 @@ function nearestHalfHour() {
 // Arranca directo, sin PIN.
 function iniciar() {
   loadWaitingRoom();
+  cargarTurnos();       // ¿ya está configurada la jornada? si no, abre el pop-up
   // Se refresca sola, pero se pausa si recepción está registrando a alguien.
   setInterval(function(){ if (!selected) loadWaitingRoom(true); }, 60000);
+  // Cada 3 min re-chequea la jornada: cubre el cambio de las 2pm sin recargar.
+  setInterval(function(){ if (!selected) cargarTurnos(); }, 180000);
+}
+
+// ── Médicos de turno (los define recepción) ──────────────────
+var _turnosMedicos = [];     // directorio [{medico, especialidades}]
+var _turnosSel = {};         // { nombre: true } — selección actual del pop-up
+var _turnosDismissed = false;// si recepción cerró sin guardar, no volver a insistir
+
+// Lee la config de la jornada. Si todavía no se configuró, abre el pop-up
+// (salvo que recepción ya lo haya cerrado a mano en esta sesión).
+function cargarTurnos() {
+  return fetch(API_URL + '?action=turnosConfig')
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (!res || !res.ok) return;
+      _turnosMedicos = res.medicos || [];
+      _turnosActuales = res.deTurno || [];
+      if (!res.configurada && !_turnosDismissed &&
+          document.getElementById('turnosModal').style.display === 'none') {
+        _turnosSel = {};                       // jornada nueva: arranca en blanco
+        abrirTurnos(true);
+      }
+    })
+    .catch(function(){});
+}
+
+// Abre el pop-up. auto=true cuando lo dispara el cambio de jornada; en ese
+// caso la selección arranca vacía. Al abrirlo a mano, precarga los actuales.
+function abrirTurnos(auto) {
+  function pintar() {
+    if (auto !== true) {
+      // Precarga: los que ya están de turno vienen marcados.
+      _turnosSel = {};
+      var actuales = _turnosActuales || [];
+      actuales.forEach(function(n){ _turnosSel[n] = true; });
+    }
+    renderTurnosLista();
+    document.getElementById('turnosModal').style.display = 'flex';
+  }
+  if (_turnosMedicos.length) { pintar(); return; }
+  // Sin directorio todavía: lo traemos y abrimos.
+  fetch(API_URL + '?action=turnosConfig').then(function(r){ return r.json(); })
+    .then(function(res){
+      if (res && res.ok) { _turnosMedicos = res.medicos || []; _turnosActuales = res.deTurno || []; }
+      pintar();
+    }).catch(pintar);
+}
+
+var _turnosActuales = [];
+
+function renderTurnosLista() {
+  var cont = document.getElementById('turnosLista');
+  cont.innerHTML = _turnosMedicos.map(function(m){
+    var on  = !!_turnosSel[m.medico];
+    var arg = "'" + String(m.medico).replace(/\\/g,'\\\\').replace(/'/g,"\\'") + "'";
+    return '<label class="turno-item'+(on?' on':'')+'">'+
+      '<input type="checkbox"'+(on?' checked':'')+' onchange="toggleTurnoItem('+arg+', this)">'+
+      '<span><span class="turno-nom">'+esc(m.medico)+'</span>'+
+      '<span class="turno-esp">'+esc((m.especialidades||[]).join(', '))+'</span></span>'+
+    '</label>';
+  }).join('');
+}
+
+// onchange en el checkbox: el label lo alterna de forma nativa (una sola vez)
+// y acá leemos el estado resultante. Nada de togglear a mano — eso se pisaba
+// con el toggle nativo del label y quedaba en cero.
+function toggleTurnoItem(nombre, chk) {
+  _turnosSel[nombre] = chk.checked;
+  var row = chk.closest('.turno-item');
+  if (row) row.classList.toggle('on', chk.checked);
+}
+
+function cerrarTurnos() {
+  document.getElementById('turnosModal').style.display = 'none';
+  _turnosDismissed = true;   // no re-abrir sola hasta que recarguen la página
+}
+
+function guardarTurnosSel() {
+  var elegidos = Object.keys(_turnosSel).filter(function(n){ return _turnosSel[n]; });
+  var btn = document.getElementById('turnosGuardar');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'guardarTurnos', medicos: elegidos }) })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      btn.disabled = false; btn.textContent = 'Guardar';
+      if (!res || !res.ok) { showToast('No se pudo guardar'); return; }
+      _turnosActuales = res.deTurno || [];
+      _turnosDismissed = true;
+      document.getElementById('turnosModal').style.display = 'none';
+      var n = (res.deTurno || []).length;
+      showToast(n ? (n + ' médico' + (n>1?'s':'') + ' de turno — les llegan las notificaciones')
+                  : 'Turno guardado sin médicos');
+    })
+    .catch(function(){ btn.disabled = false; btn.textContent = 'Guardar'; showToast('Error de conexión'); });
 }
 
 function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
