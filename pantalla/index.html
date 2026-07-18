@@ -72,7 +72,7 @@ body{display:flex;flex-direction:column}
   <div class="sound-box">
     <div class="em">📺</div>
     <h2>Pantalla de sala de espera</h2>
-    <p>Toca para activar el sonido de los llamados y pasar a pantalla completa.</p>
+    <p>Toca para activar. Cada turno se anuncia con un sonido y una <b>voz</b> que lo lee por los parlantes. Ábrela en el computador conectado al sonido de la clínica.</p>
     <button class="btn">Activar</button>
   </div>
 </div>
@@ -105,6 +105,8 @@ let primeraCarga = true;
 function activar() {
   document.getElementById('soundHint').style.display = 'none';
   try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  // Desbloquea la voz: algunos navegadores solo dejan hablar tras un toque.
+  try { if ('speechSynthesis' in window) { cargarVoces(); speechSynthesis.speak(new SpeechSynthesisUtterance(' ')); } } catch(e){}
   var el = document.documentElement;
   if (el.requestFullscreen) el.requestFullscreen().catch(function(){});
   cargar();
@@ -125,6 +127,41 @@ function ding() {
       o.start(t); o.stop(t + 0.55);
     });
   } catch(e) {}
+}
+
+// ── Voz: lee el turno en voz alta por los parlantes de la clínica ──
+// El navegador reproduce la voz; NO puede bajar la música de Spotify (esa
+// corre en otra app). Por eso va un 'ding' antes, para que se entienda.
+var vozES = null;
+function cargarVoces(){
+  try {
+    var vs = speechSynthesis.getVoices();
+    // Preferimos una voz es-CO/es-MX/es-US; si no, cualquier español.
+    vozES = vs.filter(function(v){ return /^es-(co|mx|us|419)/i.test(v.lang); })[0]
+         || vs.filter(function(v){ return /^es/i.test(v.lang); })[0] || null;
+  } catch(e){}
+}
+if ('speechSynthesis' in window) { cargarVoces(); speechSynthesis.onvoiceschanged = cargarVoces; }
+
+// "E-04" → "E 4" (el navegador lo lee "e cuatro"); sin el cero de adelante.
+function leerTurno(t){
+  t = String(t||'').trim();
+  var m = t.match(/^([A-Za-z]+)\s*-?\s*(\d+)$/);
+  return m ? (m[1] + ' ' + parseInt(m[2], 10)) : t.replace(/-/g,' ');
+}
+function hablarTurno(r){
+  if (!('speechSynthesis' in window)) return;
+  var turno = leerTurno(r.turno);
+  var room  = r.consultorio ? (', pase al consultorio ' + r.consultorio) : '';
+  // Se repite el turno para que se entienda sobre la música.
+  var frase = 'Turno ' + turno + '. Turno ' + turno + room + '.';
+  try {
+    var u = new SpeechSynthesisUtterance(frase);
+    u.lang = 'es-CO'; u.rate = 0.92; u.pitch = 1; u.volume = 1;
+    if (vozES) u.voice = vozES;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  } catch(e){}
 }
 
 function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -196,7 +233,7 @@ function pintar(llamando, esperando){
         '<div><div class="c-room-lbl">Consultorio</div>'+
         '<div class="c-room" style="color:'+color+'">'+esc(r.consultorio||'—')+'</div></div>'+
       '</div>';
-      if (nuevo) ding();
+      if (nuevo) { ding(); setTimeout((function(rec){ return function(){ hablarTurno(rec); }; })(r), 850); }
     });
     cont.innerHTML = html;
   }
