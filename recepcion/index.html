@@ -175,6 +175,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .modal-ok{flex:1;background:var(--p);color:#fff;border:none;border-radius:12px;padding:13px;font-size:.92rem;font-weight:700;cursor:pointer}
 .modal-ok:hover{background:var(--pd)}
 .modal-ok:disabled{opacity:.6;cursor:default}
+.atender-body{padding:0 22px 4px}
+.atender-lbl{display:block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tm);margin:10px 0 5px}
+.atender-sel{width:100%;box-sizing:border-box;height:42px;border:1.5px solid var(--bd);border-radius:10px;padding:0 11px;font-size:.9rem;font-family:'DM Sans',sans-serif;background:var(--wh);color:var(--tx)}
+.atender-sel:focus{border-color:var(--p);outline:none}
 </style>
 </head>
 <body>
@@ -202,6 +206,25 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <div class="modal-acts">
         <button class="modal-cancel" onclick="cerrarTurnos()">Cancelar</button>
         <button class="modal-ok" id="turnosGuardar" onclick="guardarTurnosSel()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- "Pasó con el médico": recepción dice QUIÉN lo atiende y DÓNDE, para que
+       esa info se vea en la tarjeta (recepción y médicos). -->
+  <div class="modal-bg" id="atenderModal" style="display:none" onclick="if(event.target===this)cerrarAtender()">
+    <div class="modal">
+      <div class="modal-t">¿Quién lo atiende?</div>
+      <div class="modal-sub" id="atenderSub"></div>
+      <div class="atender-body">
+        <label class="atender-lbl">Médico</label>
+        <select id="atenderMedico" class="atender-sel"></select>
+        <label class="atender-lbl">Consultorio</label>
+        <select id="atenderCons" class="atender-sel"></select>
+      </div>
+      <div class="modal-acts">
+        <button class="modal-cancel" onclick="cerrarAtender()">Cancelar</button>
+        <button class="modal-ok" id="atenderOk" onclick="confirmarAtender()">✓ Pasó con el médico</button>
       </div>
     </div>
   </div>
@@ -904,7 +927,7 @@ function wrGrupo(titulo, arr) {
     // Dos acciones: "Pasó con el médico" (→ atendiendo) para cuando recepción
     // ve que ya no está en la sala, y "Ausente" para el que se fue. El de
     // Reenviar lo agrega wrItem debajo del nombre.
-    var acts = '<button class="wr-btn wr-btn-atn" onclick="markAtendiendo('+r.rowIndex+')">✓ Pasó con el médico</button>'+
+    var acts = '<button class="wr-btn wr-btn-atn" onclick="pedirAtender('+r.rowIndex+')">✓ Pasó con el médico</button>'+
                '<button class="wr-btn" onclick="markAusente('+r.rowIndex+',\'ausente\')">Ausente</button>';
     h += wrItem(r, acts);
   });
@@ -947,12 +970,54 @@ function markAtendidoRecep(rowIndex) {
     }).catch(function(){ showToast('Error de conexión'); });
 }
 
-function markAtendiendo(rowIndex) {
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendiendo' }) })
+// Consultorios (mismos que el dashboard de médicos).
+var ROOMS = ['Boom Boom','Piel','Ojitos','Meaw Meaw','Endocrino','Gastro','Terapia física','Viajero','Rayos X','Eco','General','Vacunación 1','Vacunación 2'];
+var _atenderRow = null;
+
+// "Pasó con el médico": abre el modal para decir QUIÉN atiende y DÓNDE. Sin
+// eso, un general marcado a mano quedaba en atendiendo sin médico ni sala.
+function pedirAtender(rowIndex) {
+  var r = null;
+  for (var i = 0; i < wrRecords.length; i++) if (wrRecords[i].rowIndex === rowIndex) { r = wrRecords[i]; break; }
+  if (!r) return;
+  _atenderRow = rowIndex;
+  document.getElementById('atenderSub').textContent =
+    (r.turno || '') + ' · ' + (r.petName || '') + ' — ' + (r.service || '');
+
+  // Médicos candidatos: el especialista asignado (si es especializada) + los
+  // generales de turno. Si no hay ninguno, ofrecemos todo el directorio.
+  var docs = [];
+  if (r.medicoAsignado) docs.push(r.medicoAsignado);
+  (_turnosActuales || []).forEach(function(n){ if (docs.indexOf(n) === -1) docs.push(n); });
+  if (!docs.length) docs = (_turnosMedicos || []).map(function(m){ return m.medico; });
+
+  document.getElementById('atenderMedico').innerHTML =
+    '<option value="">— Elige el médico —</option>' +
+    docs.map(function(n){ return '<option value="'+esc(n)+'"'+(n===r.medicoAsignado?' selected':'')+'>'+esc(n)+'</option>'; }).join('');
+  document.getElementById('atenderCons').innerHTML =
+    '<option value="">— Elige el consultorio —</option>' +
+    ROOMS.map(function(rm){ return '<option value="'+esc(rm)+'"'+(rm===r.consultorio?' selected':'')+'>'+esc(rm)+'</option>'; }).join('');
+
+  document.getElementById('atenderModal').style.display = 'flex';
+}
+
+function cerrarAtender() {
+  document.getElementById('atenderModal').style.display = 'none';
+  _atenderRow = null;
+}
+
+function confirmarAtender() {
+  if (_atenderRow == null) return;
+  var medico = document.getElementById('atenderMedico').value;
+  var cons   = document.getElementById('atenderCons').value;
+  if (!medico || !cons) { showToast('Elige el médico y el consultorio'); return; }
+  var btn = document.getElementById('atenderOk'); btn.disabled = true;
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: _atenderRow, estado: 'atendiendo', medico: medico, consultorio: cons }) })
     .then(r=>r.json()).then(function(res){
-      if (res && res.ok) { showToast('Pasó con el médico'); loadWaitingRoom(true); }
-      else { showToast((res && res.error) || 'Error al actualizar'); loadWaitingRoom(true); }
-    }).catch(function(){ showToast('Error de conexión'); });
+      btn.disabled = false;
+      if (res && res.ok) { cerrarAtender(); showToast('Pasó con el médico'); loadWaitingRoom(true); }
+      else { showToast((res && res.error) || 'Error al actualizar'); }
+    }).catch(function(){ btn.disabled = false; showToast('Error de conexión'); });
 }
 
 function renderTab() {

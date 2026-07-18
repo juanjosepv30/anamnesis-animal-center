@@ -288,7 +288,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .mini-atn{background:#dcfce7;color:#15803d}
 /* En consulta ahora — awareness read-only de quién está siendo atendido. */
 .consulta-strip{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:9px 12px;margin-bottom:12px}
-.cs-t{font-size:.7rem;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
+.cs-hd{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.cs-cv{color:#15803d;font-size:.7rem;font-weight:800}
+.cs-t{font-size:.7rem;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.3px}
+.cs-item:first-of-type{margin-top:6px}
 .cs-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:.78rem}
 .cs-turno{font-weight:700;font-variant-numeric:tabular-nums;min-width:42px;flex-shrink:0}
 .cs-pet{font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -669,6 +672,11 @@ function toggleFila(key) {
   renderSala();
 }
 
+// "En consulta ahora" arranca plegado (solo título + número). Se despliega al
+// tocarlo. No se guarda: cada carga vuelve a plegarse, para no ocupar espacio.
+let csAbierto = false;
+function toggleConsulta() { csAbierto = !csAbierto; renderSala(); }
+
 // ── Identidad del médico ─────────────────────────────────────
 // El directorio vive en la pestaña "Medicos" de la hoja: la misma que
 // decide a quién le llega el WhatsApp. Un médico puede cubrir varias
@@ -898,12 +906,18 @@ function renderSala() {
   let stripHtml = '';
   if (enConsulta.length) {
     enConsulta.sort((a,b) => new Date(a.calledAt||a.timestamp) - new Date(b.calledAt||b.timestamp));
-    stripHtml = '<div class="consulta-strip"><div class="cs-t">🩺 En consulta ahora · '+enConsulta.length+'</div>'+
-      enConsulta.map(r => '<div class="cs-item">'+
+    // Arranca PLEGADO: solo el título y el número, para no comerse la pantalla
+    // del celular cuando hay muchos. Se toca para desplegar la lista.
+    stripHtml = '<div class="consulta-strip">'+
+      '<div class="cs-hd" onclick="toggleConsulta()">'+
+        '<span class="cs-t">🩺 En consulta ahora · '+enConsulta.length+'</span>'+
+        '<span class="cs-cv">'+(csAbierto?'▾':'▸')+'</span>'+
+      '</div>'+
+      (csAbierto ? enConsulta.map(r => '<div class="cs-item">'+
         '<span class="cs-turno" style="color:'+serviceColor(r.service)+'">'+esc(r.turno||'')+'</span>'+
         '<span class="cs-pet">'+esc(r.petName||'')+'</span>'+
         (r.medicoAsignado ? '<span class="cs-med">'+esc(r.medicoAsignado)+(r.consultorio?' · '+esc(r.consultorio):'')+'</span>' : '')+
-      '</div>').join('')+
+      '</div>').join('') : '')+
     '</div>';
   }
 
