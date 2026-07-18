@@ -16,7 +16,12 @@
 <meta name="apple-mobile-web-app-title" content="AC Médicos">
 <link rel="apple-touch-icon" href="/img/icono-app-v2.png">
 <link rel="icon" href="/img/icono-app-v2.png">
+<!-- Calienta las conexiones antes de que el JS las use: el backend (de donde
+     sale la cola) y el servidor de fuentes. Ahorra el DNS+TLS del primer pedido. -->
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -399,8 +404,30 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_N
 let allRecords = [];
 let activeView = 'sala';
 
+// Día de hoy como texto, para no mostrar una caché de ayer.
+function hoyKey(){ return new Date().toDateString(); }
+
+// Render instantáneo desde la última cola guardada en este dispositivo. El
+// médico ve su sala AL TOQUE (aunque esté unos segundos vieja) mientras el
+// backend responde por detrás. Sin esto, veía un spinner de 1-3s cada vez.
+function recordsDelCache(){
+  try {
+    var c = JSON.parse(localStorage.getItem('ac_records') || 'null');
+    if (!c || c.dia !== hoyKey() || !Array.isArray(c.records)) return false;
+    allRecords = c.records;
+    if (Array.isArray(c.deTurno)) deTurno = c.deTurno;
+    deducirMedico();      // si viene del WhatsApp (?t=), ya sabemos quién es
+    pintarMedicoChip();
+    renderAll();
+    updateCounts();
+    return true;
+  } catch(e){ return false; }
+}
+
 function loadRecords(silent) {
-  if (!silent) {
+  // Spinner SOLO si no hay nada que mostrar todavía (ni caché ni datos). Si ya
+  // pintamos algo, se refresca sin parpadeo.
+  if (!silent && !allRecords.length) {
     document.getElementById('mainCnt').innerHTML = '<div class="spinner"></div>';
     document.getElementById('lastUpdated').textContent = 'Actualizando...';
   }
@@ -411,6 +438,8 @@ function loadRecords(silent) {
       if (res && res.ok) {
         allRecords = res.records || [];
         if (aplicaEsteTurno(pedidoEn)) deTurno = res.deTurno || [];
+        // Guarda la cola para el próximo arranque instantáneo.
+        try { localStorage.setItem('ac_records', JSON.stringify({ dia: hoyKey(), records: allRecords, deTurno: deTurno })); } catch(e){}
         document.getElementById('pruebaAviso').style.display = res.modoPrueba ? '' : 'none';
         pintarMedicoChip();   // el turno llega acá y define el color del chip
         renderAll();
@@ -1537,8 +1566,9 @@ setInterval(function(){ if (!document.querySelector('.rec.open')) loadRecords(tr
 // del WhatsApp (?t=E-04) se autoselecciona. El turno lo define recepción.
 medicosDelCache();          // carga la lista cacheada, sin esperar
 pintarMedicoChip();         // muestra el nombre guardado de una
+recordsDelCache();          // pinta la última cola guardada AL INSTANTE
 cargarMedicos();
-loadRecords();
+loadRecords();              // refresca con el backend por detrás
 </script>
 </body>
 </html>
