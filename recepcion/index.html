@@ -106,6 +106,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* Badge de estado arriba a la izquierda, antes del nombre. */
 .wr-badge{margin-bottom:4px}
 .wr-name{font-weight:600;font-size:.9rem}
+.wr-hc{display:inline-block;background:var(--pl);color:var(--pd);border-radius:99px;padding:1px 8px;font-size:.66rem;font-weight:800;vertical-align:middle;margin-left:4px}
 .wr-meta{font-size:.73rem;color:var(--tm);margin-top:1px}
 .wr-medico{font-size:.74rem;font-weight:700;color:var(--pd);margin-top:3px}
 .wr-motivo{font-size:.73rem;color:var(--tm);font-style:italic;margin-top:3px;line-height:1.35}
@@ -226,6 +227,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <div class="card-t">Sala de espera · hoy</div>
       <div class="wr-tabs">
         <button class="wr-tab active" data-tab="espera"    onclick="verTab('espera')">En espera <span class="wr-tabn" id="cEspera">0</span></button>
+        <button class="wr-tab"        data-tab="atendiendo" onclick="verTab('atendiendo')">Atendiendo <span class="wr-tabn" id="cAtendiendo">0</span></button>
         <button class="wr-tab"        data-tab="ausentes"  onclick="verTab('ausentes')">Ausentes <span class="wr-tabn" id="cAusentes">0</span></button>
         <button class="wr-tab"        data-tab="atendidos" onclick="verTab('atendidos')">Atendidos <span class="wr-tabn" id="cAtendidos">0</span></button>
       </div>
@@ -251,7 +253,7 @@ const SPECIALTIES = [
   {name:'Nutrición',         doctor:'Dr. Freddy Vera'},
   {name:'Oftalmología',      doctor:'Dr. Alberto Amaya'},
   {name:'Imagenología',      doctor:'Dra. Angie Valero'},
-  {name:'Terapia Física',    doctor:'Dra. Milena Rodríguez'},
+  {name:'Terapia Física',    doctor:'Dra. Milena López'},
   {name:'Nefrología',        doctor:'Dr. Wilmer Rodríguez'},
   {name:'Ortopedia',         doctor:'Dr. Wilmer Páez'},
   {name:'Oncología',         doctor:'Dr. Jhoiner Barbosa'}
@@ -879,7 +881,8 @@ function wrItem(r, acts) {
     '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
     '<div class="wr-info">'+
       '<div class="wr-badge">'+badge+'</div>'+
-      '<div class="wr-name">'+esc(r.petName||'Sin nombre')+'</div>'+
+      '<div class="wr-name">'+esc(r.petName||'Sin nombre')+
+        (r.vetesoftHc ? ' <span class="wr-hc">HC '+esc(r.vetesoftHc)+'</span>' : '')+'</div>'+
       '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div>'+
       (r.medicoAsignado ? '<div class="wr-medico">🩺 '+esc(r.medicoAsignado)+'</div>' : '')+
       (reenviar ? '<div class="wr-reenviar">'+reenviar+'</div>' : '')+
@@ -923,7 +926,8 @@ function wrItemAtendiendo(r) {
     '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
     '<div class="wr-info">'+
       '<div class="wr-badge"><span class="badge badge-atn">Atendiendo</span></div>'+
-      '<div class="wr-name">'+esc(r.petName||'Sin nombre')+'</div>'+
+      '<div class="wr-name">'+esc(r.petName||'Sin nombre')+
+        (r.vetesoftHc ? ' <span class="wr-hc">HC '+esc(r.vetesoftHc)+'</span>' : '')+'</div>'+
       '<div class="wr-meta">'+esc(r.service||'')+(r.specialty?' · '+esc(r.specialty):'')+'</div>'+
       (quienDonde ? '<div class="wr-medico">'+quienDonde+'</div>' : '')+
       motivoHtml +
@@ -952,33 +956,31 @@ function markAtendiendo(rowIndex) {
 }
 
 function renderTab() {
-  // "En proceso": los que están en la clínica sin cerrar. Incluye 'atendiendo'
-  // (recepción confirmó que ya pasó con el médico).
-  var espera    = wrRecords.filter(function(r){ var e=r.estadoTurno||'esperando'; return e==='esperando'||e==='llamando'||e==='llenando'||e==='atendiendo'; });
-  var ausentes  = wrRecords.filter(function(r){ return r.estadoTurno==='ausente'; });
-  var atendidos = wrRecords.filter(function(r){ return r.estadoTurno==='atendido'; });
+  // "En espera" = los que aún esperan (esperando/llenando/llamando). Los que ya
+  // pasaron con el médico ('atendiendo') tienen su PROPIA pestaña, para que la
+  // fila de espera quede limpia y no se mezcle con los que ya están adentro.
+  var espera     = wrRecords.filter(function(r){ var e=r.estadoTurno||'esperando'; return e==='esperando'||e==='llamando'||e==='llenando'; });
+  var atendiendo = wrRecords.filter(function(r){ return r.estadoTurno==='atendiendo'; });
+  var ausentes   = wrRecords.filter(function(r){ return r.estadoTurno==='ausente'; });
+  var atendidos  = wrRecords.filter(function(r){ return r.estadoTurno==='atendido'; });
 
-  document.getElementById('cEspera').textContent    = espera.length;
-  document.getElementById('cAusentes').textContent  = ausentes.length;
-  document.getElementById('cAtendidos').textContent = atendidos.length;
+  document.getElementById('cEspera').textContent     = espera.length;
+  document.getElementById('cAtendiendo').textContent = atendiendo.length;
+  document.getElementById('cAusentes').textContent   = ausentes.length;
+  document.getElementById('cAtendidos').textContent  = atendidos.length;
 
   var el = document.getElementById('wrList');
   var html = '';
 
   if (wrTab === 'espera') {
     if (!espera.length) { el.innerHTML = '<div class="empty">Nadie en espera todavía.</div>'; return; }
-    // Siendo atendido = los que recepción ya marcó 'atendiendo' (pasaron con
-    // el médico). Va aparte y arriba, con la tarjeta completa: turno, mascota,
-    // quién y dónde lo atiende, y para qué vino.
-    var atendiendo = espera.filter(function(r){ return r.estadoTurno === 'atendiendo'; });
-    var enFila     = espera.filter(function(r){ return r.estadoTurno !== 'atendiendo'; });
-    if (atendiendo.length) {
-      atendiendo.sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
-      html += '<div class="wr-grp wr-grp-atn">🩺 Siendo atendido · ' + atendiendo.length + '</div>';
-      atendiendo.forEach(function(r){ html += wrItemAtendiendo(r); });
-    }
-    html += wrGrupo('🩺 Especialidades', enFila.filter(esEspecializado));
-    html += wrGrupo('🐾 Generales',      enFila.filter(function(r){ return !esEspecializado(r); }));
+    html += wrGrupo('🩺 Especialidades', espera.filter(esEspecializado));
+    html += wrGrupo('🐾 Generales',      espera.filter(function(r){ return !esEspecializado(r); }));
+
+  } else if (wrTab === 'atendiendo') {
+    if (!atendiendo.length) { el.innerHTML = '<div class="empty">Nadie con el médico ahora.</div>'; return; }
+    atendiendo.sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
+    atendiendo.forEach(function(r){ html += wrItemAtendiendo(r); });
 
   } else if (wrTab === 'ausentes') {
     if (!ausentes.length) { el.innerHTML = '<div class="empty">Ningún ausente hoy.</div>'; return; }

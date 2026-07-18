@@ -210,7 +210,11 @@ function cargar(){
       var hoy = (res.records || []).filter(function(r){ return esHoy(r.timestamp); });
       pintar(
         hoy.filter(function(r){ return r.estadoTurno === 'llamando'; }),
-        hoy.filter(function(r){ return (r.estadoTurno || 'esperando') === 'esperando'; })
+        // "Próximos" = los que esperan. Incluye 'llenando' (todavía llenando la
+        // ficha): igual están en la sala esperando, así que deben verse en la
+        // TV. Sin esto, los que no terminan el registro —muchas consultas
+        // generales— nunca aparecían.
+        hoy.filter(function(r){ var e = r.estadoTurno || 'esperando'; return e === 'esperando' || e === 'llenando'; })
       );
     })
     .catch(function(){});
