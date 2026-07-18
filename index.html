@@ -392,7 +392,7 @@ var QUESTIONS = [
   {id:'neutered', group:'TU MASCOTA', q:'¿Está castrado/a?', type:'single', options:[
     {label:'Sí', value:'Si'}, {label:'No', value:'No'}, {label:'No sé', value:'No se'}
   ]},
-  {id:'weight', group:'PESO', q:'¿Cuánto pesa tu mascota?', type:'weight', illo:'scale', placeholder:'Ej: 8.5'},
+  {id:'weight', group:'PESO', q:'Pesa a tu mascota en la báscula de la sala e ingresa su peso exacto', type:'weight', illo:'scale', placeholder:'Ej: 8.5'},
 
   // ── RAYOS X Y ECOGRAFÍA (solo ese servicio) ──
   // Cuestionario corto a propósito: el dueño viene con un estudio ya
@@ -751,7 +751,6 @@ function buildVsScreen() {
 
 function buildWeightScreen(q, pos) {
   return '<div class="screen has-illo">'+illoBlock(q)+'<div class="group-label">PESO</div><div class="question">'+escHtml(q.q)+'</div>' +
-    '<div class="weight-hint"><span class="em">⚖️</span><span>Por favor pesa a tu mascota en la báscula de la sala e ingresa el peso.</span></div>' +
     '<div class="weight-input-row"><input class="text-input" type="text" inputmode="decimal" id="inp_weight" value="'+escAttr(F.weight)+'" placeholder="'+escAttr(q.placeholder||'')+'" onkeydown="if(event.key===\'Enter\')nextFromText(\'weight\','+pos+')"><span class="weight-unit">kg</span></div>' +
     '<button class="next-btn" onclick="nextFromText(\'weight\','+pos+')">Siguiente →</button></div>';
 }
