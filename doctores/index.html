@@ -37,8 +37,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .hdr-brand-text{font-size:.95rem;font-weight:700;color:var(--tx)}
 .hdr-brand-sub{font-size:.72rem;color:var(--tm);margin-top:1px}
 .hdr-right{display:flex;align-items:center;gap:10px}
-.badge-pending{background:#7c3aed;color:#fff;border-radius:99px;padding:3px 10px;font-size:.72rem;font-weight:600;display:none}
-.badge-pending.show{display:inline}
+.badge-pending{background:#7c3aed;color:#fff;border-radius:99px;padding:4px 9px;font-size:.72rem;font-weight:700;display:none;white-space:nowrap;flex-shrink:0}
+.badge-pending.show{display:inline-flex;align-items:center}
 .btn-hdr{border:1.5px solid var(--bd);border-radius:8px;padding:6px 14px;color:var(--tm);font-size:.78rem;font-weight:600;cursor:pointer;background:var(--wh);font-family:'DM Sans',sans-serif;transition:all .2s}
 .btn-hdr:hover{border-color:var(--p);color:var(--p)}
 #hdrIcon{cursor:pointer}
@@ -288,6 +288,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
   .hdr-brand-sub{display:none}
   .hdr-brand-icon{width:30px;height:30px}
   .btn-hdr{padding:6px 10px;font-size:.72rem}
+  .hdr-right{gap:7px}
+  .medico-chip{max-width:150px;padding:6px 10px;font-size:.76rem}
+  .badge-pending{font-size:.7rem;padding:4px 8px}
   .srch{padding:8px 12px;top:52px}
   .srch-inner{gap:7px}
   /* Las tres pestañas en UN renglón: sin esto el texto se parte en dos
@@ -1393,7 +1396,8 @@ function updateCounts() {
   const pending = allRecords.filter(r => r.status !== 'revisado' && isSameDay(r.timestamp, today)).length;
   const el = document.getElementById('pendingCount');
   if (pending > 0) {
-    el.textContent = pending + ' pendiente' + (pending === 1 ? '' : 's') + ' hoy';
+    el.textContent = '📋 ' + pending;
+    el.title = pending + ' anamnesis pendiente' + (pending === 1 ? '' : 's') + ' hoy';
     el.classList.add('show');
   } else {
     el.classList.remove('show');
