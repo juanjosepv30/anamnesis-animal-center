@@ -131,6 +131,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .wr-grp:first-child{margin-top:0}
 .wr-btn-volver{border-color:#a78bfa;color:#5b21b6}
 .wr-btn-atn{border-color:#86efac;color:#15803d}
+.wr-btn-listo{border:none;background:#16a34a;color:#fff}
+.wr-btn-listo:hover{background:#15803d}
 .empty{text-align:center;padding:40px 20px;color:var(--tm);font-size:.85rem}
 .spinner{width:30px;height:30px;border:2.5px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:30px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -870,7 +872,9 @@ function wrGrupo(titulo, arr) {
 }
 
 // Tarjeta del que está siendo atendido: turno, mascota, quién lo atiende,
-// dónde y para qué vino. Sin botones — el médico la cierra con "Atendido".
+// dónde y para qué vino. Con botón "Atendido" para que recepción lo cierre
+// (normalmente lo cierra solo el médico al pasar al siguiente, pero recepción
+// lo puede rematar — sobre todo al que quedó sin cerrar).
 function wrItemAtendiendo(r) {
   var color = serviceColor(r.service);
   var quienDonde = '';
@@ -887,7 +891,19 @@ function wrItemAtendiendo(r) {
       (quienDonde ? '<div class="wr-medico">'+quienDonde+'</div>' : '')+
       motivoHtml +
     '</div>'+
+    '<div class="wr-right">'+
+      '<button class="wr-btn wr-btn-listo" onclick="markAtendidoRecep('+r.rowIndex+')">✓ Atendido</button>'+
+    '</div>'+
   '</div>';
+}
+
+// Recepción cierra un paciente que estaba siendo atendido → 'atendido'.
+function markAtendidoRecep(rowIndex) {
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido' }) })
+    .then(r=>r.json()).then(function(res){
+      if (res && res.ok) { showToast('✓ Marcado como atendido'); loadWaitingRoom(true); }
+      else { showToast((res && res.error) || 'Error al actualizar'); loadWaitingRoom(true); }
+    }).catch(function(){ showToast('Error de conexión'); });
 }
 
 function markAtendiendo(rowIndex) {
