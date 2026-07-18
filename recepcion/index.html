@@ -74,6 +74,22 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 @media(max-width:900px){.reg-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.reg-grid{grid-template-columns:1fr}.reg-grid label{min-height:0}}
 .reg-actions{display:flex;gap:8px}
+/* Selector de servicio por tarjetas de color (reemplaza el desplegable
+   confuso). Cada tarjeta lleva su color a la izquierda; la elegida se pinta
+   entera con ese color. */
+.svc-block{margin-bottom:14px}
+.svc-block-lbl{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tm);margin-bottom:8px}
+.svc-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.svc-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;
+  border:2px solid var(--bd);border-left:7px solid var(--sc);border-radius:10px;padding:9px 11px;
+  background:var(--wh);cursor:pointer;font-family:inherit;transition:box-shadow .12s,border-color .12s}
+.svc-card:hover{border-color:var(--sc);box-shadow:0 3px 10px rgba(58,33,64,.12)}
+.svc-card.on{border-color:var(--sc);background:var(--sc)}
+.svc-name{font-size:.83rem;font-weight:800;color:var(--tx);line-height:1.15}
+.svc-desc{font-size:.66rem;color:var(--tm);line-height:1.2}
+.svc-card.on .svc-name,.svc-card.on .svc-desc{color:#fff}
+@media(max-width:900px){.svc-picker{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:420px){.svc-picker{grid-template-columns:1fr}}
 .btn-primary{flex:1;padding:11px;border:none;border-radius:9px;background:var(--p);color:#fff;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
 .btn-primary.apagado,.btn-primary:disabled{background:var(--bd);color:var(--ts);cursor:not-allowed}
 .btn-ghost{padding:11px 16px;border:1.5px solid var(--bd);border-radius:9px;background:var(--wh);color:var(--tm);font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
@@ -257,14 +273,14 @@ function buildSpecOptions() {
 //   doctor 'auto'   → un solo doctor fijo (viajero→Freddy, rayos→Angie)
 //   doctor 'ninguno'→ por orden de llegada, sin especialista
 var SERVICIOS = [
-  { v:'Consulta especializada', doctor:'elige',   agenda:true  },
-  { v:'Control especializado',  doctor:'elige',   agenda:true  },
-  { v:'Consulta general',       doctor:'ninguno', agenda:false },
-  { v:'Control general',        doctor:'ninguno', agenda:false },
-  { v:'Vacunación',             doctor:'ninguno', agenda:false },
-  { v:'Inyectología',           doctor:'ninguno', agenda:false },
-  { v:'Viajero',                doctor:'auto', fijo:'Dr. Freddy Vera',   agenda:false, label:'Viajero / certificado' },
-  { v:'Rayos X y Ecografía',    doctor:'auto', fijo:'Dra. Angie Valero', agenda:false }
+  { v:'Consulta especializada', doctor:'elige',   agenda:true,  desc:'Primera vez con un especialista' },
+  { v:'Control especializado',  doctor:'elige',   agenda:true,  desc:'Seguimiento CON especialista' },
+  { v:'Consulta general',       doctor:'ninguno', agenda:false, desc:'Médico general' },
+  { v:'Control general',        doctor:'ninguno', agenda:false, desc:'Seguimiento con médico general' },
+  { v:'Vacunación',             doctor:'ninguno', agenda:false, desc:'Solo vacunas' },
+  { v:'Inyectología',           doctor:'ninguno', agenda:false, desc:'Aplicar inyección' },
+  { v:'Viajero',                doctor:'auto', fijo:'Dr. Freddy Vera',   agenda:false, label:'Viajero / certificado', desc:'Certificado de viaje · Dr. Freddy' },
+  { v:'Rayos X y Ecografía',    doctor:'auto', fijo:'Dra. Angie Valero', agenda:false, desc:'Imágenes · Dra. Angie' }
 ];
 
 function servicioCfg(v) {
@@ -272,13 +288,32 @@ function servicioCfg(v) {
   return SERVICIOS[0];
 }
 
-function buildServiceOptions() {
-  // Arranca sin servicio elegido: recepción tiene que elegir a conciencia,
-  // no aceptar un default. Hasta que elija, el botón Registrar está apagado.
-  return '<option value="">— Elige el servicio —</option>' +
+// Selector de servicio por TARJETAS DE COLOR (no un desplegable). Los textos
+// se parecen mucho ("Consulta especializada" / "Control general"…) y en una
+// lista chica se elige mal; el color + un descriptor lo hacen inconfundible.
+// El valor elegido vive en un input oculto #regService, para no tocar el
+// resto del código que ya lo lee.
+function buildServicePicker() {
+  return '<div class="svc-picker" id="svcPicker">' +
     SERVICIOS.map(function(s){
-      return '<option value="'+s.v+'">'+(s.label || s.v)+'</option>';
-    }).join('');
+      var c = serviceColor(s.v);
+      return '<button type="button" class="svc-card" data-v="'+esc(s.v)+'" style="--sc:'+c+'" '+
+        'onclick="pickService(this)">'+
+        '<span class="svc-name">'+esc(s.label || s.v)+'</span>'+
+        (s.desc ? '<span class="svc-desc">'+esc(s.desc)+'</span>' : '')+
+      '</button>';
+    }).join('') +
+  '</div>' +
+  '<input type="hidden" id="regService" value="">';
+}
+
+function pickService(btn) {
+  var picker = document.getElementById('svcPicker');
+  var cards  = picker.querySelectorAll('.svc-card');
+  for (var i = 0; i < cards.length; i++) cards[i].classList.remove('on');
+  btn.classList.add('on');
+  document.getElementById('regService').value = btn.getAttribute('data-v');
+  pintarServicio();
 }
 
 // Horas de cita: solo en punto y y-media (06:00 → 22:00).
@@ -537,6 +572,8 @@ function serviceColor(s){
   if(s.indexOf('especial')!==-1)return'#f97316';
   if(s.indexOf('vacun')!==-1)return'#8e3f9e';
   if(s.indexOf('inyect')!==-1)return'#eab308';
+  if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1)return'#be123c';
+  if(s.indexOf('viajer')!==-1)return'#0891b2';
   if(s.indexOf('general')!==-1)return'#16a34a';
   return'#94a3b8';
 }
@@ -635,8 +672,8 @@ function abrirRegistro(r, esNuevo) {
   document.getElementById('regArea').innerHTML =
     '<div class="reg-form">'+
       cabecera+
+      '<div class="svc-block"><div class="svc-block-lbl">¿Qué servicio es? — toca el color</div>'+buildServicePicker()+'</div>'+
       '<div class="reg-grid">'+
-        '<div><label>Servicio</label><select id="regService" onchange="pintarServicio()">'+buildServiceOptions()+'</select></div>'+
         // El selector de especialista solo aparece para los servicios que lo
         // eligen (ver SERVICIOS). pintarServicio() lo muestra o lo esconde.
         '<div id="boxSpec"><label>Especialidad / Doctor</label><select id="regSpec" onchange="actualizarBotonRegistro()">'+buildSpecOptions()+'</select></div>'+
