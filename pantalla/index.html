@@ -155,6 +155,14 @@ function duck(on){
   try { window.dispatchEvent(new CustomEvent('ac-duck', { detail: { on: !!on } })); } catch(e){}
 }
 
+// Le confirma al backend que ESTE llamado sonó en la sala. Con eso el médico
+// ve en su tarjeta "Sonó en la sala ✓" y no queda adivinando.
+function confirmarAnuncio(r){
+  try {
+    fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'anunciado', turno: r.turno, calledAt: r.calledAt || '' }) });
+  } catch(e){}
+}
+
 function hablarTurno(r){
   if (!('speechSynthesis' in window)) return;
   var turno = leerTurno(r.turno);
@@ -248,7 +256,11 @@ function pintar(llamando, esperando){
         '<div><div class="c-room-lbl">Consultorio</div>'+
         '<div class="c-room" style="color:'+color+'">'+esc(r.consultorio||'—')+'</div></div>'+
       '</div>';
-      if (nuevo) { duck(true); ding(); setTimeout((function(rec){ return function(){ hablarTurno(rec); }; })(r), 850); }
+      if (nuevo) {
+        duck(true); ding();
+        setTimeout((function(rec){ return function(){ hablarTurno(rec); }; })(r), 850);
+        confirmarAnuncio(r);   // le avisa al médico que SÍ sonó en la sala
+      }
     });
     cont.innerHTML = html;
   }
@@ -298,6 +310,10 @@ function chequearVersion(){
 }
 setInterval(chequearVersion, 2000);   // casi en vivo
 setInterval(cargar, 30000);           // red de seguridad por si se pierde un cambio
+// Al volver al frente (el navegador congela los temporizadores en segundo
+// plano, y el equipo pudo dormirse) recuperamos de inmediato lo perdido.
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) { chequearVersion(); cargar(); } });
+window.addEventListener('focus', function(){ chequearVersion(); });
 cargar();
 </script>
 </body>

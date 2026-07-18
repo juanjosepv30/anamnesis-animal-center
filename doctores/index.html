@@ -249,6 +249,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .calling-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .calling-t{font-size:1.1rem;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums}
 .calling-m{font-size:.73rem;color:var(--tm);margin-top:2px}
+.calling-son{margin-top:9px;padding-top:8px;border-top:1px dashed #bbf7d0;font-size:.76rem;font-weight:700}
+.son-ok{color:#15803d}
+.son-wait{color:#b45309}
 .calling-btns{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
 /* Llamar otra vez y Ausente van juntos: los dos son "todavía no pasó".
    Atendido va abajo y solo: es el que cierra el caso. */
@@ -982,6 +985,11 @@ function renderSala() {
       // Ausente es la salida para el que no apareció: sin esto el médico
       // queda trabado y termina marcando "Atendido" a alguien que nunca
       // atendió, que es peor — ensucia el dato y no queda registro real.
+      // Confirmación de que SONÓ en la sala: el médico espera en el consultorio
+      // y no oye los parlantes, así que acá ve si el llamado de verdad salió.
+      var anuncio = r.anunciadoEn
+        ? '<div class="calling-son son-ok">📢 Sonó en la sala ✓ '+fmtHoraSeg(r.anunciadoEn)+'</div>'
+        : '<div class="calling-son son-wait">⏳ Esperando que suene en la sala…</div>';
       body += '<div class="calling"><div class="calling-top">'+
         '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
           '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
@@ -996,7 +1004,9 @@ function renderSala() {
             '<button class="btn-again" onclick="llamarDeNuevo('+r.rowIndex+')">🔔 Llamar otra vez</button>'+
             '<button class="btn-sutil" onclick="markAtendido('+r.rowIndex+')" title="Cerrar sin llamar al siguiente">Marcar atendido</button>'+
           '</div>'+
-        '</div></div></div>';
+        '</div></div>'+
+        anuncio +
+      '</div>';
     });
 
     // Siguiente a llamar — semi-desplegado, clickeable para ver la anamnesis
@@ -1157,7 +1167,12 @@ function callNext(rowIndex, filaKey) {
         const rec = allRecords.find(x => x.rowIndex === rowIndex);
         if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; }
         renderSala();
-        showToast('🔔 Turno llamado a ' + room);
+        // avisoEnviado: true = el WhatsApp al cliente salió; false = no se pudo
+        // (número malo o sin teléfono); null = no había teléfono que avisar.
+        var wa = res.avisoEnviado === true ? ' · 📱 aviso enviado al cliente'
+               : res.avisoEnviado === false ? ' · ⚠️ no se pudo avisar al cliente (revisar número)'
+               : '';
+        showToast('🔔 Turno llamado a ' + room + wa);
       } else showToast('❌ Error al llamar');
     }).catch(function(){ showToast('❌ Error de conexión'); });
 }
@@ -1299,6 +1314,12 @@ function fmtTime(ts) {
   const dt = new Date(ts);
   if (isNaN(dt)) return '';
   return dt.getHours() + ':' + String(dt.getMinutes()).padStart(2,'0');
+}
+
+function fmtHoraSeg(ts) {
+  const dt = new Date(ts);
+  if (isNaN(dt)) return '';
+  return dt.getHours() + ':' + String(dt.getMinutes()).padStart(2,'0') + ':' + String(dt.getSeconds()).padStart(2,'0');
 }
 
 // Cuánto lleva esperando este paciente.
