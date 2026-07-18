@@ -91,6 +91,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .wr-badge{margin-bottom:4px}
 .wr-name{font-weight:600;font-size:.9rem}
 .wr-meta{font-size:.73rem;color:var(--tm);margin-top:1px}
+.wr-medico{font-size:.74rem;font-weight:700;color:var(--pd);margin-top:3px}
 /* Reenviar registro, debajo del nombre. */
 .wr-reenviar{margin-top:7px}
 /* Columna derecha: tiempos arriba, botón (Ausente) debajo. */
@@ -123,6 +124,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .wr-tab.active .wr-tabn{background:var(--pl);color:var(--p)}
 /* Subtítulo de grupo dentro de "En espera". */
 .wr-grp{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--ts);margin:12px 0 6px}
+.wr-grp-atn{color:var(--ok)}
 .wr-grp:first-child{margin-top:0}
 .wr-btn-volver{border-color:#a78bfa;color:#5b21b6}
 .empty{text-align:center;padding:40px 20px;color:var(--tm);font-size:.85rem}
@@ -836,6 +838,7 @@ function wrItem(r, acts) {
       '<div class="wr-badge">'+badge+'</div>'+
       '<div class="wr-name">'+esc(r.petName||'Sin nombre')+'</div>'+
       '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div>'+
+      (r.medicoAsignado ? '<div class="wr-medico">🩺 '+esc(r.medicoAsignado)+'</div>' : '')+
       (reenviar ? '<div class="wr-reenviar">'+reenviar+'</div>' : '')+
     '</div>'+
     '<div class="wr-right">'+
@@ -874,8 +877,17 @@ function renderTab() {
 
   if (wrTab === 'espera') {
     if (!espera.length) { el.innerHTML = '<div class="empty">Nadie en espera todavía.</div>'; return; }
-    html += wrGrupo('🩺 Especialidades', espera.filter(esEspecializado));
-    html += wrGrupo('🐾 Generales',      espera.filter(function(r){ return !esEspecializado(r); }));
+    // Siendo atendido (ya los llamó un médico) va aparte y arriba: recepción
+    // ve de un vistazo quién sigue esperando de verdad y quién ya está adentro.
+    var atendiendo = espera.filter(function(r){ return r.estadoTurno === 'llamando'; });
+    var enFila     = espera.filter(function(r){ return r.estadoTurno !== 'llamando'; });
+    if (atendiendo.length) {
+      atendiendo.sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
+      html += '<div class="wr-grp wr-grp-atn">🩺 Siendo atendido · ' + atendiendo.length + '</div>';
+      atendiendo.forEach(function(r){ html += wrItem(r, ''); });   // sin botón: lo maneja el médico
+    }
+    html += wrGrupo('🩺 Especialidades', enFila.filter(esEspecializado));
+    html += wrGrupo('🐾 Generales',      enFila.filter(function(r){ return !esEspecializado(r); }));
 
   } else if (wrTab === 'ausentes') {
     if (!ausentes.length) { el.innerHTML = '<div class="empty">Ningún ausente hoy.</div>'; return; }

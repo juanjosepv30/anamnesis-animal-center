@@ -209,6 +209,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .next-turno{font-size:1.5rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
 .next-pet{font-size:.95rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .next-reg{flex-shrink:0}
+.next-espera-top{font-size:.74rem;font-weight:700;color:var(--tm);flex-shrink:0;text-align:right}
+.next-espera-top.esp-medio{color:#b45309}
+.next-espera-top.esp-mucho{color:#dc2626}
+/* Debajo del turno: registro (Haciendo registro) + cita, como en recepción. */
+.next-sub{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
 .next-owner{font-size:.76rem;font-weight:600;margin-top:4px}
 .next-meta{font-size:.72rem;color:var(--tm);margin-top:2px}
 /* Tiempo de espera. A los 30 min se pone ámbar, a los 45 rojo: el médico
@@ -261,7 +266,15 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .next-motivo{font-size:.72rem;color:var(--tm);font-style:italic;margin-top:6px;line-height:1.35}
 .mini{font-size:.6rem;font-weight:700;border-radius:99px;padding:1px 7px;white-space:nowrap}
 .mini-ag{background:#ede9fe;color:#6d28d9}
+.mini-cita{background:#ede9fe;color:#6d28d9}
 .mini-esp{background:#e0f2fe;color:#0369a1}
+/* En consulta ahora — awareness read-only de quién está siendo atendido. */
+.consulta-strip{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:9px 12px;margin-bottom:12px}
+.cs-t{font-size:.7rem;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
+.cs-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:.78rem}
+.cs-turno{font-weight:700;font-variant-numeric:tabular-nums;min-width:42px;flex-shrink:0}
+.cs-pet{font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-med{color:var(--tm);font-size:.72rem;margin-left:auto;white-space:nowrap;flex-shrink:0}
 /* Congelado: recepción vio que hay una cita antes que este paciente. */
 .mini-frio{background:#fef3c7;color:#92400e;margin-left:4px}
 .q-frio{opacity:.6}
@@ -705,14 +718,14 @@ function pintarMedicoChip() {
 function abrirIdentidad() {
   const cont = document.getElementById('identLista');
   cont.innerHTML =
+    '<div class="idm-op idm-todos'+(miMedico?'':' sel')+'" onclick="elegirIdentidad(\'\')">👁 Ver todo sin identificarme</div>' +
     medicos.map(function(m){
       const sel = m.medico === miMedico ? ' sel' : '';
       const arg = "'" + String(m.medico).replace(/\\/g,'\\\\').replace(/'/g,"\\'") + "'";
       return '<div class="idm-op'+sel+'" onclick="elegirIdentidad('+arg+')">'+
         '<span class="idm-op-n">'+esc(m.medico)+'</span>'+
         '<span class="idm-op-e">'+esc(m.especialidades.join(', '))+'</span></div>';
-    }).join('') +
-    '<div class="idm-op idm-todos" onclick="elegirIdentidad(\'\')">👁 Ver todo sin identificarme</div>';
+    }).join('');
   document.getElementById('identModal').style.display = 'flex';
 }
 
@@ -833,7 +846,24 @@ function renderSala() {
   // Acá había un aviso de "fuera de turno: no te llegan avisos". Se quitó:
   // el turno lo maneja recepción ahora. El chip del header (verde/gris) ya
   // le dice al médico si está recibiendo notificaciones o solo mirando.
-  let html = '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
+
+  // Awareness read-only: quién está siendo atendido ahora en toda la clínica.
+  // Excluye a mi propio paciente (ese ya lo veo en su tarjeta con botones).
+  const enConsulta = allRecords.filter(r => isSameDay(r.timestamp, today) &&
+    r.estadoTurno === 'llamando' && (!miMedico || r.calledBy !== miMedico));
+  let stripHtml = '';
+  if (enConsulta.length) {
+    enConsulta.sort((a,b) => new Date(a.calledAt||a.timestamp) - new Date(b.calledAt||b.timestamp));
+    stripHtml = '<div class="consulta-strip"><div class="cs-t">🩺 En consulta ahora · '+enConsulta.length+'</div>'+
+      enConsulta.map(r => '<div class="cs-item">'+
+        '<span class="cs-turno" style="color:'+serviceColor(r.service)+'">'+esc(r.turno||'')+'</span>'+
+        '<span class="cs-pet">'+esc(r.petName||'')+'</span>'+
+        (r.medicoAsignado ? '<span class="cs-med">'+esc(r.medicoAsignado)+(r.consultorio?' · '+esc(r.consultorio):'')+'</span>' : '')+
+      '</div>').join('')+
+    '</div>';
+  }
+
+  let html = stripHtml + '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
 
   // Cuando un médico tiene las dos filas (Tatiana es gastro Y general),
   // hay que decirle cuál llamar primero. Ver decidirEntreFilas.
@@ -906,9 +936,9 @@ function renderSala() {
     if (next) {
       const nc = serviceColor(next.service);
       const hora = fmtHora(next.horaCita);
-      const ag = next.agendado === 'si'
-        ? '<span class="mini mini-ag">Agendado'+(hora?' '+hora:'')+'</span>'
-        : '<span class="mini mini-esp">Espontáneo</span>';
+      const citaB = next.agendado === 'si' ? '<span class="mini mini-cita">Cita de las '+esc(hora)+'</span>' : '';
+      const espoB = next.agendado === 'si' ? '' : '<span class="mini mini-esp">Espontáneo</span>';
+      const subC  = etiquetaRegistro(next) + citaB;   // debajo del turno: registro + cita
       // Ningún consultorio queda elegido por defecto, para que el médico no
       // llame sin querer a la sala equivocada. La excepción: al especialista
       // se le preselecciona SU consultorio (el que más usa), que igual puede
@@ -938,11 +968,11 @@ function renderSala() {
           '<div class="next-top">'+
             '<div class="next-tp"><span class="next-turno" style="color:'+nc+'">'+esc(next.turno||'—')+'</span> '+
               '<span class="next-pet">'+esc(next.petName||'Sin nombre')+'</span></div>'+
-            '<div class="next-reg">'+etiquetaRegistro(next)+'</div>'+
+            '<div class="next-espera-top'+claseEspera(next.timestamp)+'">Esperando '+fmtEspera(next.timestamp).replace(/^hace /,'')+'</div>'+
           '</div>'+
+          (subC ? '<div class="next-sub">'+subC+'</div>' : '')+
           '<div class="next-owner">👤 '+esc(next.ownerName||'—')+'</div>'+
-          '<div class="next-meta">'+esc(next.service||'')+(next.specialty?' · '+esc(next.specialty):'')+' '+ag+'</div>'+
-          '<div class="next-espera'+claseEspera(next.timestamp)+'">Esperando '+fmtEspera(next.timestamp).replace(/^hace /,'')+'</div>'+
+          '<div class="next-meta">'+esc(next.service||'')+(next.specialty?' · '+esc(next.specialty):'')+(espoB?' '+espoB:'')+'</div>'+
           (next.complaint ? '<div class="next-motivo">“'+esc(String(next.complaint).slice(0,90))+(String(next.complaint).length>90?'…':'')+'”</div>' : '')+
         '</div>'+
         // Con un paciente sin cerrar, Llamar queda apagado. No hace falta
@@ -966,7 +996,7 @@ function renderSala() {
     rest.forEach(function(r) {
       const rc = serviceColor(r.service);
       const hora = fmtHora(r.horaCita);
-      const ag = r.agendado === 'si' ? '<span class="mini mini-ag">'+(hora||'Agendado')+'</span>' : '';
+      const ag = r.agendado === 'si' ? '<span class="mini mini-cita">Cita de las '+esc(hora||'—')+'</span>' : '';
       // Congelado: hay una cita antes que él. Hay que decirlo, o el médico
       // ve a alguien esperando y no entiende por qué no puede llamarlo.
       const frio = estaCongelado(r)
