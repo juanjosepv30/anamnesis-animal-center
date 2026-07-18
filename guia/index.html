@@ -98,6 +98,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <div class="role-t">🐾 El cliente</div>
       <div class="role-s">Qué le pasa a él</div>
     </button>
+    <button class="role" data-r="pantalla" onclick="verRol('pantalla')">
+      <div class="role-t">🔊 Pantalla y sonido</div>
+      <div class="role-s">La TV de la sala y la voz</div>
+    </button>
   </div>
 
   <!-- ============ RECEPCIÓN ============ -->
@@ -245,6 +249,48 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
     <div class="nota">
       Si el cliente <b>no trae celular</b> o no quiere usarlo, no pasa nada: recepción lo registra sin teléfono y lo atienden normal, como siempre.
+    </div>
+  </div>
+
+  <!-- ============ PANTALLA Y SONIDO ============ -->
+  <div class="seccion" id="s-pantalla">
+    <div class="h2">Pantalla y sonido — la TV de la sala y la voz</div>
+    <div class="h2-sub">Cómo dejar andando la pantalla de turnos y la voz que los anuncia. Guía para configurarlo, y para volver a hacerlo si se daña.</div>
+
+    <div class="paso"><div class="paso-n">1</div><div class="paso-c">
+      <div class="paso-t">Abre la pantalla de sala</div>
+      <div class="paso-d">En el computador conectado a los <b>parlantes</b>, abre en el navegador <span class="pill">servicios.animalcenter.com.co/pantalla</span> y toca <span class="pill">Activar</span>.<br>
+      Ese toque de <b>Activar</b> desbloquea la voz — hay que hacerlo <b>cada vez</b> que se abra o se reinicie el computador.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">2</div><div class="paso-c">
+      <div class="paso-t">La voz lee cada turno</div>
+      <div class="paso-d">Cuando un médico llama un turno, suena un <i>ding</i> y una voz lo lee por los parlantes: <b>"Turno E 4, pase al consultorio Boom Boom, con Mila"</b>. No hay que tocar nada.</div>
+    </div></div>
+
+    <div class="titulo-bloque">La música (Spotify) baja sola — la extensión</div>
+
+    <div class="nota">
+      Una pequeña <b>extensión del navegador</b> hace que, cuando suena un turno, <b>Spotify baje el volumen</b> y lo vuelva a subir al terminar. Se instala <b>una sola vez</b>. Si se daña o hay computador nuevo, se vuelve a hacer con estos pasos.
+    </div>
+
+    <div class="paso"><div class="paso-n">A</div><div class="paso-c">
+      <div class="paso-t">Ten la carpeta de la extensión</div>
+      <div class="paso-d">Se llama <span class="pill">extension-musica</span>. Cópiala a ese computador (por ejemplo al Escritorio) y <b>no la borres</b> — la extensión la lee desde ahí. Si no la tienes, se descarga del repositorio del proyecto en GitHub (botón "Code → Download ZIP").</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">B</div><div class="paso-c">
+      <div class="paso-t">Cárgala en el navegador</div>
+      <div class="paso-d">En Chrome entra a <span class="pill">chrome://extensions</span> (en Edge: <span class="pill">edge://extensions</span>). Activa arriba el <b>Modo de desarrollador</b>, toca <span class="pill">Cargar descomprimida</span> y elige la carpeta <b>extension-musica</b>. Debe aparecer "Animal Center — Baja la música al llamar turno".</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">C</div><div class="paso-c">
+      <div class="paso-t">Deja las dos pestañas abiertas</div>
+      <div class="paso-d">En el <b>mismo navegador</b>: <b>Spotify</b> en <span class="pill">open.spotify.com</span> (reproduciendo la música) y la <b>pantalla</b> en <span class="pill">servicios.animalcenter.com.co/pantalla</span> (con Activar tocado). Listo: la música baja sola cuando se anuncia un turno.</div>
+    </div></div>
+
+    <div class="nota">
+      <b>Si la música no baja:</b> revisa que Spotify esté en <b>open.spotify.com</b> (el reproductor web), no en la app de escritorio — la app de escritorio no se puede controlar. Revisa que las dos pestañas estén en el mismo navegador. Si actualizaste la carpeta, entra a <b>chrome://extensions</b> y toca recargar (la flechita) en la extensión.
     </div>
   </div>
 </div>
