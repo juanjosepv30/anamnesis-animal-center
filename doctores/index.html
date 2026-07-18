@@ -245,7 +245,16 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* Llamar otra vez y Ausente van juntos: los dos son "todavía no pasó".
    Atendido va abajo y solo: es el que cierra el caso. */
 .calling-fila1{display:flex;gap:5px}
-.calling-fila1 .btn-again{flex:1}
+.calling-fila1 .btn-aus{flex:1}
+.calling-fila1 .btn-atender{flex:1}
+.calling-fila2{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:2px}
+/* "Atender" es la acción principal: verde lleno, junto a Ausente. */
+.btn-atender{border:none;background:#16a34a;color:#fff;border-radius:7px;padding:6px 12px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.btn-atender:hover{background:#15803d}
+/* "Marcar atendido" es el caso raro (último paciente): discreto, no satura. */
+.btn-sutil{border:none;background:none;color:var(--ts);font-size:.66rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline;padding:2px 4px;white-space:nowrap}
+.btn-sutil:hover{color:var(--tm)}
+.calling-fila2 .btn-again{font-size:.68rem;padding:4px 9px}
 .btn-aus{border:1.5px solid var(--bd);background:var(--wh);color:var(--tm);border-radius:7px;
   padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;
   font-family:'DM Sans',sans-serif;white-space:nowrap}
@@ -851,7 +860,7 @@ function renderSala() {
   // Awareness read-only: quién está siendo atendido ahora en toda la clínica.
   // Excluye a mi propio paciente (ese ya lo veo en su tarjeta con botones).
   const enConsulta = allRecords.filter(r => isSameDay(r.timestamp, today) &&
-    (r.estadoTurno === 'llamando' || r.estadoTurno === 'atendiendo') && (!miMedico || r.calledBy !== miMedico));
+    r.estadoTurno === 'atendiendo' && (!miMedico || r.calledBy !== miMedico));
   let stripHtml = '';
   if (enConsulta.length) {
     enConsulta.sort((a,b) => new Date(a.calledAt||a.timestamp) - new Date(b.calledAt||b.timestamp));
@@ -876,8 +885,11 @@ function renderSala() {
   // De paso arregla el olvido de marcar "Atendido": el sistema cree ocupado
   // al que no cierra, y entonces deja de avisarle. Ahora no puede seguir
   // sin cerrar, así que el olvido se nota en el acto.
+  // Solo un paciente 'llamando' (llamado, sin decidir) frena el llamado del
+  // siguiente. Apenas el médico marca "Atender" pasa a 'atendiendo' y se
+  // libera: puede llamar al que sigue mientras atiende a este.
   const miPacienteAbierto = miMedico
-    ? hoy.find(r => (r.estadoTurno === 'llamando' || r.estadoTurno === 'atendiendo') && r.calledBy === miMedico)
+    ? hoy.find(r => r.estadoTurno === 'llamando' && r.calledBy === miMedico)
     : null;
 
   filasVisibles.forEach(function(f) {
@@ -892,7 +904,10 @@ function renderSala() {
     // otro es ruido y encima invita a pisarle el turno.
     // Si no hay identidad ("ver todos") se muestran todos, y si nadie firmó
     // el llamado tampoco lo escondemos: sería peor perderlo de vista.
-    const llamando = mine.filter(r => (r.estadoTurno === 'llamando' || r.estadoTurno === 'atendiendo') &&
+    // La tarjeta de acción es SOLO para 'llamando' (recién llamado, todavía
+    // sin decidir). Al marcar "Atender" pasa a 'atendiendo' y desaparece del
+    // dashboard de todos — su seguimiento queda en recepción.
+    const llamando = mine.filter(r => r.estadoTurno === 'llamando' &&
       (!miMedico || !r.calledBy || r.calledBy === miMedico));
     // Los que ya pasaron hoy por esta fila: sirven para mantener la
     // proporción del intercalado a lo largo del día.
@@ -919,18 +934,20 @@ function renderSala() {
       // Ausente es la salida para el que no apareció: sin esto el médico
       // queda trabado y termina marcando "Atendido" a alguien que nunca
       // atendió, que es peor — ensucia el dato y no queda registro real.
-      var atnBadge = r.estadoTurno === 'atendiendo' ? ' <span class="mini mini-atn">Atendiendo</span>' : '';
       body += '<div class="calling"><div class="calling-top">'+
         '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
-          '<div class="calling-t">'+esc(r.turno||'')+atnBadge+'</div>'+
+          '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
           '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
         '</div>'+
         '<div class="calling-btns">'+
           '<div class="calling-fila1">'+
-            '<button class="btn-again" onclick="llamarDeNuevo('+r.rowIndex+')">🔔 Llamar otra vez</button>'+
             '<button class="btn-aus" onclick="markAusente('+r.rowIndex+')">Ausente</button>'+
+            '<button class="btn-atender" onclick="atender('+r.rowIndex+')">✓ Atender</button>'+
           '</div>'+
-          '<button class="btn-done" onclick="markAtendido('+r.rowIndex+')">✓ Atendido</button>'+
+          '<div class="calling-fila2">'+
+            '<button class="btn-again" onclick="llamarDeNuevo('+r.rowIndex+')">🔔 Llamar otra vez</button>'+
+            '<button class="btn-sutil" onclick="markAtendido('+r.rowIndex+')" title="Cerrar sin llamar al siguiente">Marcar atendido</button>'+
+          '</div>'+
         '</div></div></div>';
     });
 
@@ -1125,6 +1142,30 @@ function markAusente(rowIndex) {
         renderSala();
         updateCounts();
         showToast('Marcado como ausente · recepción puede reactivarlo');
+      } else showToast('❌ Error');
+    }).catch(function(){ showToast('❌ Error de conexión'); });
+}
+
+// "Atender": el paciente pasa a 'atendiendo' y su tarjeta desaparece del
+// dashboard de todos. Se libera el freno y el médico puede llamar al que
+// sigue. El backend, de paso, cierra a 'atendido' al anterior que este
+// mismo médico estaba atendiendo (ver atenderPaciente).
+function atender(rowIndex) {
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atender', rowIndex: rowIndex, medico: miMedico }) })
+    .then(r => r.json()).then(function(res){
+      if (res && res.ok) {
+        const rec = allRecords.find(x => x.rowIndex === rowIndex);
+        if (rec) rec.estadoTurno = 'atendiendo';
+        // El anterior que yo atendía ya lo cerró el backend: lo reflejo local
+        // para que la vista sea consistente hasta el próximo refresco.
+        if (miMedico) allRecords.forEach(function(x){
+          if (x.rowIndex !== rowIndex && x.estadoTurno === 'atendiendo' && x.calledBy === miMedico) {
+            x.estadoTurno = 'atendido'; x.status = 'revisado';
+          }
+        });
+        renderSala();
+        updateCounts();
+        showToast('✓ Atendiendo · turno liberado');
       } else showToast('❌ Error');
     }).catch(function(){ showToast('❌ Error de conexión'); });
 }
