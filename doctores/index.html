@@ -440,7 +440,7 @@ function showError(msg) {
 // Los consultorios son flexibles: sirven para especialidad Y para consulta
 // general. Los 2 de vacunación son aparte (a veces se usan para
 // inyectología o consulta), por eso también están disponibles.
-const ROOMS_MAIN = ['Boom Boom','Piel','Ojitos','Meaw Meaw','Endocrino','Gastro','Viajero','Rayos X','Eco','General'];
+const ROOMS_MAIN = ['Boom Boom','Piel','Ojitos','Meaw Meaw','Endocrino','Gastro','Terapia física','Viajero','Rayos X','Eco','General'];
 const ROOMS_VAC  = ['Vacunación 1','Vacunación 2'];
 
 function roomsFor(filaKey) {
@@ -455,6 +455,7 @@ function roomsFor(filaKey) {
 const CONS_POR_ESP = {
   'cardiologia':'Boom Boom', 'dermatologia':'Piel', 'oftalmologia':'Ojitos',
   'medicina felina':'Meaw Meaw', 'gastroenterologia':'Gastro',
+  'terapia fisica':'Terapia física',
   'endocrinologia':'Endocrino', 'neonatologia':'Endocrino',
   // Angie hace imagenología. Cubre los dos caminos: el servicio propio
   // "Rayos X y Ecografía" (más abajo, por service) Y la especialidad
