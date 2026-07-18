@@ -144,6 +144,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .empty-title{font-size:.95rem;font-weight:600;color:var(--tx);margin-bottom:4px}
 .empty-sub{font-size:.82rem;color:var(--tm)}
 .spinner{width:36px;height:36px;border:2.5px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:64px auto}
+.cargando{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cargando .spinner{margin:64px auto 0}
+.cargando-t{margin-top:16px;font-size:.95rem;font-weight:700;color:var(--tm)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── Toast ── */
@@ -428,7 +431,8 @@ function loadRecords(silent) {
   // Spinner SOLO si no hay nada que mostrar todavía (ni caché ni datos). Si ya
   // pintamos algo, se refresca sin parpadeo.
   if (!silent && !allRecords.length) {
-    document.getElementById('mainCnt').innerHTML = '<div class="spinner"></div>';
+    document.getElementById('mainCnt').innerHTML =
+      '<div class="cargando"><div class="spinner"></div><div class="cargando-t">Cargando tu sala…</div></div>';
     document.getElementById('lastUpdated').textContent = 'Actualizando...';
   }
   const pedidoEn = Date.now();
