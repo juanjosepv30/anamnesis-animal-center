@@ -1,0 +1,49 @@
+EXTENSION: Baja la musica al llamar turno — Animal Center
+==========================================================
+
+QUE HACE
+--------
+Cuando la pantalla de sala de espera anuncia un turno con la voz, esta
+extension le baja el volumen a Spotify (al 15%) y lo vuelve a subir apenas
+termina de hablar. Solo funciona en ESE computador (el que esta conectado a
+los parlantes y tiene Spotify abierto en el navegador).
+
+
+COMO INSTALARLA (una sola vez) — Chrome o Edge
+----------------------------------------------
+1. Copia la carpeta "extension-musica" completa a ese computador
+   (por ejemplo al Escritorio). No la borres despues: la extension la lee
+   desde ahi.
+
+2. Abre el navegador (Chrome o Edge) y entra a:
+      Chrome:  chrome://extensions
+      Edge:    edge://extensions
+
+3. Arriba a la derecha, activa el "Modo de desarrollador" (Developer mode).
+
+4. Toca "Cargar descomprimida" (Load unpacked) y elige la carpeta
+   "extension-musica".
+
+5. Listo. Deberia aparecer "Animal Center — Baja la musica al llamar turno".
+
+
+COMO USARLA EN EL DIA A DIA
+---------------------------
+En el MISMO navegador de ese computador, ten abiertas dos pestanas:
+  - Spotify:   https://open.spotify.com   (reproduciendo tu musica normal)
+  - Pantalla:  https://servicios.animalcenter.com.co/pantalla
+               (con "Activar" tocado, para que suene la voz)
+
+Cuando un medico llama un turno: suena el ding, baja Spotify, se lee el turno
+y Spotify vuelve a subir solo. No hay que tocar nada mas.
+
+
+SI NO BAJA LA MUSICA
+--------------------
+- Revisa que Spotify este en open.spotify.com (el reproductor web), no en la
+  app de escritorio: la app de escritorio NO se puede controlar desde aqui.
+- Revisa que las dos pestanas esten en el MISMO navegador.
+- Si actualizaste la carpeta, entra a chrome://extensions y toca el boton de
+  recargar (la flechita) en la extension.
+- Si baja pero no lo suficiente o demasiado, avisa: se ajusta el 15% en el
+  archivo spotify.js (la linea "var DUCK = 0.15;").

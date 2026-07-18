@@ -149,6 +149,12 @@ function leerTurno(t){
   var m = t.match(/^([A-Za-z]+)\s*-?\s*(\d+)$/);
   return m ? (m[1] + ' ' + parseInt(m[2], 10)) : t.replace(/-/g,' ');
 }
+// Avisa a la extensión "Baja música al llamar turno" (si está instalada) que
+// baje / suba Spotify. Si NO hay extensión, este evento no molesta a nadie.
+function duck(on){
+  try { window.dispatchEvent(new CustomEvent('ac-duck', { detail: { on: !!on } })); } catch(e){}
+}
+
 function hablarTurno(r){
   if (!('speechSynthesis' in window)) return;
   var turno = leerTurno(r.turno);
@@ -160,9 +166,13 @@ function hablarTurno(r){
     var u = new SpeechSynthesisUtterance(frase);
     u.lang = 'es-CO'; u.rate = 0.92; u.pitch = 1; u.volume = 1;
     if (vozES) u.voice = vozES;
+    // Al terminar (o si falla) sube la música de nuevo. La red de seguridad
+    // la sube igual a los 9s por si el evento 'end' no llega.
+    u.onend = u.onerror = function(){ duck(false); };
+    setTimeout(function(){ duck(false); }, 9000);
     speechSynthesis.cancel();
     speechSynthesis.speak(u);
-  } catch(e){}
+  } catch(e){ duck(false); }
 }
 
 function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -234,7 +244,7 @@ function pintar(llamando, esperando){
         '<div><div class="c-room-lbl">Consultorio</div>'+
         '<div class="c-room" style="color:'+color+'">'+esc(r.consultorio||'—')+'</div></div>'+
       '</div>';
-      if (nuevo) { ding(); setTimeout((function(rec){ return function(){ hablarTurno(rec); }; })(r), 850); }
+      if (nuevo) { duck(true); ding(); setTimeout((function(rec){ return function(){ hablarTurno(rec); }; })(r), 850); }
     });
     cont.innerHTML = html;
   }

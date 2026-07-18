@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Animal Center — Baja la musica al llamar turno",
+  "version": "1.0",
+  "description": "Cuando la pantalla de sala anuncia un turno, baja el volumen de Spotify y lo vuelve a subir al terminar.",
+  "background": { "service_worker": "bg.js" },
+  "host_permissions": [
+    "https://open.spotify.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://servicios.animalcenter.com.co/*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": ["pantalla.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://open.spotify.com/*"],
+      "js": ["spotify.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}
