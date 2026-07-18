@@ -163,6 +163,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       Si el cliente <b>vuelve</b>, en Ausentes toca <span class="pill">← Devolver a la fila</span> y vuelve <b>de primero</b>, con su ficha lista.</div>
     </div></div>
 
+    <div class="paso"><div class="paso-n">🩺</div><div class="paso-c">
+      <div class="paso-t">Cuando pasa con el médico</div>
+      <div class="paso-d">Si ves que el paciente <b>ya no está en la sala</b> (entró al consultorio), tócale <span class="pill">✓ Pasó con el médico</span>. Sube al bloque <b>🩺 Siendo atendido</b>, donde ves <b>quién lo atiende, en qué consultorio y para qué vino</b>.<br>
+      Casi siempre el médico lo cierra solo al pasar al siguiente. Si alguno queda sin cerrar, tócale <span class="pill">✓ Atendido</span>.</div>
+    </div></div>
+
     <div class="paso"><div class="paso-n">✓</div><div class="paso-c">
       <div class="paso-t">Atendidos</div>
       <div class="paso-d">En esa pestaña quedan los que ya pasaron. Es solo para consultar.</div>
@@ -196,10 +202,20 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     </div></div>
 
     <div class="paso"><div class="paso-n">5</div><div class="paso-c">
-      <div class="paso-t">Cierra el turno</div>
-      <div class="paso-d">Cuando termines, toca <span class="pill">✓ Atendido</span>.<br>
-      ¿No apareció? <span class="pill">🔔 Llamar otra vez</span> (le suena de nuevo en la pantalla de la sala) o <span class="pill">Ausente</span>.</div>
+      <div class="paso-t">Atiende y pasa al siguiente</div>
+      <div class="paso-d">Cuando el paciente <b>entra al consultorio</b>, toca <span class="pill">✓ Atender</span> (al lado de Ausente). Su tarjeta desaparece de la pantalla de todos y <b>se habilita el siguiente turno</b>.<br>
+      Cuando llames y atiendas al siguiente, el anterior pasa <b>solo</b> a <b>Atendido</b> — no tienes que marcar "terminé".<br>
+      ¿No apareció? <span class="pill">🔔 Llamar otra vez</span> (le suena de nuevo en la sala) o <span class="pill">Ausente</span>.</div>
     </div></div>
+
+    <div class="paso"><div class="paso-n">✓</div><div class="paso-c">
+      <div class="paso-t">¿Era el último del día?</div>
+      <div class="paso-d">Como no hay un "siguiente" que lo cierre, usa el botón chico <span class="pill">Marcar atendido</span> de esa misma tarjeta. (Si te olvidas, el sistema igual lo cierra solo en la noche.)</div>
+    </div></div>
+
+    <div class="nota">
+      Arriba ves <b>🩺 En consulta ahora</b>: quiénes están siendo atendidos en la clínica y en qué consultorio. Es solo para que sepas cómo va la sala — no tienes que hacer nada ahí.
+    </div>
 
     <div class="nota">
       <b>Tú decides, no el sistema.</b> Si el siguiente turno todavía no hizo su registro, puedes pasarlo igual — no lo hagas esperar. La etiqueta solo te avisa que aún no lo llenó.
