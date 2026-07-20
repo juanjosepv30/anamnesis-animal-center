@@ -306,6 +306,13 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
    la etiqueta solo le dice al médico si el registro está o no. */
 .mini-llen{background:#ede9fe;color:#5b21b6;margin-left:4px}       /* haciendo registro */
 .mini-sinreg{background:#f1f5f9;color:#64748b;margin-left:4px}     /* sin registro */
+/* Overlay de pausa por inactividad */
+.pausa-ov{position:fixed;inset:0;background:rgba(26,10,46,.72);z-index:700;display:flex;align-items:center;justify-content:center;padding:24px;cursor:pointer;backdrop-filter:blur(2px)}
+.pausa-box{background:var(--wh);border-radius:20px;padding:34px 30px;text-align:center;max-width:340px}
+.pausa-em{font-size:3rem}
+.pausa-t{font-size:1.5rem;font-weight:800;color:var(--tx);margin:6px 0 8px}
+.pausa-s{font-size:.9rem;color:var(--tm);line-height:1.5}
+.pausa-btn{margin-top:20px;background:var(--p);color:#fff;border:none;border-radius:14px;padding:14px 32px;font-size:1rem;font-weight:800;font-family:'DM Sans',sans-serif;cursor:pointer}
 /* max-width: un <select> se estira al ancho de su opción más larga y en el
    celular se sale de la pantalla ("Dra. Catherine Hernández — Endocrinología,
    Neonatología" mide más que un iPhone). */
@@ -361,6 +368,17 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 <div class="prueba-aviso" id="pruebaAviso" style="display:none">
   🧪 MODO PRUEBA ENCENDIDO — los médicos NO están recibiendo avisos por WhatsApp
+</div>
+
+<!-- Pausa por inactividad: aparece tras 2 min sin uso y frena el consumo.
+     Cualquier toque o movimiento la reactiva. -->
+<div class="pausa-ov" id="pausaOverlay" style="display:none" onclick="reanudar()">
+  <div class="pausa-box">
+    <div class="pausa-em">⏸️</div>
+    <div class="pausa-t">En pausa</div>
+    <div class="pausa-s">Se pausó por inactividad para no gastar de más.<br>Toca la pantalla para volver a tu sala.</div>
+    <button class="pausa-btn" onclick="reanudar()">Reactivar</button>
+  </div>
 </div>
 
 <header class="hdr">
@@ -1493,12 +1511,9 @@ function copyRecord(rowIdx) {
     '  Animal Center',
     '══════════════════════════════════\n',
     r.vetesoftHc ? '▸ HISTORIA CLÍNICA VETESOFT: ' + r.vetesoftHc + '\n\n' : '',
-    '▸ DATOS DEL PACIENTE\n',
-    line('Nombre', r.petName), line('Especie', r.species), line('Raza', r.breed),
-    line('Edad', r.age), line('Sexo', r.sex), line('Castrado/a', r.neutered),
-    r.weight ? line('Peso', r.weight + ' kg') : '', '\n',
-    '▸ PROPIETARIO\n',
-    line('Nombre', r.ownerName), '\n',
+    // Sin datos del paciente ni del propietario: en Vetesoft ya existen y se
+    // pega sobre esa historia. Solo va lo clínico. El peso sí (cambia cada vez).
+    r.weight ? '▸ PESO: ' + r.weight + ' kg\n\n' : '',
     '▸ SERVICIO\n',
     line('Tipo', r.service), line('Especialidad', r.specialty), '\n',
     '▸ MOTIVO DE CONSULTA\n',
@@ -1589,15 +1604,42 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// ── Pausa por inactividad (cuida la cuota de Apps Script) ────
+// Muchos médicos dejan la página abierta todo el día. Cada uno sondeando
+// consume cuota de Google. Tras 2 min SIN actividad, la página se pausa y
+// deja de consultar. Al primer movimiento/toque, se reactiva y refresca.
+let pausado = false;
+let ultActividad = Date.now();
+function marcarActividad(){ ultActividad = Date.now(); if (pausado) reanudar(); }
+['mousemove','mousedown','keydown','touchstart','scroll','focus'].forEach(function(ev){
+  window.addEventListener(ev, marcarActividad, { passive: true });
+});
+function pausar(){
+  if (pausado) return;
+  pausado = true;
+  document.getElementById('pausaOverlay').style.display = 'flex';
+}
+function reanudar(){
+  if (!pausado) return;
+  pausado = false;
+  document.getElementById('pausaOverlay').style.display = 'none';
+  ultimaVersion = null;              // fuerza recarga fresca
+  loadRecords(true); cargarMedicos(); chequearCambios();
+}
+setInterval(function(){
+  if (!pausado && (Date.now() - ultActividad) > 120000) pausar();
+}, 20000);
+
 // Los minutos de espera corren solos aunque no llegue ningún paciente, y
 // de ellos depende también a quién sugerimos llamar (un médico que estaba
 // "a 10 min de salir" ya salió). Sin esto el médico ve números congelados.
 setInterval(function(){
+  if (pausado) return;
   if (activeView === 'sala') renderSala();
 }, 60000);
 
-setInterval(chequearCambios, 5000);
-setInterval(function(){ if (!document.querySelector('.rec.open')) loadRecords(true); }, 120000); // red de seguridad
+setInterval(function(){ if (!pausado) chequearCambios(); }, 5000);
+setInterval(function(){ if (!pausado && !document.querySelector('.rec.open')) loadRecords(true); }, 120000); // red de seguridad
 
 // ── Arranque ──
 // Ya no hay puerta de "quién eres / de turno": el médico entra directo. Su

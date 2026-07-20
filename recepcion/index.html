@@ -179,6 +179,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .atender-lbl{display:block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tm);margin:10px 0 5px}
 .atender-sel{width:100%;box-sizing:border-box;height:42px;border:1.5px solid var(--bd);border-radius:10px;padding:0 11px;font-size:.9rem;font-family:'DM Sans',sans-serif;background:var(--wh);color:var(--tx)}
 .atender-sel:focus{border-color:var(--p);outline:none}
+.pausa-ov{position:fixed;inset:0;background:rgba(26,10,46,.72);z-index:700;display:flex;align-items:center;justify-content:center;padding:24px;cursor:pointer}
+.pausa-box{background:var(--wh);border-radius:20px;padding:34px 30px;text-align:center;max-width:340px}
+.pausa-em{font-size:3rem}
+.pausa-t{font-size:1.5rem;font-weight:800;color:var(--tx);margin:6px 0 8px}
+.pausa-s{font-size:.9rem;color:var(--tm);line-height:1.5}
+.pausa-btn{margin-top:20px;background:var(--p);color:#fff;border:none;border-radius:14px;padding:14px 32px;font-size:1rem;font-weight:800;font-family:'DM Sans',sans-serif;cursor:pointer}
 </style>
 </head>
 <body>
@@ -226,6 +232,15 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
         <button class="modal-cancel" onclick="cerrarAtender()">Cancelar</button>
         <button class="modal-ok" id="atenderOk" onclick="confirmarAtender()">✓ Pasó con el médico</button>
       </div>
+    </div>
+  </div>
+
+  <div class="pausa-ov" id="pausaOverlay" style="display:none" onclick="reanudar()">
+    <div class="pausa-box">
+      <div class="pausa-em">⏸️</div>
+      <div class="pausa-t">En pausa</div>
+      <div class="pausa-s">Se pausó por inactividad para no gastar de más.<br>Toca la pantalla para volver.</div>
+      <button class="pausa-btn" onclick="reanudar()">Reactivar</button>
     </div>
   </div>
 
@@ -452,14 +467,38 @@ function nearestHalfHour() {
   return String(Math.floor(r/60)).padStart(2,'0') + ':' + String(r%60).padStart(2,'0');
 }
 
+// ── Pausa por inactividad (cuida la cuota de Apps Script) ────
+// Si dejan la página abierta sin usarla, tras 2 min deja de sondear. Vuelve
+// con cualquier movimiento o toque.
+var pausado = false, ultActividad = Date.now();
+function marcarActividad(){ ultActividad = Date.now(); if (pausado) reanudar(); }
+['mousemove','mousedown','keydown','touchstart','scroll','focus'].forEach(function(ev){
+  window.addEventListener(ev, marcarActividad, { passive: true });
+});
+function reanudar(){
+  if (!pausado) return;
+  pausado = false;
+  document.getElementById('pausaOverlay').style.display = 'none';
+  loadWaitingRoom(true); cargarTurnos();
+}
+function pausar(){
+  if (pausado || selected) return;   // si está registrando a alguien, no pausa
+  pausado = true;
+  document.getElementById('pausaOverlay').style.display = 'flex';
+}
+setInterval(function(){
+  if (!pausado && !selected && (Date.now() - ultActividad) > 120000) pausar();
+}, 20000);
+
 // Arranca directo, sin PIN.
 function iniciar() {
   loadWaitingRoom();
   cargarTurnos();       // ¿ya está configurada la jornada? si no, abre el pop-up
-  // Se refresca sola, pero se pausa si recepción está registrando a alguien.
-  setInterval(function(){ if (!selected) loadWaitingRoom(true); }, 60000);
+  // Se refresca sola, pero se pausa si recepción está registrando a alguien o
+  // si la página está inactiva (ver pausar).
+  setInterval(function(){ if (!selected && !pausado) loadWaitingRoom(true); }, 60000);
   // Cada 3 min re-chequea la jornada: cubre el cambio de las 2pm sin recargar.
-  setInterval(function(){ if (!selected) cargarTurnos(); }, 180000);
+  setInterval(function(){ if (!selected && !pausado) cargarTurnos(); }, 180000);
 }
 
 // ── Médicos de turno (los define recepción) ──────────────────
