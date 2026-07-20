@@ -742,6 +742,8 @@ function destinatarios(r) {
 function atiendo(r) {
   const mis = misEspecialidades();
   if (!mis.length) return true;            // sin identidad, ve todo
+  // Si el cliente pidió un general específico, ese turno es SOLO de ese médico.
+  if (r.medicoPref && miMedico && r.medicoPref !== miMedico) return false;
   return destinatarios(r).some(t => t && mis.indexOf(t) !== -1);
 }
 

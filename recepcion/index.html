@@ -109,6 +109,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .wr-hc{display:inline-block;background:var(--pl);color:var(--pd);border-radius:99px;padding:1px 8px;font-size:.66rem;font-weight:800;vertical-align:middle;margin-left:4px}
 .wr-meta{font-size:.73rem;color:var(--tm);margin-top:1px}
 .wr-medico{font-size:.74rem;font-weight:700;color:var(--pd);margin-top:3px}
+.wr-asignar{display:inline-block;margin-top:5px;font-size:.72rem;font-weight:700;color:var(--pd);background:var(--pl);border:1px solid var(--bd);border-radius:8px;padding:3px 9px;cursor:pointer}
+.wr-asignar:hover{background:#ede4ff}
 .wr-motivo{font-size:.73rem;color:var(--tm);font-style:italic;margin-top:3px;line-height:1.35}
 .wr-atn{background:#f0fdf4}
 /* Reenviar registro, debajo del nombre. */
@@ -229,6 +231,22 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     </div>
   </div>
 
+  <!-- Asignar un médico general a un turno YA creado (el cliente lo pidió). -->
+  <div class="modal-bg" id="asignarModal" style="display:none" onclick="if(event.target===this)cerrarAsignar()">
+    <div class="modal">
+      <div class="modal-t">Médico general</div>
+      <div class="modal-sub" id="asignarSub"></div>
+      <div class="atender-body">
+        <label class="atender-lbl">¿Con qué médico general?</label>
+        <select id="asignarSel" class="atender-sel"></select>
+      </div>
+      <div class="modal-acts">
+        <button class="modal-cancel" onclick="cerrarAsignar()">Cancelar</button>
+        <button class="modal-ok" onclick="confirmarAsignar()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="wrap">
     <div class="card">
       <div class="card-t">Registrar llegada</div>
@@ -288,6 +306,14 @@ function buildSpecOptions() {
     h += '<option value="'+s.name+'">'+s.name+' — '+s.doctor+'</option>';
   });
   return h;
+}
+
+// Médicos generales de turno AHORA (los que puede pedir el cliente). Salen de
+// la lista que recepción configuró (_turnosActuales).
+function buildMedGenOptions() {
+  var docs = _turnosActuales || [];
+  return '<option value="">— Cualquiera (por orden de llegada) —</option>' +
+    docs.map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
 }
 
 // ── El servicio manda ────────────────────────────────────────
@@ -379,7 +405,7 @@ function pintarServicio() {
   // Sin servicio elegido no se muestra nada más ni se puede registrar: hay
   // que elegir primero. Esconde doctor y agenda, y apaga el botón.
   if (!svc) {
-    ['boxSpec','boxAutoDoc','boxTieneCita','boxHora','boxEsperar'].forEach(function(id){
+    ['boxSpec','boxAutoDoc','boxMedGen','boxTieneCita','boxHora','boxEsperar'].forEach(function(id){
       document.getElementById(id).style.display = 'none';
     });
     document.getElementById('regSpec').value = '';
@@ -400,6 +426,13 @@ function pintarServicio() {
     document.getElementById('autoDocName').textContent = cfg.fijo;
   }
   if (cfg.doctor !== 'elige') document.getElementById('regSpec').value = '';
+
+  // ── Médico general pedido (solo consultas/controles generales) ──
+  var esGen = cfg.doctor === 'ninguno' && /general/i.test(svc);
+  var boxMG = document.getElementById('boxMedGen');
+  boxMG.style.display = esGen ? '' : 'none';
+  if (esGen) document.getElementById('regMedGen').innerHTML = buildMedGenOptions();
+  else document.getElementById('regMedGen').value = '';
 
   // ── Agenda ──
   // Solo los servicios con agenda preguntan por cita. El resto entra por
@@ -705,6 +738,8 @@ function abrirRegistro(r, esNuevo) {
         '<div id="boxSpec"><label>Especialidad / Doctor</label><select id="regSpec" onchange="actualizarBotonRegistro()">'+buildSpecOptions()+'</select></div>'+
         // Viajero y Rayos van con un doctor fijo: se muestra, no se elige.
         '<div id="boxAutoDoc" style="display:none"><label>Doctor asignado</label><div class="reg-auto">👨‍⚕️ <span id="autoDocName"></span></div></div>'+
+        // Consulta general: el cliente puede pedir un general específico (opcional).
+        '<div id="boxMedGen" style="display:none"><label>Médico general <span class="lbl-tip">(opcional — si lo pidió)</span></label><select id="regMedGen">'+buildMedGenOptions()+'</select></div>'+
         // Con teléfono, al cliente le llega el link y llena la ficha desde su
         // celular. Vacío, recepción se la llena a mano. Señores de 78,
         // celulares sin datos, gente que no quiere — ese camino no se toca.
@@ -797,7 +832,11 @@ function doRegister() {
       })(),
       // Si va vacío, el backend no manda nada y el paciente entra directo
       // a la fila, como toda la vida.
-      phone: document.getElementById('regTel').value.trim()
+      phone: document.getElementById('regTel').value.trim(),
+      // Médico general pedido por el cliente (opcional). Solo cuando el
+      // selector está visible (consulta/control general).
+      medicoPref: document.getElementById('boxMedGen').style.display !== 'none'
+        ? document.getElementById('regMedGen').value : ''
     }
   };
   document.getElementById('regArea').innerHTML = '<div class="spinner"></div>';
@@ -909,6 +948,10 @@ function wrItem(r, acts) {
         (r.vetesoftHc ? ' <span class="wr-hc">HC '+esc(r.vetesoftHc)+'</span>' : '')+'</div>'+
       '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div>'+
       (r.medicoAsignado ? '<div class="wr-medico">🩺 '+esc(r.medicoAsignado)+'</div>' : '')+
+      // Consulta general en cola: chip para asignar/cambiar el médico pedido.
+      (/general/i.test(r.service||'') && enCola
+        ? '<div class="wr-asignar" onclick="pedirAsignar('+r.rowIndex+')">👨‍⚕️ '+(r.medicoPref?esc(r.medicoPref)+' ✎':'Asignar médico')+'</div>'
+        : '')+
       (reenviar ? '<div class="wr-reenviar">'+reenviar+'</div>' : '')+
     '</div>'+
     '<div class="wr-right">'+
@@ -968,6 +1011,31 @@ function markAtendidoRecep(rowIndex) {
     .then(r=>r.json()).then(function(res){
       if (res && res.ok) { showToast('✓ Marcado como atendido'); loadWaitingRoom(true); }
       else { showToast((res && res.error) || 'Error al actualizar'); loadWaitingRoom(true); }
+    }).catch(function(){ showToast('Error de conexión'); });
+}
+
+// ── Asignar médico general a un turno ya creado ──────────────
+var _asignarRow = null;
+function pedirAsignar(rowIndex) {
+  var r = null;
+  for (var i = 0; i < wrRecords.length; i++) if (wrRecords[i].rowIndex === rowIndex) { r = wrRecords[i]; break; }
+  if (!r) return;
+  _asignarRow = rowIndex;
+  document.getElementById('asignarSub').textContent = (r.turno || '') + ' · ' + (r.petName || '');
+  var docs = _turnosActuales || [];
+  document.getElementById('asignarSel').innerHTML =
+    '<option value="">— Cualquiera (por orden de llegada) —</option>' +
+    docs.map(function(n){ return '<option value="'+esc(n)+'"'+(n===r.medicoPref?' selected':'')+'>'+esc(n)+'</option>'; }).join('');
+  document.getElementById('asignarModal').style.display = 'flex';
+}
+function cerrarAsignar(){ document.getElementById('asignarModal').style.display = 'none'; _asignarRow = null; }
+function confirmarAsignar(){
+  if (_asignarRow == null) return;
+  var med = document.getElementById('asignarSel').value;
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'asignarMedico', rowIndex: _asignarRow, medico: med }) })
+    .then(r=>r.json()).then(function(res){
+      if (res && res.ok) { cerrarAsignar(); showToast(med ? ('Asignado a ' + med) : 'Sin médico específico'); loadWaitingRoom(true); }
+      else showToast((res && res.error) || 'Error al asignar');
     }).catch(function(){ showToast('Error de conexión'); });
 }
 
@@ -1065,6 +1133,14 @@ function renderTab() {
 }
 
 function markAusente(rowIndex, estado) {
+  // Ausente es un dato real (cuánta gente se va). No lo marques por error: solo
+  // si el cliente de verdad NO está. Por eso pedimos confirmación.
+  if (estado === 'ausente') {
+    var r = null;
+    for (var i = 0; i < wrRecords.length; i++) if (wrRecords[i].rowIndex === rowIndex) { r = wrRecords[i]; break; }
+    var quien = r ? ((r.turno||'') + ' · ' + (r.petName||'')) : 'este paciente';
+    if (!confirm('¿' + quien + ' de verdad se fue o no se presentó?\n\nMárcalo ausente SOLO si realmente no está — no por error.')) return;
+  }
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: estado }) })
     .then(r=>r.json()).then(function(res){
       if (res && res.ok) { showToast(estado==='ausente'?'Marcado ausente':'Devuelto a la fila'); loadWaitingRoom(true); }
