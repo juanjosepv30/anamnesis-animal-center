@@ -1273,16 +1273,17 @@ function renderAll() {
   const today = new Date();
   const dfVal = document.getElementById('dateFilter').value;
   let records = allRecords.filter(r => {
-    const isReviewed = r.status === 'revisado';
+    // Fuente de verdad = el ESTADO del turno, NO el campo 'status'. Así el
+    // turno y su anamnesis nunca se desconectan: si el turno está 'atendido',
+    // su anamnesis está en Atendidas; si no, sigue pendiente de leer.
+    const atendido = r.estadoTurno === 'atendido';
     if (activeView === 'pending') {
-      // Pendientes de hoy, PERO no los que ya se fueron ('ausente'): ese
-      // paciente no está para atender, y su anamnesis quedaba suelta acá sin
-      // forma de cerrarla. Si vuelve (lo reactivan), reaparece sola.
-      return !isReviewed && r.estadoTurno !== 'ausente' && isSameDay(r.timestamp, today);
+      // Anamnesis a leer = pacientes EN CURSO. No los atendidos (ya pasaron)
+      // ni los ausentes (se fueron). Si un ausente vuelve, reaparece solo.
+      return !atendido && r.estadoTurno !== 'ausente' && isSameDay(r.timestamp, today);
     } else {
-      // Revisadas: por defecto SOLO las de hoy. Las de otros días
-      // aparecen únicamente si el médico elige una fecha.
-      if (!isReviewed) return false;
+      // Atendidas: por defecto SOLO las de hoy. Otros días con el selector.
+      if (!atendido) return false;
       if (dfVal) {
         const parts = dfVal.split('-');
         const chosen = new Date(parts[0], parts[1]-1, parts[2]);
@@ -1399,7 +1400,7 @@ function serviceColor(s) {
 }
 
 function buildCard(r) {
-  const reviewed = r.status === 'revisado';
+  const reviewed = r.estadoTurno === 'atendido';
   const em = r.species === 'Felino' ? '🐈' : '🐕';
   const rowIdx = r.rowIndex;
   const svc = r.service || '';
@@ -1483,7 +1484,6 @@ function buildCard(r) {
     </div>
     <div class="rec-actions">
       <button class="btn-copy" id="copy-${rowIdx}" onclick="copyRecord(${rowIdx})">📋 Copiar anamnesis</button>
-      ${!reviewed ? `<button class="btn-done-rec" onclick="event.stopPropagation();markAtendido(${rowIdx})">✓ Marcar atendido</button>` : ''}
     </div>
   </div>
 </div>`;
@@ -1555,7 +1555,7 @@ function copyRecord(rowIdx) {
 
 function updateCounts() {
   const today = new Date();
-  const pending = allRecords.filter(r => r.status !== 'revisado' && r.estadoTurno !== 'ausente' && isSameDay(r.timestamp, today)).length;
+  const pending = allRecords.filter(r => r.estadoTurno !== 'atendido' && r.estadoTurno !== 'ausente' && isSameDay(r.timestamp, today)).length;
   const el = document.getElementById('pendingCount');
   if (pending > 0) {
     el.textContent = '📋 ' + pending;
