@@ -135,6 +135,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 .rec-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
 .btn-copy{flex:1;padding:10px 14px;border:1.5px solid var(--p);border-radius:9px;background:var(--wh);color:var(--p);font-size:.8rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;min-width:130px}
+.btn-done-rec{flex:1;padding:10px 14px;border:none;border-radius:9px;background:#16a34a;color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;min-width:130px}
+.btn-done-rec:hover{background:#15803d}
 .btn-copy:hover{background:var(--pl)}
 .btn-copy.copied{border-color:var(--ok);color:var(--ok);background:var(--okl)}
 
@@ -1259,7 +1261,7 @@ function markAtendido(rowIndex) {
         // Atendido cierra el caso: sale de la sala y de anamnesis,
         // y aparece en Revisadas.
         if (rec) { rec.estadoTurno = 'atendido'; rec.status = 'revisado'; }
-        renderSala();
+        renderAll();   // sirve para la sala Y para la lista de anamnesis
         updateCounts();
         showToast('✓ Atendido · pasó a Atendidas');
       } else showToast('❌ Error');
@@ -1481,6 +1483,7 @@ function buildCard(r) {
     </div>
     <div class="rec-actions">
       <button class="btn-copy" id="copy-${rowIdx}" onclick="copyRecord(${rowIdx})">📋 Copiar anamnesis</button>
+      ${!reviewed ? `<button class="btn-done-rec" onclick="event.stopPropagation();markAtendido(${rowIdx})">✓ Marcar atendido</button>` : ''}
     </div>
   </div>
 </div>`;

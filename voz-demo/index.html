@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prueba de voz — Animal Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:#f3e7f7;color:#3a2140;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.box{background:#fff;border-radius:22px;padding:34px 28px;max-width:440px;width:100%;box-shadow:0 12px 40px rgba(58,33,64,.14);text-align:center}
+h1{font-size:1.5rem;color:#8e3f9e;margin-bottom:4px}
+.sub{font-size:.9rem;color:#7d6d86;margin-bottom:22px;line-height:1.5}
+.frase{background:#f3e7f7;border-radius:12px;padding:14px;font-size:1rem;font-weight:700;margin-bottom:20px}
+.play{width:100%;background:#8e3f9e;color:#fff;border:none;border-radius:16px;padding:18px;font-size:1.15rem;font-weight:900;font-family:'Nunito',sans-serif;cursor:pointer;margin-bottom:18px}
+.play:active{transform:scale(.98)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.lbl{font-size:.85rem;font-weight:800;color:#7d6d86}
+.ctrl{display:flex;align-items:center;gap:8px}
+.ctrl button{width:38px;height:38px;border-radius:10px;border:1.5px solid #e8daf0;background:#fff;font-size:1.2rem;font-weight:900;color:#8e3f9e;cursor:pointer}
+.val{min-width:44px;font-weight:900;font-size:1rem}
+.voz{font-size:.78rem;color:#b8a8c2;margin-top:8px}
+.hint{font-size:.75rem;color:#b8a8c2;margin-top:16px;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🔊 Prueba de voz</h1>
+  <div class="sub">Esta es la nueva voz de la sala de espera. Tócala para escucharla, y ajusta el tono si la quieres más o menos aguda.</div>
+  <div class="frase" id="frase">"Turno E 4, pase al consultorio Boom Boom, con Mila."</div>
+  <button class="play" onclick="hablar()">▶ Escuchar</button>
+  <div class="row">
+    <span class="lbl">Tono (agudo)</span>
+    <div class="ctrl">
+      <button onclick="ajustar('pitch',-0.1)">–</button>
+      <span class="val" id="pitchVal">1.3</span>
+      <button onclick="ajustar('pitch',0.1)">+</button>
+    </div>
+  </div>
+  <div class="row">
+    <span class="lbl">Velocidad</span>
+    <div class="ctrl">
+      <button onclick="ajustar('rate',-0.05)">–</button>
+      <span class="val" id="rateVal">0.94</span>
+      <button onclick="ajustar('rate',0.05)">+</button>
+    </div>
+  </div>
+  <div class="voz" id="vozInfo">Buscando voz…</div>
+  <div class="hint">La actual está en tono <b>1.3</b>. Si prefieres otro, dime el número que se oye mejor y lo dejo fijo en la sala.</div>
+</div>
+<script>
+var pitch = 1.3, rate = 0.94, vozES = null;
+function cargarVoces(){
+  var vs = speechSynthesis.getVoices();
+  var es = vs.filter(function(v){ return /^es/i.test(v.lang); });
+  var fem = /sabina|helena|laura|paulina|monica|mónica|elena|female|mujer|isabela|catalina|valentina/i;
+  vozES = es.filter(function(v){ return fem.test(v.name); })[0]
+       || es.filter(function(v){ return /^es-(co|mx|us|419)/i.test(v.lang); })[0]
+       || es[0] || null;
+  document.getElementById('vozInfo').textContent = vozES ? ('Voz: ' + vozES.name + ' (' + vozES.lang + ')') : 'No hay voces en español en este navegador';
+}
+if ('speechSynthesis' in window){ cargarVoces(); speechSynthesis.onvoiceschanged = cargarVoces; }
+function ajustar(cual, d){
+  if (cual === 'pitch') { pitch = Math.max(0.5, Math.min(2, Math.round((pitch+d)*10)/10)); document.getElementById('pitchVal').textContent = pitch; }
+  else { rate = Math.max(0.5, Math.min(1.5, Math.round((rate+d)*100)/100)); document.getElementById('rateVal').textContent = rate; }
+  hablar();
+}
+function hablar(){
+  try {
+    var u = new SpeechSynthesisUtterance('Turno E 4, pase al consultorio Boom Boom, con Mila.');
+    u.lang = 'es-CO'; u.pitch = pitch; u.rate = rate; u.volume = 1;
+    if (vozES) u.voice = vozES;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch(e){}
+}
+</script>
+</body>
+</html>
