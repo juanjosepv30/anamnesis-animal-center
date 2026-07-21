@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda — Animal Center</title>
+<link rel="icon" type="image/png" sizes="192x192" href="/img/icono-morado-192.png">
+<link rel="apple-touch-icon" href="/img/icono-app-morado.png">
+<meta name="theme-color" content="#8e3f9e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Agenda">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://script.google.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#faf7ff;--tx:#1a0a2e;--tm:#6b5c7e;--ts:#b0a4bf;--bd:#e8daf0;--wh:#fff;--p:#8e3f9e;--pd:#6d2f7a;--pl:#f3e7f7}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+.hdr{background:var(--wh);border-bottom:1px solid var(--bd);padding:8px 16px;min-height:58px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+.hdr-icon{width:34px;height:34px;border-radius:8px;overflow:hidden;background:var(--p);flex-shrink:0}
+.hdr-icon img{width:100%;height:100%;object-fit:cover}
+.hdr-t{font-size:.95rem;font-weight:700}
+.hdr-s{font-size:.72rem;color:var(--tm)}
+.wrap{max-width:820px;margin:0 auto;padding:16px 14px 60px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tab{flex:1;border:1.5px solid var(--bd);background:var(--wh);border-radius:12px;padding:11px;font-size:.9rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:inherit}
+.tab.on{background:var(--pl);color:var(--pd);border-color:var(--p)}
+.card{background:var(--wh);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px}
+.card-t{font-size:.95rem;font-weight:800;margin-bottom:2px}
+.card-sub{font-size:.8rem;color:var(--tm);margin-bottom:12px}
+.srch{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+@media(max-width:560px){.srch{grid-template-columns:1fr}}
+input,select,textarea{border:1.5px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:.9rem;font-family:inherit;outline:none;background:var(--bg);color:var(--tx);width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--p);background:var(--wh)}
+.btn{border:none;border-radius:11px;padding:12px 16px;font-size:.95rem;font-weight:800;font-family:inherit;cursor:pointer;background:var(--p);color:#fff}
+.btn:active{transform:scale(.99)}
+.btn-ghost{background:var(--wh);color:var(--pd);border:1.5px solid var(--bd)}
+.btn-block{width:100%}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-top:12px}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+label{display:block;font-size:.8rem;font-weight:700;color:var(--tm);margin-bottom:5px}
+.results{margin-top:10px;display:flex;flex-direction:column;gap:7px}
+.res{border:1.5px solid var(--bd);border-radius:10px;padding:10px 12px;cursor:pointer}
+.res:hover{border-color:var(--p);background:var(--pl)}
+.res-n{font-weight:700;font-size:.9rem}
+.res-m{font-size:.75rem;color:var(--tm);margin-top:2px}
+.sel{background:var(--pl);border:1.5px solid var(--p);border-radius:10px;padding:10px 12px;font-size:.88rem;font-weight:700;color:var(--pd);margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sel button{background:none;border:none;color:var(--pd);font-weight:800;cursor:pointer;font-size:.8rem;font-family:inherit}
+.btn-nuevo{border:1.5px dashed var(--p);background:var(--pl);color:var(--pd);border-radius:9px;padding:9px 14px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;width:100%;margin-top:8px}
+.hint{font-size:.78rem;color:var(--tm);text-align:center;padding:8px}
+.filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:12px}
+.filtros>div{flex:1;min-width:130px}
+.cita{border:1px solid var(--bd);border-left:5px solid var(--p);border-radius:11px;padding:11px 13px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start}
+.cita-h{font-size:1.1rem;font-weight:800;min-width:56px;color:var(--p);font-variant-numeric:tabular-nums}
+.cita-i{flex:1;min-width:0}
+.cita-n{font-weight:700;font-size:.92rem}
+.cita-m{font-size:.76rem;color:var(--tm);margin-top:2px}
+.cita-x{border:none;background:none;color:#c0392b;font-weight:800;cursor:pointer;font-size:.75rem;font-family:inherit;flex-shrink:0}
+.empty{color:var(--ts);text-align:center;padding:22px;font-size:.9rem}
+.grp{font-size:.78rem;font-weight:800;color:var(--pd);text-transform:uppercase;letter-spacing:.3px;margin:12px 0 6px}
+.confirm{text-align:center;padding:16px}
+.confirm .em{font-size:2.4rem;margin-bottom:8px}
+.err{color:#c0392b;font-size:.82rem;margin-top:8px;min-height:16px}
+.spinner{width:26px;height:26px;border:3px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:sp .8s linear infinite;margin:20px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="hdr-icon"><img src="/img/icono-app-morado.png" alt="" onerror="this.style.display='none'"></div>
+  <div><div class="hdr-t">Agenda</div><div class="hdr-s">Animal Center</div></div>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab on" id="t-agendar" onclick="verTab('agendar')">➕ Agendar</button>
+    <button class="tab" id="t-ver" onclick="verTab('ver')">📅 Ver agenda</button>
+  </div>
+
+  <!-- ── Agendar ── -->
+  <div id="vistaAgendar">
+    <div class="card">
+      <div class="card-t">Buscar al paciente</div>
+      <div class="card-sub">Buscalo en Vetesoft para no re-teclear. Si es nuevo, cargalo a mano.</div>
+      <div class="srch">
+        <input type="number" id="qCedula" placeholder="Cédula" onkeydown="if(event.key==='Enter')buscar()">
+        <input type="text" id="qPet" placeholder="Mascota (opcional)" onkeydown="if(event.key==='Enter')buscar()">
+        <input type="text" id="qOwner" placeholder="Dueño (opcional)" onkeydown="if(event.key==='Enter')buscar()">
+      </div>
+      <button class="btn btn-block" style="margin-top:10px" onclick="buscar()">🔍 Buscar</button>
+      <div class="results" id="results"></div>
+      <div id="formArea"></div>
+    </div>
+  </div>
+
+  <!-- ── Ver agenda ── -->
+  <div id="vistaVer" style="display:none">
+    <div class="card">
+      <div class="card-t">Agenda</div>
+      <div class="filtros">
+        <div><label>Día</label><input type="date" id="verFecha" onchange="cargarAgenda()"></div>
+        <div><label>Médico</label><select id="verMedico" onchange="cargarAgenda()"><option value="">Todos</option></select></div>
+        <button class="btn-ghost btn" onclick="hoyAgenda()">Hoy</button>
+      </div>
+      <div id="agendaList"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
+const SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Vacunación','Inyectología','Rayos X y Ecografía','Viajero'];
+var MEDICOS=[];
+var selCliente=null;   // {petName, owner, cedula, phone, vetesoftId, vetesoftHc} o null (manual)
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function hoyISO(){return new Date().toLocaleDateString('en-CA');}
+
+function verTab(t){
+  document.getElementById('t-agendar').classList.toggle('on', t==='agendar');
+  document.getElementById('t-ver').classList.toggle('on', t==='ver');
+  document.getElementById('vistaAgendar').style.display = t==='agendar'?'':'none';
+  document.getElementById('vistaVer').style.display = t==='ver'?'':'none';
+  if(t==='ver') cargarAgenda();
+}
+
+// ── Médicos (para los selectores) ──
+function cargarMedicos(){
+  fetch(API_URL+'?action=medicos').then(function(r){return r.json();}).then(function(res){
+    if(res&&res.ok){ MEDICOS=(res.medicos||[]).map(function(m){return m.medico;}).sort(); }
+    var opt=MEDICOS.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join('');
+    var vm=document.getElementById('verMedico'); if(vm) vm.innerHTML='<option value="">Todos</option>'+opt;
+  }).catch(function(){});
+}
+function medicoOptions(){ return '<option value="">— Elegí el médico —</option>'+MEDICOS.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join(''); }
+function servicioOptions(){ return SERVICIOS.map(function(s){return '<option value="'+esc(s)+'">'+esc(s)+'</option>';}).join(''); }
+function horaOptions(){ var h='';for(var m=6*60;m<=20*60;m+=30){var hh=Math.floor(m/60),mm=m%60;var v=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');h+='<option value="'+v+'">'+v+'</option>';}return h;}
+
+// ── Buscar en Vetesoft ──
+function buscar(){
+  var ced=document.getElementById('qCedula').value.trim();
+  var pet=document.getElementById('qPet').value.trim();
+  var own=document.getElementById('qOwner').value.trim();
+  if(!ced&&!pet&&!own){ return; }
+  var R=document.getElementById('results'); R.innerHTML='<div class="spinner"></div>';
+  document.getElementById('formArea').innerHTML='';
+  var q='?action=search&cedula='+encodeURIComponent(ced)+'&petName='+encodeURIComponent(pet)+'&ownerName='+encodeURIComponent(own);
+  fetch(API_URL+q).then(function(r){return r.json();}).then(function(res){
+    var rows=(res&&res.results)||[];
+    var html='';
+    rows.forEach(function(r,i){
+      window['_res'+i]=r;
+      html+='<div class="res" onclick="pick('+i+')"><div class="res-n">'+esc(r.petName||'(sin nombre)')+' — '+esc(r.owner||'')+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
+        '<div class="res-m">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+(r.phone?' · 📞 '+esc(r.phone):'')+'</div></div>';
+    });
+    if(!rows.length) html='<div class="hint">Sin resultados en Vetesoft.</div>';
+    html+='<button class="btn-nuevo" onclick="nuevoManual()">+ Cliente nuevo (cargar a mano)</button>';
+    R.innerHTML=html;
+  }).catch(function(){ R.innerHTML='<div class="hint">Error de conexión.</div><button class="btn-nuevo" onclick="nuevoManual()">+ Cliente nuevo (cargar a mano)</button>'; });
+}
+
+function pick(i){
+  var r=window['_res'+i];
+  selCliente={ petName:r.petName||'', owner:r.owner||'', cedula:r.documento||document.getElementById('qCedula').value.trim(),
+               phone:r.phone||'', vetesoftId:r.id?String(r.id):'', vetesoftHc:r.registro||'' };
+  document.getElementById('results').innerHTML='';
+  abrirForm(false);
+}
+function nuevoManual(){
+  selCliente=null;
+  document.getElementById('results').innerHTML='';
+  abrirForm(true);
+}
+
+// ── Formulario de la cita ──
+function abrirForm(manual){
+  var hh=selCliente?('✅ '+esc(selCliente.petName||'')+' — '+esc(selCliente.owner||'')+(selCliente.vetesoftHc?' · HC '+esc(selCliente.vetesoftHc):'')):'';
+  var cab = manual
+    ? '<div class="row"><div><label>Mascota</label><input id="fPet"></div><div><label>Dueño</label><input id="fOwner"></div>'+
+      '<div><label>Cédula <span style="font-weight:400">(opcional)</span></label><input id="fCed" inputmode="numeric"></div>'+
+      '<div><label>WhatsApp <span style="font-weight:400">(para recordatorios)</span></label><input id="fTel" inputmode="numeric" placeholder="3001234567"></div></div>'
+    : '<div class="sel">'+hh+'<button onclick="reset()">Cambiar</button></div>'+
+      '<div style="margin-top:10px"><label>WhatsApp <span style="font-weight:400">(para recordatorios)</span></label><input id="fTel" inputmode="numeric" placeholder="3001234567" value="'+esc(selCliente.phone||'')+'"></div>';
+  document.getElementById('formArea').innerHTML=
+    cab+
+    '<div class="row">'+
+      '<div><label>Médico</label><select id="fMedico">'+medicoOptions()+'</select></div>'+
+      '<div><label>Servicio</label><select id="fServicio">'+servicioOptions()+'</select></div>'+
+      '<div><label>Fecha</label><input type="date" id="fFecha" value="'+hoyISO()+'"></div>'+
+      '<div><label>Hora</label><select id="fHora">'+horaOptions()+'</select></div>'+
+    '</div>'+
+    '<div style="margin-top:12px"><label>Notas <span style="font-weight:400">(opcional)</span></label><textarea id="fNotas" rows="2" placeholder="Motivo, indicaciones…"></textarea></div>'+
+    '<button class="btn btn-block" style="margin-top:14px" onclick="guardar()">Agendar cita →</button>'+
+    '<div class="err" id="fErr"></div>';
+}
+function reset(){ selCliente=null; document.getElementById('formArea').innerHTML=''; }
+
+function guardar(){
+  var medico=document.getElementById('fMedico').value;
+  var err=document.getElementById('fErr');
+  if(!medico){ err.textContent='Elegí el médico.'; return; }
+  var data={
+    fecha:document.getElementById('fFecha').value,
+    hora:document.getElementById('fHora').value,
+    medico:medico,
+    servicio:document.getElementById('fServicio').value,
+    notas:document.getElementById('fNotas').value.trim(),
+    phone:(document.getElementById('fTel')||{}).value||''
+  };
+  if(selCliente){
+    data.petName=selCliente.petName; data.owner=selCliente.owner; data.cedula=selCliente.cedula;
+    data.vetesoftId=selCliente.vetesoftId; data.vetesoftHc=selCliente.vetesoftHc;
+  } else {
+    data.petName=(document.getElementById('fPet')||{}).value||'';
+    data.owner=(document.getElementById('fOwner')||{}).value||'';
+    data.cedula=(document.getElementById('fCed')||{}).value||'';
+  }
+  if(!data.petName&&!data.owner){ err.textContent='Falta el paciente.'; return; }
+  err.textContent='';
+  document.getElementById('formArea').innerHTML='<div class="spinner"></div>';
+  fetch(API_URL,{method:'POST',body:JSON.stringify({action:'crearCita',data:data})})
+    .then(function(r){return r.json();}).then(function(res){
+      if(res&&res.ok){
+        document.getElementById('formArea').innerHTML=
+          '<div class="confirm"><div class="em">📅</div><b>¡Cita agendada!</b><br>'+
+          esc(data.petName||data.owner)+' con '+esc(data.medico)+'<br>'+esc(data.fecha)+' a las '+esc(data.hora)+'</div>'+
+          '<button class="btn-ghost btn btn-block" onclick="nuevaBusqueda()">Agendar otra</button>';
+        document.getElementById('qCedula').value='';document.getElementById('qPet').value='';document.getElementById('qOwner').value='';
+      } else {
+        abrirForm(!selCliente);
+        document.getElementById('fErr').textContent=(res&&res.error)||'No se pudo agendar.';
+      }
+    }).catch(function(){ abrirForm(!selCliente); document.getElementById('fErr').textContent='Error de conexión.'; });
+}
+function nuevaBusqueda(){ selCliente=null; document.getElementById('results').innerHTML=''; document.getElementById('formArea').innerHTML=''; }
+
+// ── Ver agenda ──
+function hoyAgenda(){ document.getElementById('verFecha').value=hoyISO(); cargarAgenda(); }
+function cargarAgenda(){
+  var f=document.getElementById('verFecha').value||hoyISO();
+  var m=document.getElementById('verMedico').value||'';
+  var L=document.getElementById('agendaList'); L.innerHTML='<div class="spinner"></div>';
+  fetch(API_URL+'?action=citas&fecha='+encodeURIComponent(f)+'&medico='+encodeURIComponent(m))
+    .then(function(r){return r.json();}).then(function(res){
+      var citas=(res&&res.citas)||[];
+      if(!citas.length){ L.innerHTML='<div class="empty">Sin citas para ese día.</div>'; return; }
+      var html='';
+      if(!m){
+        // agrupar por médico
+        var porMed={},orden=[];
+        citas.forEach(function(c){var k=c.medico||'—';if(!porMed[k]){porMed[k]=[];orden.push(k);}porMed[k].push(c);});
+        orden.sort();
+        orden.forEach(function(k){ html+='<div class="grp">🩺 '+esc(k)+'</div>'+porMed[k].map(citaHtml).join(''); });
+      } else {
+        html=citas.map(citaHtml).join('');
+      }
+      L.innerHTML=html;
+    }).catch(function(){ L.innerHTML='<div class="empty">Error de conexión.</div>'; });
+}
+function citaHtml(c){
+  return '<div class="cita"><div class="cita-h">'+esc(c.hora||'')+'</div>'+
+    '<div class="cita-i"><div class="cita-n">'+esc(c.petName||'')+(c.owner?' <span style="font-weight:400;color:#6b5c7e">· '+esc(c.owner)+'</span>':'')+
+      (c.vetesoftHc?' <span style="font-size:.72rem;background:#8e3f9e22;color:#6d2f7a;border-radius:6px;padding:1px 6px;font-weight:700">HC '+esc(c.vetesoftHc)+'</span>':'')+'</div>'+
+    '<div class="cita-m">'+esc(c.servicio||'')+(c.phone?' · 📞 '+esc(c.phone):'')+(c.notas?' · '+esc(c.notas):'')+'</div></div>'+
+    '<button class="cita-x" onclick="cancelar(\''+esc(c.id)+'\',this)">Cancelar</button></div>';
+}
+function cancelar(id,btn){
+  if(!confirm('¿Cancelar esta cita?')) return;
+  btn.textContent='…';
+  fetch(API_URL,{method:'POST',body:JSON.stringify({action:'cancelarCita',id:id})})
+    .then(function(r){return r.json();}).then(function(res){ cargarAgenda(); })
+    .catch(function(){ cargarAgenda(); });
+}
+
+// ── Arranque ──
+document.getElementById('verFecha').value=hoyISO();
+cargarMedicos();
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}
+</script>
+</body>
+</html>
