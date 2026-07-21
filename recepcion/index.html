@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Recepción — Animal Center</title>
+<!-- Ícono para "agregar a pantalla de inicio": fondo morado para distinguirse
+     del resto de las apps. iOS necesita PNG; el SVG queda como favicon nítido. -->
+<link rel="icon" type="image/svg+xml" href="/img/icono-app.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="/img/icono-morado-192.png">
+<link rel="apple-touch-icon" href="/img/icono-app-morado.png">
+<link rel="manifest" href="/manifest-recepcion.json">
+<meta name="theme-color" content="#8e3f9e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Recepción">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -168,6 +178,28 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .toast.show{opacity:1}
 .hdr-acts{display:flex;gap:8px;align-items:center}
 .btn-turno-cfg{background:var(--pl);color:var(--pd);border:1.5px solid var(--bd);border-radius:10px;padding:9px 14px;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap}
+
+/* ── Móvil: recepción se usa mucho desde el celular ── */
+@media(max-width:560px){
+  .hdr{height:auto;min-height:58px;flex-wrap:wrap;padding:8px 12px;gap:8px}
+  .hdr-acts{margin-left:auto}
+  .btn-turno-cfg,.btn-ref{padding:7px 10px;font-size:.74rem}
+  .wrap{padding:14px 12px 60px}
+  .card{padding:14px}
+  /* Pestañas: que se puedan deslizar en vez de cortarse. */
+  .wr-tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  .wr-tab{padding:8px 9px;font-size:.78rem;white-space:nowrap;flex-shrink:0}
+  .wr-tab-der{margin-left:6px}
+  /* Tarjetas de sala: apiladas, con las acciones abajo a lo ancho. */
+  .wr-item{flex-wrap:wrap}
+  .wr-turno{min-width:46px}
+  .wr-right{width:100%;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;text-align:left;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)}
+  .wr-acts{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px}
+}
+/* En pantallas muy angostas, la búsqueda en una sola columna. */
+@media(max-width:480px){
+  .search-row{grid-template-columns:1fr}
+}
 .btn-turno-cfg:hover{background:#ede4ff}
 .modal-bg{position:fixed;inset:0;background:rgba(26,10,46,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:18px}
 .modal{background:var(--wh);border-radius:18px;width:100%;max-width:440px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25)}
