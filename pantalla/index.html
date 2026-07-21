@@ -331,6 +331,14 @@ function chequearVersion(){
 }
 setInterval(chequearVersion, 2000);   // casi en vivo
 setInterval(cargar, 30000);           // red de seguridad por si se pierde un cambio
+// La pantalla del TV queda abierta todo el día y nunca se reabre, así que sola
+// no toma los cambios de código. Cada hora se recarga para traer la versión
+// nueva (el service worker la baja fresca). No recarga si justo está sonando un
+// llamado, para no cortarlo.
+setInterval(function(){
+  try { if ('speechSynthesis' in window && speechSynthesis.speaking) return; } catch (e) {}
+  location.reload();
+}, 3600000);
 // Al volver al frente (el navegador congela los temporizadores en segundo
 // plano, y el equipo pudo dormirse) recuperamos de inmediato lo perdido.
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) { chequearVersion(); cargar(); } });

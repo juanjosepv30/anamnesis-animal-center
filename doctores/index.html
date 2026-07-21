@@ -421,7 +421,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     </div>
   </div>
   <div class="hdr-right">
-    <span class="badge-pending" id="pendingCount"></span>
     <!-- El nombre del médico que está viendo la página. Verde = está
          recibiendo notificaciones. Clic para cambiar de médico. -->
     <button class="medico-chip" id="medicoChip" onclick="abrirIdentidad()">
@@ -1693,18 +1692,9 @@ function copyRecord(rowIdx) {
   });
 }
 
-function updateCounts() {
-  const today = new Date();
-  const pending = allRecords.filter(r => r.estadoTurno !== 'atendido' && r.estadoTurno !== 'ausente' && isSameDay(r.timestamp, today)).length;
-  const el = document.getElementById('pendingCount');
-  if (pending > 0) {
-    el.textContent = '📋 ' + pending;
-    el.title = pending + ' anamnesis pendiente' + (pending === 1 ? '' : 's') + ' hoy';
-    el.classList.add('show');
-  } else {
-    el.classList.remove('show');
-  }
-}
+// (Se quitó el contador "📋 N anamnesis pendientes" del encabezado: ya no hace
+// falta, cada turno tiene su anamnesis a un toque en la tarjeta.)
+function updateCounts() {}
 
 function showToast(msg) {
   const t = document.getElementById('toast');

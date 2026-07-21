@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tu opinión — Animal Center</title>
+<link rel="icon" type="image/png" sizes="192x192" href="/img/icono-morado-192.png">
+<link rel="apple-touch-icon" href="/img/icono-app-morado.png">
+<meta name="theme-color" content="#8e3f9e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://script.google.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--p:#8e3f9e;--pd:#6d2f7a;--pl:#f3e7f7;--tx:#3a2140;--tm:#7d6d86;--bd:#e8daf0;--wh:#fff;--bg:#faf5fc}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.box{background:var(--wh);border-radius:22px;padding:30px 24px;max-width:440px;width:100%;box-shadow:0 12px 44px rgba(58,33,64,.14);text-align:center}
+.logo{width:64px;height:64px;border-radius:16px;margin:0 auto 14px;display:block}
+h1{font-size:1.35rem;color:var(--pd);margin-bottom:6px}
+.sub{font-size:.92rem;color:var(--tm);line-height:1.5;margin-bottom:22px}
+.stars{display:flex;justify-content:center;gap:6px;margin-bottom:8px}
+.star{font-size:2.6rem;cursor:pointer;color:#e2d3ec;transition:transform .1s,color .1s;line-height:1;-webkit-tap-highlight-color:transparent}
+.star.on{color:#f5b301}
+.star:active{transform:scale(.85)}
+.star-lbl{height:20px;font-size:.85rem;font-weight:700;color:var(--p);margin-bottom:18px}
+label{display:block;text-align:left;font-size:.82rem;font-weight:700;color:var(--tm);margin-bottom:6px}
+textarea{width:100%;border:1.5px solid var(--bd);border-radius:12px;padding:12px;font-size:.95rem;font-family:inherit;resize:vertical;min-height:88px;outline:none;background:var(--bg)}
+textarea:focus{border-color:var(--p);background:var(--wh)}
+.send{width:100%;background:var(--p);color:#fff;border:none;border-radius:16px;padding:16px;font-size:1.05rem;font-weight:800;font-family:inherit;cursor:pointer;margin-top:16px}
+.send:disabled{opacity:.5;cursor:default}
+.send:active:not(:disabled){transform:scale(.99)}
+.msg{font-size:1rem;line-height:1.5;color:var(--tx)}
+.msg .em{font-size:3rem;margin-bottom:10px}
+.err{color:#c0392b;font-size:.85rem;margin-top:10px;min-height:18px}
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <img src="/img/icono-app-morado.png" alt="Animal Center" class="logo" onerror="this.style.display='none'">
+  <h1>¿Cómo te fue?</h1>
+  <div class="sub">Tu opinión nos ayuda a cuidar mejor a las mascotas de Animal Center. ¡Solo te toma un momento!</div>
+  <div class="stars" id="stars">
+    <span class="star" data-v="1">★</span>
+    <span class="star" data-v="2">★</span>
+    <span class="star" data-v="3">★</span>
+    <span class="star" data-v="4">★</span>
+    <span class="star" data-v="5">★</span>
+  </div>
+  <div class="star-lbl" id="starLbl"></div>
+  <label for="com">¿Algo que quieras contarnos? <span style="font-weight:400">(opcional)</span></label>
+  <textarea id="com" placeholder="Cómo te atendieron, cómo sigue tu mascota, lo que quieras…"></textarea>
+  <button class="send" id="send" onclick="enviar()" disabled>Enviar mi opinión</button>
+  <div class="err" id="err"></div>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
+const LBL = ['','Muy mal 😟','Regular 😕','Bien 🙂','Muy bien 😃','¡Excelente! 🤩'];
+let sel = 0;
+const idVisita = (function(){ try { return new URLSearchParams(location.search).get('id') || ''; } catch(e){ return ''; } })();
+
+const stars = document.querySelectorAll('.star');
+stars.forEach(function(s){
+  s.addEventListener('click', function(){
+    sel = parseInt(s.getAttribute('data-v'), 10);
+    pintar();
+  });
+});
+function pintar(){
+  stars.forEach(function(s){
+    s.classList.toggle('on', parseInt(s.getAttribute('data-v'),10) <= sel);
+  });
+  document.getElementById('starLbl').textContent = LBL[sel] || '';
+  document.getElementById('send').disabled = sel < 1;
+}
+
+function enviar(){
+  if (sel < 1) return;
+  var btn = document.getElementById('send');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  document.getElementById('err').textContent = '';
+  var payload = {
+    action: 'guardarResena',
+    id: idVisita,
+    estrellas: sel,
+    comentario: document.getElementById('com').value.trim()
+  };
+  fetch(API_URL, { method:'POST', body: JSON.stringify(payload) })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (res && res.ok) {
+        document.getElementById('box').innerHTML =
+          '<div class="msg"><div class="em">💜</div>' +
+          '<b>¡Gracias por tu opinión!</b><br>La tendremos muy en cuenta para seguir cuidando a tu mascota.</div>';
+      } else {
+        btn.disabled = false; btn.textContent = 'Enviar mi opinión';
+        document.getElementById('err').textContent = (res && res.error) || 'No se pudo enviar. Probá de nuevo.';
+      }
+    })
+    .catch(function(){
+      btn.disabled = false; btn.textContent = 'Enviar mi opinión';
+      document.getElementById('err').textContent = 'Error de conexión. Probá de nuevo.';
+    });
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
