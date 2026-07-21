@@ -321,6 +321,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .mc-hint{font-size:.76rem;font-weight:600;color:#b45309;margin-top:3px;line-height:1.35}
 .mc-btn{margin-left:auto;flex-shrink:0;align-self:center;border:none;background:#16a34a;color:#fff;font-weight:900;font-family:'DM Sans',sans-serif;font-size:.9rem;border-radius:10px;padding:11px 15px;cursor:pointer}
 .mc-btn:active{transform:scale(.97)}
+.mc-btn-fin{margin-left:8px;padding:8px 13px;font-size:.82rem}
 /* Congelado: recepción vio que hay una cita antes que este paciente. */
 .mini-frio{background:#fef3c7;color:#92400e;margin-left:4px}
 .q-frio{opacity:.6}
@@ -997,6 +998,9 @@ function renderSala() {
       return '<div class="mi-consulta" onclick="goToAnamnesis('+r.rowIndex+')">'+
         '<div class="mc-l">🩺 <b>En consulta</b> · '+turno+'</div>'+
         '<div class="mc-min" data-inicio="'+esc(ini)+'">'+fmtConsulta(ini)+'</div>'+
+        // Botón para cerrar SIEMPRE visible: el turno no depende de que el
+        // médico llame al siguiente para pasar a 'atendido'.
+        '<button class="mc-btn mc-btn-fin" onclick="event.stopPropagation();markAtendido('+r.rowIndex+')">✓ Finalizar</button>'+
       '</div>';
     }).join('');
   }
@@ -1537,14 +1541,13 @@ function buildCard(r) {
     <div class="rec-info">
       <div class="rec-top">
         <span class="rec-service" style="background:${color}22;color:${color}">${esc(svcShort)}</span>
-        <span class="rec-time${claseEspera(r.timestamp)}">${fmtEspera(r.timestamp)}</span>
+        ${!reviewed ? '<span class="rec-time'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</span>' : ''}
       </div>
       <div class="rec-name">
         ${r.turno ? '<span class="turno-badge" style="background:'+color+'">'+esc(r.turno)+'</span>' : ''}
         ${em} ${esc(nombreConMascotas(r))}
         ${r.breed ? '<span class="rec-breed">· '+esc(r.breed)+'</span>' : ''}
         ${r.vetesoftHc ? '<span class="hc-badge">HC '+esc(r.vetesoftHc)+'</span>' : ''}
-        ${reviewed ? '<span class="rv-badge">✓ Revisado</span>' : ''}
       </div>
       <div class="rec-meta">
         <span>👤 ${esc(r.ownerName||'—')}</span>
