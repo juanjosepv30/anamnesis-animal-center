@@ -1324,5 +1324,15 @@ function showToast(msg){
 
 iniciar();
 </script>
+<script>
+// Registra el service worker (sw.js): NO cachea nada, fuerza traer la página
+// fresca de la red en cada apertura. Así el celular se actualiza solo con cada
+// cambio, sin depender de que el usuario borre la caché.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  });
+}
+</script>
 </body>
 </html>

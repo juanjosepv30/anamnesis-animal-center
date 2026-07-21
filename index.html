@@ -1034,5 +1034,12 @@ function escAttr(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').repl
 // llegó y las preguntas de recepción están saltadas.
 cargarFicha();
 </script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  });
+}
+</script>
 </body>
 </html>
