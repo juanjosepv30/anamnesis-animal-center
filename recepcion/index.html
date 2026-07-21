@@ -401,6 +401,24 @@ function buildMedGenOptions() {
     docs.map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
 }
 
+// Todos los médicos de la clínica (especialistas + los de turno + Dra. Diana
+// Arias), sin repetir. Para servicios como Rayos X donde normalmente atiende
+// uno pero a veces lo cubre otro.
+function todosLosMedicos() {
+  var set = {};
+  SPECIALTIES.forEach(function(s){ if (s.doctor) set[s.doctor] = true; });
+  (_turnosActuales || []).forEach(function(n){ if (n) set[n] = true; });
+  set['Dra. Diana Arias'] = true;
+  return Object.keys(set).sort();
+}
+// Selector de médico para Rayos X: todos, con la Dra. Angie por defecto.
+function buildRayosDocOptions() {
+  var def = 'Dra. Angie Valero';
+  return todosLosMedicos().map(function(n){
+    return '<option value="'+esc(n)+'"'+(n===def?' selected':'')+'>'+esc(n)+'</option>';
+  }).join('');
+}
+
 // ── El servicio manda ────────────────────────────────────────
 // Una sola tabla decide, por servicio, si recepción elige doctor y si hay
 // agenda. Es la regla del dueño hecha config: agregar o cambiar un servicio
@@ -416,7 +434,7 @@ var SERVICIOS = [
   { v:'Vacunación',             doctor:'ninguno', agenda:false, desc:'Solo vacunas' },
   { v:'Inyectología',           doctor:'ninguno', agenda:false, desc:'Aplicar inyección' },
   { v:'Viajero',                doctor:'auto', fijo:'Dr. Freddy Vera',   agenda:false, label:'Viajero / certificado', desc:'Certificado de viaje · Dr. Freddy' },
-  { v:'Rayos X y Ecografía',    doctor:'auto', fijo:'Dra. Angie Valero', agenda:false, desc:'Imágenes · Dra. Angie' }
+  { v:'Rayos X y Ecografía',    doctor:'eligeDoc', fijo:'Dra. Angie Valero', agenda:false, desc:'Imágenes · normalmente Dra. Angie' }
 ];
 
 function servicioCfg(v) {
@@ -497,7 +515,7 @@ function pintarServicio() {
   // Sin servicio elegido no se muestra nada más ni se puede registrar: hay
   // que elegir primero. Esconde doctor y agenda, y apaga el botón.
   if (!svc) {
-    ['boxSpec','boxAutoDoc','boxMedGen','boxTieneCita','boxHora','boxEsperar'].forEach(function(id){
+    ['boxSpec','boxAutoDoc','boxMedGen','boxRayosDoc','boxTieneCita','boxHora','boxEsperar'].forEach(function(id){
       document.getElementById(id).style.display = 'none';
     });
     document.getElementById('regSpec').value = '';
@@ -517,6 +535,10 @@ function pintarServicio() {
   if (cfg.doctor === 'auto') {
     document.getElementById('autoDocName').textContent = cfg.fijo;
   }
+  // 'eligeDoc' (Rayos X): selector de médico, con la Dra. Angie por defecto.
+  var boxRD = document.getElementById('boxRayosDoc');
+  boxRD.style.display = cfg.doctor === 'eligeDoc' ? '' : 'none';
+  if (cfg.doctor === 'eligeDoc') document.getElementById('regRayosDoc').innerHTML = buildRayosDocOptions();
   if (cfg.doctor !== 'elige') document.getElementById('regSpec').value = '';
 
   // ── Médico general pedido (solo consultas/controles generales) ──
@@ -830,6 +852,8 @@ function abrirRegistro(r, esNuevo) {
         '<div id="boxAutoDoc" style="display:none"><label>Doctor asignado</label><div class="reg-auto">👨‍⚕️ <span id="autoDocName"></span></div></div>'+
         // Consulta general: el cliente puede pedir un general específico (opcional).
         '<div id="boxMedGen" style="display:none"><label>Médico general <span class="lbl-tip">(opcional — si lo pidió)</span></label><select id="regMedGen">'+buildMedGenOptions()+'</select></div>'+
+        // Rayos X: normalmente la Dra. Angie, pero si no está lo cubre otro.
+        '<div id="boxRayosDoc" style="display:none"><label>Médico que lo hace <span class="lbl-tip">(si la Dra. Angie no está, elige otro)</span></label><select id="regRayosDoc">'+buildRayosDocOptions()+'</select></div>'+
         // Con teléfono, al cliente le llega el link y llena la ficha desde su
         // celular. Vacío, recepción se la llena a mano. Señores de 78,
         // celulares sin datos, gente que no quiere — ese camino no se toca.
@@ -929,10 +953,13 @@ function doRegister() {
       // Si va vacío, el backend no manda nada y el paciente entra directo
       // a la fila, como toda la vida.
       phone: document.getElementById('regTel').value.trim(),
-      // Médico general pedido por el cliente (opcional). Solo cuando el
-      // selector está visible (consulta/control general).
+      // Médico asignado al turno (opcional): general pedido por el cliente, o
+      // el médico que hace los Rayos X (normalmente la Dra. Angie). Va según
+      // cuál selector esté visible.
       medicoPref: document.getElementById('boxMedGen').style.display !== 'none'
-        ? document.getElementById('regMedGen').value : '',
+        ? document.getElementById('regMedGen').value
+        : (document.getElementById('boxRayosDoc').style.display !== 'none'
+            ? document.getElementById('regRayosDoc').value : ''),
       // #10 — Otras mascotas del mismo turno (opcional).
       petsExtra: (document.getElementById('regPetsExtra')||{}).value ?
         document.getElementById('regPetsExtra').value.trim() : ''

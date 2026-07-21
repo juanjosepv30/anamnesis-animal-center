@@ -1345,13 +1345,15 @@ function renderAll() {
     // turno y su anamnesis nunca se desconectan: si el turno está 'atendido',
     // su anamnesis está en Atendidas; si no, sigue pendiente de leer.
     const atendido = r.estadoTurno === 'atendido';
+    // Cada médico ve SOLO lo suyo (lo que él atiende / atendió). El perfil
+    // "ver todo" (sin identificarse, miMedico vacío) ve el de todos.
+    const mio = !miMedico || r.calledBy === miMedico;
     if (activeView === 'atendiendo') {
-      // Los que están EN CONSULTA ahora. Sirve al médico para cerrar el suyo y
-      // al administrador para ver quién atiende, a quién y dónde.
-      return r.estadoTurno === 'atendiendo' && isSameDay(r.timestamp, today);
+      // Los que están EN CONSULTA ahora — solo los míos (o todos en ver-todo).
+      return r.estadoTurno === 'atendiendo' && mio && isSameDay(r.timestamp, today);
     } else {
       // Atendidas: por defecto SOLO las de hoy. Otros días con el selector.
-      if (!atendido) return false;
+      if (!atendido || !mio) return false;
       if (dfVal) {
         const parts = dfVal.split('-');
         const chosen = new Date(parts[0], parts[1]-1, parts[2]);
@@ -1559,8 +1561,8 @@ function buildCard(r) {
       </div>
       <div class="rec-meta">
         <span>👤 ${esc(r.ownerName||'—')}</span>
-        ${r.consultorio ? '<span>· 🚪 '+esc(r.consultorio)+'</span>' : ''}
-        ${enConsulta && r.calledBy ? '<span>· 🩺 '+esc(r.calledBy)+'</span>' : ''}
+        ${!reviewed && r.consultorio ? '<span>· 🚪 '+esc(r.consultorio)+'</span>' : ''}
+        ${(reviewed || enConsulta) && r.calledBy ? '<span>· 🩺 '+esc(r.calledBy)+'</span>' : ''}
         ${enConsulta ? '<span class="ta-t" data-inicio="'+esc(r.calledAt||r.timestamp)+'">🕐 '+fmtConsulta(r.calledAt||r.timestamp)+'</span>' : ''}
         ${reviewed ? tiemposAtendida(r) : ''}
       </div>

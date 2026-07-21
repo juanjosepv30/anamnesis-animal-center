@@ -185,7 +185,26 @@ function render(){
     kpisHtml(enV) +
     crecimientoHtml(enV) +
     esperasHtml(enV) +
+    tiemposHtml(enV) +
     ausentesHtml(enV);
+}
+
+// ── Cuánto dura la consulta (del llamado al cierre) por servicio ──
+function tiemposHtml(rows){
+  var conAten=rows.filter(function(x){return x.aten!=null;});
+  if(!conAten.length) return '';
+  var porSvc={};
+  conAten.forEach(function(x){ var s=x.svc||'—'; if(!porSvc[s])porSvc[s]={n:0,s:0}; porSvc[s].n++; porSvc[s].s+=x.aten; });
+  var svcs=Object.keys(porSvc).sort(function(a,b){ return (porSvc[b].s/porSvc[b].n)-(porSvc[a].s/porSvc[a].n); });
+  var maxP=1; svcs.forEach(function(s){ var p=porSvc[s].s/porSvc[s].n; if(p>maxP)maxP=p; });
+  var hb='';
+  svcs.forEach(function(s){
+    var p=Math.round(porSvc[s].s/porSvc[s].n), w=Math.round(p/maxP*100);
+    hb+='<div style="margin-bottom:11px"><div style="display:flex;justify-content:space-between;font-size:.86rem;margin-bottom:3px"><span>'+esc(s)+'</span><span><b>'+p+" min</b> <span style='color:#b8a8c2'>("+porSvc[s].n+")</span></span></div>"+
+        '<div style="height:8px;background:#f0e8f5;border-radius:5px;overflow:hidden"><div style="height:8px;width:'+w+'%;background:#8e3f9e;border-radius:5px"></div></div></div>';
+  });
+  return '<div class="card"><div class="card-t">🩺 Cuánto dura la consulta</div>'+
+    '<div style="font-size:.8rem;color:#7d6d86;margin:2px 0 12px">Promedio de atención (del llamado al cierre) por servicio.</div>'+hb+'</div>';
 }
 
 // ── KPIs ─────────────────────────────────────────────────────
@@ -193,11 +212,14 @@ function kpisHtml(rows){
   var total=rows.length;
   var conEspera=rows.filter(function(x){return x.wait!=null;});
   var prom = conEspera.length ? Math.round(conEspera.reduce(function(a,x){return a+x.wait;},0)/conEspera.length) : null;
+  var conAten=rows.filter(function(x){return x.aten!=null;});
+  var promAt = conAten.length ? Math.round(conAten.reduce(function(a,x){return a+x.aten;},0)/conAten.length) : null;
   var aus = rows.filter(function(x){return x.est==='ausente';}).length;
   var tasaAus = total ? Math.round(aus/total*100) : 0;
   return '<div class="card"><div class="kpis">'+
     kpi(total, 'pacientes')+
     kpi(prom==null?'—':prom+"'", 'espera promedio')+
+    kpi(promAt==null?'—':promAt+"'", 'consulta promedio')+
     kpi(tasaAus+'%', 'se fueron (ausentes)')+
   '</div></div>';
 }
@@ -321,35 +343,30 @@ function cargarResenas(){
   var el = document.getElementById('resenas');
   fetch(API_URL+'?action=resenas').then(function(r){return r.json();}).then(function(res){
     if(!res||!res.ok){ el.innerHTML=''; return; }
-    var rs = res.resenas||[];
-    if(!rs.length){
+    if(!res.total){
       el.innerHTML='<div class="card"><div class="card-t">⭐ Reseñas de clientes</div><div class="empty">Todavía no hay reseñas. Aparecen cuando los clientes califican su visita.</div></div>';
       return;
     }
-    var suma = rs.reduce(function(a,x){return a+(x.estrellas||0);},0);
-    var prom = suma/rs.length;
-    var porMed = {};
-    rs.forEach(function(x){ var m=(x.medico||'—'); if(!porMed[m])porMed[m]={n:0,s:0}; porMed[m].n++; porMed[m].s+=x.estrellas||0; });
-    var meds = Object.keys(porMed).sort(function(a,b){return (porMed[b].s/porMed[b].n)-(porMed[a].s/porMed[a].n);});
+    var prom = res.promedio || 0;
     var html = '<div class="card"><div class="card-t">⭐ Reseñas de clientes</div>'+
       '<div style="display:flex;align-items:center;gap:16px;margin:10px 0 16px">'+
         '<div style="font-size:2.6rem;font-weight:800;color:#8e3f9e;line-height:1">'+prom.toFixed(1)+'</div>'+
         '<div><div>'+estrellasHtml(prom,'1.4rem')+'</div>'+
-        '<div style="font-size:.82rem;color:#7d6d86;margin-top:2px">'+rs.length+' reseña'+(rs.length===1?'':'s')+'</div></div>'+
+        '<div style="font-size:.82rem;color:#7d6d86;margin-top:2px">'+res.total+' reseña'+(res.total===1?'':'s')+'</div></div>'+
       '</div>';
+    var meds = res.porMedico || [];
     if(meds.length){
       html += '<div style="font-weight:700;font-size:.85rem;margin-bottom:4px">Por médico</div>';
       meds.forEach(function(m){
-        var p=porMed[m].s/porMed[m].n;
         html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0e8f5;font-size:.88rem">'+
-          '<span>'+esc(m||'—')+'</span>'+
-          '<span style="white-space:nowrap">'+estrellasHtml(p)+' <b>'+p.toFixed(1)+'</b> <span style="color:#b8a8c2">('+porMed[m].n+')</span></span></div>';
+          '<span>'+esc(m.medico||'—')+'</span>'+
+          '<span style="white-space:nowrap">'+estrellasHtml(m.prom)+' <b>'+m.prom.toFixed(1)+'</b> <span style="color:#b8a8c2">('+m.n+')</span></span></div>';
       });
     }
-    var conCom = rs.filter(function(x){return (x.comentario||'').trim();}).reverse();
-    if(conCom.length){
-      html += '<div style="font-weight:700;font-size:.85rem;margin:16px 0 6px">Comentarios</div>';
-      conCom.slice(0,60).forEach(function(x){
+    var coms = res.comentarios || [];
+    if(coms.length){
+      html += '<div style="font-weight:700;font-size:.85rem;margin:16px 0 6px">Comentarios <span style="color:#b8a8c2;font-weight:400">(últimos '+coms.length+')</span></div>';
+      coms.forEach(function(x){
         html += '<div style="background:#faf5fc;border-radius:10px;padding:10px 12px;margin-bottom:8px">'+
           '<div style="font-size:.85rem">'+estrellasHtml(x.estrellas)+' <span style="color:#7d6d86;font-size:.78rem">'+esc(x.medico||'')+(x.turno?' · '+esc(x.turno):'')+'</span></div>'+
           '<div style="margin-top:3px;font-size:.9rem;line-height:1.4">'+esc(x.comentario)+'</div></div>';
