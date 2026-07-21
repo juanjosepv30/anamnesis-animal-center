@@ -1761,6 +1761,10 @@ function marcarActividad(){ ultActividad = Date.now(); if (pausado) reanudar(); 
 });
 function pausar(){
   if (pausado) return;
+  // En el celular no hace falta la pausa por inactividad: el médico abre la
+  // página cuando la necesita y la cierra, no la deja abierta gastando como el
+  // computador del consultorio. En pantallas chicas el pop-up solo estorba.
+  if (window.matchMedia('(max-width: 560px)').matches) return;
   pausado = true;
   document.getElementById('pausaOverlay').style.display = 'flex';
 }
