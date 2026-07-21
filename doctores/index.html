@@ -556,11 +556,9 @@ const CONS_POR_ESP = {
   'medicina felina':'Meaw Meaw', 'gastroenterologia':'Gastro',
   'terapia fisica':'Terapia física',
   'endocrinologia':'Endocrino', 'neonatologia':'Endocrino',
-  // El de imágenes: cubre los dos caminos: el servicio propio "Rayos X y
-  // Ecografía" (más abajo, por service) Y la misma especialidad dentro de una
-  // consulta/control especializado. Se deja 'imagenologia' por compatibilidad
-  // con registros viejos que aún tengan ese nombre.
-  'rayos x y ecografia':'Rayos X', 'imagenologia':'Rayos X'
+  // Rayos X y Ecografía: cubre los dos caminos, el servicio propio (más abajo,
+  // por service) y la misma especialidad dentro de una consulta especializada.
+  'rayos x y ecografia':'Rayos X'
 };
 function consultorioPreferido(r) {
   var esp = normEsp(r.specialty || '');
