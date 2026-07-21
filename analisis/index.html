@@ -184,9 +184,69 @@ function render(){
   cont.innerHTML =
     kpisHtml(enV) +
     crecimientoHtml(enV) +
+    rendimientoHtml(enV) +
     esperasHtml(enV) +
     tiemposHtml(enV) +
     ausentesHtml(enV);
+}
+
+// ── Comparativo por médico (rendimiento) ─────────────────────
+// Barras que comparan a los médicos entre sí: cuántos atienden, cuánto dura su
+// consulta, y qué servicios hace cada uno. Con esto se ve quién carga más, quién
+// es más rápido, y quién cubre qué.
+function medPalette(i){ return ['#8e3f9e','#2563eb','#16a34a','#f97316','#be123c','#0891b2','#eab308','#7c3aed'][i%8]; }
+function barra(nombre, valor, max, unidad, color){
+  var w = max>0 ? Math.round(valor/max*100) : 0;
+  return '<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:3px">'+
+    '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62%">'+esc(nombre)+'</span>'+
+    '<b>'+valor+(unidad||'')+'</b></div>'+
+    '<div style="height:9px;background:#f0e8f5;border-radius:5px;overflow:hidden"><div style="height:9px;width:'+Math.max(w,2)+'%;background:'+color+';border-radius:5px"></div></div></div>';
+}
+function rendimientoHtml(rows){
+  var med={};
+  rows.forEach(function(x){
+    if (x.est!=='atendido' || !x.med) return;
+    var m=x.med;
+    if(!med[m]) med[m]={n:0,atenN:0,atenS:0,waitN:0,waitS:0,svc:{}};
+    med[m].n++;
+    if(x.aten!=null){med[m].atenN++; med[m].atenS+=x.aten;}
+    if(x.wait!=null){med[m].waitN++; med[m].waitS+=x.wait;}
+    var s=x.svc||'—'; med[m].svc[s]=(med[m].svc[s]||0)+1;
+  });
+  var docs=Object.keys(med);
+  if(!docs.length) return '';
+
+  // 1) Pacientes atendidos por médico (quién carga más)
+  var porN=docs.slice().sort(function(a,b){return med[b].n-med[a].n;});
+  var maxN=med[porN[0]].n;
+  var h1='';
+  porN.forEach(function(m,i){ h1+=barra(m, med[m].n, maxN, '', medPalette(i)); });
+
+  // 2) Duración promedio de consulta por médico (quién es más rápido/lento)
+  var conDur=docs.filter(function(m){return med[m].atenN>0;});
+  var h2='';
+  if(conDur.length){
+    var promD={}; conDur.forEach(function(m){ promD[m]=Math.round(med[m].atenS/med[m].atenN); });
+    var porD=conDur.slice().sort(function(a,b){return promD[b]-promD[a];});
+    var maxD=promD[porD[0]];
+    porD.forEach(function(m,i){ h2+=barra(m, promD[m], maxD, ' min', medPalette(i)); });
+  }
+
+  // 3) Qué servicios hace cada médico
+  var h3='';
+  porN.forEach(function(m){
+    var svcs=Object.keys(med[m].svc).sort(function(a,b){return med[m].svc[b]-med[m].svc[a];});
+    var chips=svcs.slice(0,6).map(function(s){
+      return '<span style="display:inline-block;background:#f3e7f7;color:#6d2f7a;border-radius:8px;padding:2px 8px;font-size:.74rem;font-weight:700;margin:2px 3px 2px 0">'+esc(s.replace('Consulta ','').replace('Control ','Ctrl '))+' '+med[m].svc[s]+'</span>';
+    }).join('');
+    h3+='<div style="padding:8px 0;border-bottom:1px solid #f0e8f5"><div style="font-weight:700;font-size:.86rem;margin-bottom:2px">'+esc(m)+'</div><div>'+chips+'</div></div>';
+  });
+
+  return '<div class="card"><div class="card-t">👨‍⚕️ Comparativo por médico</div>'+
+    '<div style="font-weight:700;font-size:.85rem;margin:12px 0 8px">Pacientes atendidos</div>'+h1+
+    (h2?'<div style="font-weight:700;font-size:.85rem;margin:16px 0 8px">Duración promedio de consulta</div>'+h2:'')+
+    '<div style="font-weight:700;font-size:.85rem;margin:16px 0 4px">Qué atiende cada uno</div>'+h3+
+  '</div>';
 }
 
 // ── Cuánto dura la consulta (del llamado al cierre) por servicio ──
@@ -365,16 +425,33 @@ function cargarResenas(){
     }
     var coms = res.comentarios || [];
     if(coms.length){
-      html += '<div style="font-weight:700;font-size:.85rem;margin:16px 0 6px">Comentarios <span style="color:#b8a8c2;font-weight:400">(últimos '+coms.length+')</span></div>';
-      coms.forEach(function(x){
-        html += '<div style="background:#faf5fc;border-radius:10px;padding:10px 12px;margin-bottom:8px">'+
-          '<div style="font-size:.85rem">'+estrellasHtml(x.estrellas)+' <span style="color:#7d6d86;font-size:.78rem">'+esc(x.medico||'')+(x.turno?' · '+esc(x.turno):'')+'</span></div>'+
-          '<div style="margin-top:3px;font-size:.9rem;line-height:1.4">'+esc(x.comentario)+'</div></div>';
-      });
+      window._resenasComs = coms;
+      var hoy = new Date().toLocaleDateString('en-CA');   // YYYY-MM-DD local
+      html += '<div style="font-weight:700;font-size:.85rem;margin:16px 0 6px">Comentarios por día</div>'+
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+
+          '<input type="date" id="resFecha" value="'+hoy+'" onchange="pintarComentarios()" style="border:1.5px solid #e8daf0;border-radius:9px;padding:7px 10px;font-family:inherit;font-size:.85rem;color:#3a2140;background:#faf5fc;outline:none">'+
+          '<button onclick="document.getElementById(\'resFecha\').value=\'\';pintarComentarios()" style="border:1.5px solid #e8daf0;background:#fff;color:#6d2f7a;font-weight:700;font-size:.8rem;font-family:inherit;border-radius:9px;padding:7px 13px;cursor:pointer">Ver todas</button>'+
+        '</div><div id="resComs"></div>';
     }
     html += '</div>';
     el.innerHTML = html;
+    if(coms.length) pintarComentarios();
   }).catch(function(){ el.innerHTML=''; });
+}
+function fmtFechaCorta(iso){ var d=new Date(iso); if(isNaN(d))return''; return d.toLocaleDateString('es-CO',{day:'numeric',month:'short'}); }
+function pintarComentarios(){
+  var coms = window._resenasComs || [];
+  var cont = document.getElementById('resComs'); if(!cont) return;
+  var f = (document.getElementById('resFecha')||{}).value || '';
+  var lista = f ? coms.filter(function(x){ return new Date(x.fecha).toLocaleDateString('en-CA')===f; }) : coms;
+  if(!lista.length){ cont.innerHTML='<div style="color:#b8a8c2;font-size:.85rem;padding:6px 0">Sin comentarios '+(f?'ese día':'')+'.</div>'; return; }
+  var html='<div style="color:#b8a8c2;font-size:.78rem;margin-bottom:6px">'+lista.length+' comentario'+(lista.length===1?'':'s')+(f?'':' — todos')+'</div>';
+  lista.forEach(function(x){
+    html += '<div style="background:#faf5fc;border-radius:10px;padding:10px 12px;margin-bottom:8px">'+
+      '<div style="font-size:.85rem">'+estrellasHtml(x.estrellas)+' <span style="color:#7d6d86;font-size:.78rem">'+esc(x.medico||'')+(x.turno?' · '+esc(x.turno):'')+' · '+fmtFechaCorta(x.fecha)+'</span></div>'+
+      '<div style="margin-top:3px;font-size:.9rem;line-height:1.4">'+esc(x.comentario)+'</div></div>';
+  });
+  cont.innerHTML = html;
 }
 
 cargar();

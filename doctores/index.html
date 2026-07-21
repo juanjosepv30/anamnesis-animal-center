@@ -346,8 +346,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* max-width: un <select> se estira al ancho de su opción más larga y en el
    celular se sale de la pantalla ("Dra. Catherine Hernández — Endocrinología,
    Neonatología" mide más que un iPhone). */
-.date-filter{border:1.5px solid var(--bd);border-radius:9px;padding:8px 12px;font-size:.85rem;font-family:'DM Sans',sans-serif;color:var(--tx);background:var(--wh);outline:none;max-width:100%;min-width:0}
-.date-filter:focus{border-color:var(--p)}
+.date-filter-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;background:var(--wh);border:1.5px solid var(--bd);border-radius:11px;padding:8px 12px}
+.df-lbl{font-size:.82rem;font-weight:700;color:var(--tm)}
+.date-filter{border:1.5px solid var(--bd);border-radius:9px;padding:7px 10px;font-size:.85rem;font-family:'DM Sans',sans-serif;color:var(--tx);background:var(--bg);outline:none;min-width:0}
+.date-filter:focus{border-color:var(--p);background:var(--wh)}
+.df-hoy{border:1.5px solid var(--bd);background:var(--wh);color:var(--pd);font-weight:700;font-size:.8rem;font-family:'DM Sans',sans-serif;border-radius:9px;padding:7px 13px;cursor:pointer}
+.df-hoy:hover{background:var(--pl)}
 .legend{flex-wrap:wrap;gap:12px;font-size:.72rem;color:var(--tm);font-weight:600}
 .lg{display:flex;align-items:center;gap:5px}
 .lg-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
@@ -436,7 +440,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <button class="fbtn" id="f-atendiendo" onclick="setView('atendiendo')">🩺 Atendiendo</button>
       <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Finalizados</button>
     </div>
-    <input type="date" id="dateFilter" class="date-filter" style="display:none" onchange="renderAll()">
+    <div class="date-filter-wrap" id="dateFilterWrap" style="display:none">
+      <span class="df-lbl">📅 Ver otro día</span>
+      <input type="date" id="dateFilter" class="date-filter" onchange="renderAll()">
+      <button class="df-hoy" onclick="document.getElementById('dateFilter').value='';renderAll()">Hoy</button>
+    </div>
   </div>
   <div class="srch-inner legend" style="margin-top:8px">
     <span class="lg"><span class="lg-dot" style="background:#16a34a"></span>General</span>
@@ -707,7 +715,7 @@ function setView(v) {
   activeView = v;
   ['sala','atendiendo','reviewed'].forEach(id =>
     document.getElementById('f-'+id).classList.toggle('active', id === v));
-  document.getElementById('dateFilter').style.display = (v === 'reviewed') ? 'block' : 'none';
+  document.getElementById('dateFilterWrap').style.display = (v === 'reviewed') ? 'flex' : 'none';
   renderAll();
 }
 
