@@ -109,6 +109,13 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .rec-time.esp-mucho{color:#dc2626}
 .rec-arrow{color:var(--ts);font-size:.65rem;flex-shrink:0;transition:transform .25s;margin-left:4px}
 .rec.open .rec-arrow{transform:rotate(180deg)}
+.rec-fin{flex-shrink:0;border:none;background:#16a34a;color:#fff;font-weight:800;font-family:inherit;font-size:.82rem;border-radius:9px;padding:9px 13px;cursor:pointer}
+.rec-fin:active{transform:scale(.97)}
+/* Overlay de anamnesis: se abre al tocar cualquier tarjeta, en cualquier estado. */
+.anam-overlay{display:none;position:fixed;inset:0;background:rgba(20,10,30,.55);z-index:200;padding:14px;overflow-y:auto}
+.anam-overlay.show{display:block}
+.anam-panel{max-width:640px;margin:14px auto}
+.anam-close{display:block;margin:0 0 10px auto;border:none;background:var(--wh);color:var(--tx);font-weight:800;font-family:inherit;font-size:.85rem;border-radius:10px;padding:9px 15px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 
 /* ── Expanded body ── */
 .rec-body{display:none;padding:0 18px 18px;border-top:1px solid var(--bd)}
@@ -427,7 +434,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
   <div class="srch-inner">
     <div class="filter-btns">
       <button class="fbtn active" id="f-sala" onclick="setView('sala')">🔔 Sala de espera</button>
-      <button class="fbtn" id="f-pending" onclick="setView('pending')">📋 Anamnesis</button>
+      <button class="fbtn" id="f-atendiendo" onclick="setView('atendiendo')">🩺 Atendiendo</button>
       <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Finalizados</button>
     </div>
     <input type="date" id="dateFilter" class="date-filter" style="display:none" onchange="renderAll()">
@@ -448,6 +455,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Panel de anamnesis: se abre al tocar cualquier tarjeta. -->
+<div class="anam-overlay" id="anamOverlay" onclick="if(event.target===this)cerrarAnam()">
+  <div class="anam-panel" id="anamPanel"></div>
+</div>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
@@ -694,7 +706,7 @@ function pickNext(list, filaKey, yaLlamados) {
 
 function setView(v) {
   activeView = v;
-  ['sala','pending','reviewed'].forEach(id =>
+  ['sala','atendiendo','reviewed'].forEach(id =>
     document.getElementById('f-'+id).classList.toggle('active', id === v));
   document.getElementById('dateFilter').style.display = (v === 'reviewed') ? 'block' : 'none';
   renderAll();
@@ -1202,27 +1214,23 @@ function abrirDesdeLink() {
 }
 
 // Desde la sala de espera → abre la anamnesis de ese paciente.
+// La anamnesis se ve SIEMPRE desde la tarjeta, en cualquier estado: se abre en
+// un panel encima. Ya no hay una pestaña aparte "Anamnesis".
 function goToAnamnesis(rowIndex) {
   const rec = allRecords.find(x => x.rowIndex === rowIndex);
-  setView('pending');
-  setTimeout(function(){
-    const el = document.getElementById('rec-' + rowIndex);
-    if (el) {
-      el.classList.add('open');
-      // Arriba del todo, no al centro: centrar la tarjeta deja los datos
-      // del paciente fuera de pantalla y obliga a subir para leerlos.
-      // El descuento es por el encabezado, que es sticky y si no la tapa.
-      const hdr  = document.querySelector('.hdr');
-      const srch = document.querySelector('.srch');
-      const tapa = (hdr ? hdr.offsetHeight : 0) + (srch ? srch.offsetHeight : 0) + 8;
-      const y = el.getBoundingClientRect().top + window.pageYOffset - tapa;
-      window.scrollTo({ top: Math.max(0, y), behavior:'smooth' });
-      if (rec && !rec.complaint && !rec.detail)
-        showToast('El cliente todavía no llenó su anamnesis');
-    } else {
-      showToast('No se encontró la anamnesis de ese turno');
-    }
-  }, 80);
+  if (!rec) { showToast('No se encontró ese turno'); return; }
+  const panel = document.getElementById('anamPanel');
+  panel.innerHTML = '<button class="anam-close" onclick="cerrarAnam()">✕ Cerrar</button>' + buildCard(rec);
+  const card = panel.querySelector('.rec');
+  if (card) card.classList.add('open');   // se abre ya desplegada
+  document.getElementById('anamOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  if (!rec.complaint && !rec.detail)
+    showToast('El cliente todavía no llenó su anamnesis');
+}
+function cerrarAnam() {
+  document.getElementById('anamOverlay').classList.remove('show');
+  document.body.style.overflow = '';
 }
 
 // Habilita "Llamar" solo cuando hay consultorio elegido. Así nadie llama a
@@ -1338,10 +1346,10 @@ function renderAll() {
     // turno y su anamnesis nunca se desconectan: si el turno está 'atendido',
     // su anamnesis está en Atendidas; si no, sigue pendiente de leer.
     const atendido = r.estadoTurno === 'atendido';
-    if (activeView === 'pending') {
-      // Anamnesis a leer = pacientes EN CURSO. No los atendidos (ya pasaron)
-      // ni los ausentes (se fueron). Si un ausente vuelve, reaparece solo.
-      return !atendido && r.estadoTurno !== 'ausente' && isSameDay(r.timestamp, today);
+    if (activeView === 'atendiendo') {
+      // Los que están EN CONSULTA ahora. Sirve al médico para cerrar el suyo y
+      // al administrador para ver quién atiende, a quién y dónde.
+      return r.estadoTurno === 'atendiendo' && isSameDay(r.timestamp, today);
     } else {
       // Atendidas: por defecto SOLO las de hoy. Otros días con el selector.
       if (!atendido) return false;
@@ -1355,8 +1363,8 @@ function renderAll() {
   });
 
   if (!records.length) {
-    const msg = activeView === 'pending'
-      ? 'No hay pacientes pendientes hoy'
+    const msg = activeView === 'atendiendo'
+      ? 'Nadie en consulta ahora mismo'
       : (dfVal ? 'No hay atendidos en la fecha elegida'
                : 'Nadie atendido hoy todavía · usá la fecha para ver otros días');
     document.getElementById('mainCnt').innerHTML =
@@ -1529,6 +1537,7 @@ function serviceColor(s) {
 
 function buildCard(r) {
   const reviewed = r.estadoTurno === 'atendido';
+  const enConsulta = r.estadoTurno === 'atendiendo';
   const em = r.species === 'Felino' ? '🐈' : '🐕';
   const rowIdx = r.rowIndex;
   const svc = r.service || '';
@@ -1541,7 +1550,7 @@ function buildCard(r) {
     <div class="rec-info">
       <div class="rec-top">
         <span class="rec-service" style="background:${color}22;color:${color}">${esc(svcShort)}</span>
-        ${!reviewed ? '<span class="rec-time'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</span>' : ''}
+        ${!reviewed && !enConsulta ? '<span class="rec-time'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</span>' : ''}
       </div>
       <div class="rec-name">
         ${r.turno ? '<span class="turno-badge" style="background:'+color+'">'+esc(r.turno)+'</span>' : ''}
@@ -1552,9 +1561,12 @@ function buildCard(r) {
       <div class="rec-meta">
         <span>👤 ${esc(r.ownerName||'—')}</span>
         ${r.consultorio ? '<span>· 🚪 '+esc(r.consultorio)+'</span>' : ''}
+        ${enConsulta && r.calledBy ? '<span>· 🩺 '+esc(r.calledBy)+'</span>' : ''}
+        ${enConsulta ? '<span class="ta-t" data-inicio="'+esc(r.calledAt||r.timestamp)+'">🕐 '+fmtConsulta(r.calledAt||r.timestamp)+'</span>' : ''}
         ${reviewed ? tiemposAtendida(r) : ''}
       </div>
     </div>
+    ${enConsulta ? '<button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button>' : ''}
     <div class="rec-arrow">▼</div>
   </div>
   <div class="rec-body">
