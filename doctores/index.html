@@ -251,6 +251,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .calling-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .calling-t{font-size:1.1rem;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums}
 .calling-m{font-size:.73rem;color:var(--tm);margin-top:2px}
+.ta-times{display:inline-flex;gap:8px;flex-wrap:wrap;margin-left:2px}
+.ta-t{background:#eef2f7;color:#475569;border-radius:8px;padding:1px 7px;font-size:.72rem;font-weight:700}
+.pets-extra{background:#8e3f9e22;color:#8e3f9e;border-radius:8px;padding:1px 7px;font-size:.72rem;font-weight:800;margin-left:4px}
 .calling-son{margin-top:9px;padding-top:8px;border-top:1px dashed #bbf7d0;font-size:.76rem;font-weight:700}
 .son-ok{color:#15803d}
 .son-wait{color:#b45309}
@@ -301,6 +304,23 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .cs-turno{font-weight:700;font-variant-numeric:tabular-nums;min-width:42px;flex-shrink:0}
 .cs-pet{font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cs-med{color:var(--tm);font-size:.72rem;margin-left:auto;white-space:nowrap;flex-shrink:0}
+.cs-min{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;color:#15803d;background:#dcfce7;border-radius:7px;padding:1px 7px;font-size:.72rem;white-space:nowrap;flex-shrink:0}
+.cs-med + .cs-min{margin-left:8px}
+/* Mi consulta en curso: tarjeta propia con cronómetro. */
+.mi-consulta{display:flex;align-items:center;gap:10px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:10px 13px;margin-bottom:10px;cursor:pointer}
+.mi-consulta:active{transform:scale(.995)}
+.mc-l{font-size:.86rem;color:var(--tx);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mc-turno{font-weight:800;font-variant-numeric:tabular-nums}
+.mc-min{margin-left:auto;flex-shrink:0;font-weight:900;font-variant-numeric:tabular-nums;color:#1d4ed8;background:#dbeafe;border-radius:9px;padding:4px 11px;font-size:.95rem}
+/* Recordatorio: consulta que se quedó sin marcar. Ámbar y con latido para que
+   NO se parezca a las demás tarjetas y salte a la vista. */
+.mc-vencida{background:#fffbeb;border-color:#fcd34d;animation:mcLatido 1.8s ease-in-out infinite}
+@keyframes mcLatido{0%,100%{box-shadow:0 0 0 0 rgba(217,119,6,.32)}50%{box-shadow:0 0 0 6px rgba(217,119,6,0)}}
+.mc-vencida .mc-l{color:#92400e}
+.mc-sub{font-weight:700;margin-top:3px}
+.mc-hint{font-size:.76rem;font-weight:600;color:#b45309;margin-top:3px;line-height:1.35}
+.mc-btn{margin-left:auto;flex-shrink:0;align-self:center;border:none;background:#16a34a;color:#fff;font-weight:900;font-family:'DM Sans',sans-serif;font-size:.9rem;border-radius:10px;padding:11px 15px;cursor:pointer}
+.mc-btn:active{transform:scale(.97)}
 /* Congelado: recepción vio que hay una cita antes que este paciente. */
 .mini-frio{background:#fef3c7;color:#92400e;margin-left:4px}
 .q-frio{opacity:.6}
@@ -377,9 +397,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <div class="pausa-ov" id="pausaOverlay" style="display:none" onclick="reanudar()">
   <div class="pausa-box">
     <div class="pausa-em">⏸️</div>
-    <div class="pausa-t">En pausa</div>
-    <div class="pausa-s">Se pausó por inactividad para no gastar de más.<br>Toca la pantalla para volver a tu sala.</div>
-    <button class="pausa-btn" onclick="reanudar()">Reactivar</button>
+    <div class="pausa-t">Pantalla en reposo</div>
+    <div class="pausa-s">Llevaba un rato sin usarse.<br>Toca aquí para volver a tu sala y ver tus pacientes.</div>
+    <button class="pausa-btn" onclick="reanudar()">Volver a mi sala</button>
   </div>
 </div>
 
@@ -407,7 +427,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div class="filter-btns">
       <button class="fbtn active" id="f-sala" onclick="setView('sala')">🔔 Sala de espera</button>
       <button class="fbtn" id="f-pending" onclick="setView('pending')">📋 Anamnesis</button>
-      <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Atendidas</button>
+      <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Finalizados</button>
     </div>
     <input type="date" id="dateFilter" class="date-filter" style="display:none" onchange="renderAll()">
   </div>
@@ -940,13 +960,48 @@ function renderSala() {
       '</div>'+
       (csAbierto ? enConsulta.map(r => '<div class="cs-item">'+
         '<span class="cs-turno" style="color:'+serviceColor(r.service)+'">'+esc(r.turno||'')+'</span>'+
-        '<span class="cs-pet">'+esc(r.petName||'')+'</span>'+
+        '<span class="cs-pet">'+esc(nombreConMascotas(r))+'</span>'+
         (r.medicoAsignado ? '<span class="cs-med">'+esc(r.medicoAsignado)+(r.consultorio?' · '+esc(r.consultorio):'')+'</span>' : '')+
+        '<span class="cs-min" data-inicio="'+esc(r.calledAt||r.timestamp)+'">'+fmtConsulta(r.calledAt||r.timestamp)+'</span>'+
       '</div>').join('') : '')+
     '</div>';
   }
 
-  let html = stripHtml + '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
+  // Mi consulta en curso: el paciente que ESTOY atendiendo (marqué "Atender").
+  // Hoy desaparece del tablero al pasar a 'atendiendo'; acá lo muestro con un
+  // cronómetro para que el médico vea cuánto lleva en consulta. Ancla en
+  // calledAt, igual que el número final que se registra al cerrar.
+  let miHtml = '';
+  if (miMedico) {
+    const misConsulta = allRecords.filter(r => isSameDay(r.timestamp, today) &&
+      r.estadoTurno === 'atendiendo' && r.calledBy === miMedico);
+    misConsulta.sort((a,b) => new Date(a.calledAt||a.timestamp) - new Date(b.calledAt||b.timestamp));
+    miHtml = misConsulta.map(r => {
+      const ini = r.calledAt || r.timestamp;
+      const mins = minsDesde(ini);
+      // "Se quedó sin marcar": lleva más de lo razonable para ese servicio.
+      const vencido = mins !== null && mins >= umbralRecordatorio(r.service);
+      const turno = '<span class="mc-turno" style="color:'+serviceColor(r.service)+'">'+esc(r.turno||'')+'</span> '+
+                    esc(nombreConMascotas(r))+(r.consultorio?' · '+esc(r.consultorio):'');
+      if (vencido) {
+        // Recordatorio: se ve DISTINTO (ámbar, con latido) y trae el botón para
+        // cerrarlo ahí mismo. Al tocar la tarjeta también abre la anamnesis.
+        return '<div class="mi-consulta mc-vencida" onclick="goToAnamnesis('+r.rowIndex+')">'+
+          '<div class="mc-l">🔔 <b>¿Ya terminaste? Marca a este paciente como finalizado</b>'+
+            '<div class="mc-sub">'+turno+'</div>'+
+            '<div class="mc-hint">Lleva <span data-inicio="'+esc(ini)+'">'+fmtConsulta(ini)+'</span> en consulta. '+
+              'Ciérralo para que el tiempo quede real (o abre la anamnesis y márcalo).</div></div>'+
+          '<button class="mc-btn" onclick="event.stopPropagation();markAtendido('+r.rowIndex+')">✓ Finalizado</button>'+
+        '</div>';
+      }
+      return '<div class="mi-consulta" onclick="goToAnamnesis('+r.rowIndex+')">'+
+        '<div class="mc-l">🩺 <b>En consulta</b> · '+turno+'</div>'+
+        '<div class="mc-min" data-inicio="'+esc(ini)+'">'+fmtConsulta(ini)+'</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  let html = miHtml + stripHtml + '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
 
   // Cuando un médico tiene las dos filas (Tatiana es gastro Y general),
   // hay que decirle cuál llamar primero. Ver decidirEntreFilas.
@@ -1015,7 +1070,7 @@ function renderSala() {
       body += '<div class="calling"><div class="calling-top">'+
         '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
           '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
-          '<div class="calling-m">'+esc(r.petName||'')+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
+          '<div class="calling-m">'+esc(nombreConMascotas(r))+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
         '</div>'+
         '<div class="calling-btns">'+
           '<div class="calling-fila1">'+
@@ -1103,7 +1158,7 @@ function renderSala() {
       body += '<div class="q-item q-click'+(estaCongelado(r)?' q-frio':'')+'" onclick="goToAnamnesis('+r.rowIndex+')">'+
         '<div class="q-turno" style="color:'+rc+'">'+esc(r.turno||'—')+'</div>'+
         '<div class="q-info">'+
-          '<div class="q-pet">'+esc(r.petName||'')+' '+ag+frio+'</div>'+
+          '<div class="q-pet">'+esc(nombreConMascotas(r))+' '+ag+frio+'</div>'+
           '<div class="q-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+'</div>'+
         '</div>'+
         '<div class="q-side">'+
@@ -1265,7 +1320,7 @@ function markAtendido(rowIndex) {
         if (rec) { rec.estadoTurno = 'atendido'; rec.status = 'revisado'; }
         renderAll();   // sirve para la sala Y para la lista de anamnesis
         updateCounts();
-        showToast('✓ Atendido · pasó a Atendidas');
+        showToast('✓ Finalizado · pasó a Finalizados');
       } else showToast('❌ Error');
     }).catch(function(){ showToast('❌ Error de conexión'); });
 }
@@ -1386,6 +1441,73 @@ function etiquetaRegistro(r) {
   return '';
 }
 
+// Minutos entre dos fechas (ISO o Date). null si falta alguna.
+function minsEntre(a, b) {
+  if (!a || !b) return null;
+  const d1 = new Date(a), d2 = new Date(b);
+  if (isNaN(d1) || isNaN(d2)) return null;
+  return Math.max(0, Math.round((d2 - d1) / 60000));
+}
+function fmtMin(m) {
+  if (m === null) return '—';
+  if (m < 60) return m + ' min';
+  const h = Math.floor(m / 60), r = m % 60;
+  return h + ' h' + (r ? ' ' + r + ' min' : '');
+}
+// #7 — En las tarjetas atendidas: cuánto esperó el cliente (llegada → llamado)
+// y cuánto duró la atención (llamado → cierre).
+function tiemposAtendida(r) {
+  const espera   = minsEntre(r.timestamp, r.calledAt);
+  const atencion = minsEntre(r.calledAt, r.atendidoEn);
+  if (espera === null && atencion === null) return '';
+  let s = '<span class="ta-times">';
+  if (espera   !== null) s += '<span class="ta-t">⏳ Esperó ' + fmtMin(espera) + '</span>';
+  if (atencion !== null) s += '<span class="ta-t">🩺 Atención ' + fmtMin(atencion) + '</span>';
+  return s + '</span>';
+}
+// Minutos transcurridos desde una fecha hasta AHORA (para el cronómetro de
+// consulta en vivo). null si no hay fecha válida.
+function minsDesde(ts) {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (isNaN(d)) return null;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 60000));
+}
+function fmtConsulta(ts) {
+  const m = minsDesde(ts);
+  if (m === null) return '';
+  if (m < 60) return m + ' min';
+  const h = Math.floor(m / 60), r = m % 60;
+  return h + ' h' + (r ? ' ' + r + ' min' : '');
+}
+// A partir de cuántos minutos una consulta "ya lleva mucho" y probablemente
+// quedó sin cerrar. Se apoya en el umbral de salida por servicio (una inyección
+// no dura lo que una consulta) y le suma un margen para no molestar al médico
+// mientras de verdad está atendiendo.
+function umbralRecordatorio(service) {
+  return umbralSalida(service) + 15;
+}
+// Refresca el texto de todos los cronómetros en pantalla, sin re-renderizar
+// todo. Corre en su propio intervalo para que el número avance aunque no
+// entren datos nuevos del backend.
+function tickConsultas() {
+  const els = document.querySelectorAll('[data-inicio]');
+  for (let i = 0; i < els.length; i++) {
+    const t = fmtConsulta(els[i].getAttribute('data-inicio'));
+    if (t) els[i].textContent = t;
+  }
+}
+
+// #10 — Nombre(s) de la(s) mascota(s) del turno. Si vienen varias (petsExtra),
+// se listan TODAS en el nombre ("Mila, Toby, Luna"): así, desde que arranca el
+// protocolo, queda claro que el turno es por todas y no solo por una.
+function nombreConMascotas(r) {
+  const base = String(r.petName || '').trim();
+  const ex   = String(r.petsExtra || '').trim();
+  if (!ex) return base || 'Sin nombre';
+  return (base ? base + ', ' : '') + ex;
+}
+
 function serviceColor(s) {
   s = (s || '').toLowerCase();
   // Control primero: "Control especializado" tiene las dos palabras y se
@@ -1419,7 +1541,7 @@ function buildCard(r) {
       </div>
       <div class="rec-name">
         ${r.turno ? '<span class="turno-badge" style="background:'+color+'">'+esc(r.turno)+'</span>' : ''}
-        ${em} ${esc(r.petName||'Sin nombre')}
+        ${em} ${esc(nombreConMascotas(r))}
         ${r.breed ? '<span class="rec-breed">· '+esc(r.breed)+'</span>' : ''}
         ${r.vetesoftHc ? '<span class="hc-badge">HC '+esc(r.vetesoftHc)+'</span>' : ''}
         ${reviewed ? '<span class="rv-badge">✓ Revisado</span>' : ''}
@@ -1427,6 +1549,7 @@ function buildCard(r) {
       <div class="rec-meta">
         <span>👤 ${esc(r.ownerName||'—')}</span>
         ${r.consultorio ? '<span>· 🚪 '+esc(r.consultorio)+'</span>' : ''}
+        ${reviewed ? tiemposAtendida(r) : ''}
       </div>
     </div>
     <div class="rec-arrow">▼</div>
@@ -1647,6 +1770,8 @@ setInterval(function(){
 
 setInterval(function(){ if (!pausado) chequearCambios(); }, 5000);
 setInterval(function(){ if (!pausado && !document.querySelector('.rec.open')) loadRecords(true); }, 120000); // red de seguridad
+// El cronómetro de "En consulta" avanza solo, cada 30s, sin re-renderizar todo.
+setInterval(function(){ if (!pausado) tickConsultas(); }, 30000);
 
 // ── Arranque ──
 // Ya no hay puerta de "quién eres / de turno": el médico entra directo. Su

@@ -167,11 +167,28 @@ function confirmarAnuncio(r){
   } catch(e){}
 }
 
+// Nombre(s) de la(s) mascota(s) del turno, para MOSTRAR. Si vienen varias
+// (petsExtra), se listan todas: "Mila, Toby, Luna". Así el cliente ve que va
+// a pasar con TODAS sus mascotas, no solo una.
+function nombreMascotas(r){
+  var base = String(r.petName || '').trim();
+  var ex   = String(r.petsExtra || '').trim();
+  if (!ex) return base;
+  return base ? (base + ', ' + ex) : ex;
+}
+// Igual pero para DECIR en voz alta: la última se une con "y" para que suene
+// natural ("Mila, Toby y Luna").
+function mascotasHabladas(r){
+  var todas = nombreMascotas(r).split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  if (todas.length <= 1) return todas[0] || '';
+  return todas.slice(0, -1).join(', ') + ' y ' + todas[todas.length - 1];
+}
+
 function hablarTurno(r){
   if (!('speechSynthesis' in window)) return;
   var turno = leerTurno(r.turno);
   var room  = r.consultorio ? ('pase al consultorio ' + r.consultorio) : 'pase adelante';
-  var pet   = r.petName ? (', con ' + r.petName) : '';
+  var pet   = mascotasHabladas(r) ? (', con ' + mascotasHabladas(r)) : '';
   // Ej: "Turno E 4, pase al consultorio Boom Boom, con Mila."
   var frase = 'Turno ' + turno + ', ' + room + pet + '.';
   try {
@@ -256,7 +273,7 @@ function pintar(llamando, esperando){
       html += '<div class="card'+(i===1?' prev':'')+(nuevo?' nuevo':'')+'" style="border-left-color:'+color+'">'+
         '<div>'+(i===1?'<div class="c-prev-lbl">Anterior</div>':'')+
         '<div class="c-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
-        '<div class="c-pet">'+esc(r.petName||'')+'</div></div>'+
+        '<div class="c-pet">'+esc(nombreMascotas(r))+'</div></div>'+
         '<div><div class="c-room-lbl">Consultorio</div>'+
         '<div class="c-room" style="color:'+color+'">'+esc(r.consultorio||'—')+'</div></div>'+
       '</div>';
@@ -288,7 +305,7 @@ function pintar(llamando, esperando){
     prox.forEach(function(r){
       var color = serviceColor(r.service);
       h += '<div class="n-item"><div class="n-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
-        '<div style="min-width:0"><div class="n-pet">'+esc(r.petName||'')+'</div>'+
+        '<div style="min-width:0"><div class="n-pet">'+esc(nombreMascotas(r))+'</div>'+
         '<div class="n-svc">'+esc(r.service||'')+'</div></div></div>';
     });
     lista.innerHTML = h;

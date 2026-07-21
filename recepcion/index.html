@@ -111,6 +111,14 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .wr-medico{font-size:.74rem;font-weight:700;color:var(--pd);margin-top:3px}
 .wr-asignar{display:inline-block;margin-top:5px;font-size:.72rem;font-weight:700;color:var(--pd);background:var(--pl);border:1px solid var(--bd);border-radius:8px;padding:3px 9px;cursor:pointer}
 .wr-asignar:hover{background:#ede4ff}
+.wr-chips{display:flex;flex-wrap:wrap;gap:6px}
+.wr-editar{color:#475569;background:#eef2f7;border-color:#dbe3ec}
+.wr-editar:hover{background:#e2e8f0}
+.wr-pets{background:#8e3f9e22;color:#8e3f9e;border-radius:8px;padding:1px 7px;font-size:.72rem;font-weight:800}
+.wr-ta{display:inline-block;margin-top:3px;margin-right:6px;font-size:.72rem;font-weight:700;color:#475569;background:#eef2f7;border-radius:8px;padding:1px 8px}
+.edit-banner{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:9px 12px;font-size:.82rem;margin-bottom:10px;line-height:1.4}
+.edit-cancel{margin-left:auto;font-size:.75rem;font-weight:700;color:#9a3412;background:#fff;border:1px solid #fdba74;border-radius:8px;padding:4px 10px;cursor:pointer}
+.edit-cancel:hover{background:#fff1e6}
 .wr-motivo{font-size:.73rem;color:var(--tm);font-style:italic;margin-top:3px;line-height:1.35}
 .wr-atn{background:#f0fdf4}
 /* Reenviar registro, debajo del nombre. */
@@ -141,6 +149,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* Pestañas de la sala de espera. */
 .wr-tabs{display:flex;gap:6px;margin:2px 0 12px;border-bottom:1.5px solid var(--bd)}
 .wr-tab{border:none;background:none;padding:8px 12px;font-size:.82rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:'DM Sans',sans-serif;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;display:flex;align-items:center;gap:6px}
+.wr-tab-der{margin-left:auto}
 .wr-tab.active{color:var(--p);border-bottom-color:var(--p)}
 .wr-tabn{font-size:.7rem;background:var(--bg);color:var(--tm);border-radius:10px;padding:1px 7px;font-weight:700}
 .wr-tab.active .wr-tabn{background:var(--pl);color:var(--p)}
@@ -251,6 +260,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div class="card">
       <div class="card-t">Registrar llegada</div>
       <div class="card-sub">Busca al paciente en Vetesoft, valida contra el calendar y regístralo en la sala. Sirve para los que tienen cita y para los que no.</div>
+      <div id="editBanner"></div>
       <div class="search-row">
         <!-- La cédula va primera y con el foco: es única, así que encuentra
              mejor que los nombres (que se repiten). Enter en cualquier campo
@@ -269,8 +279,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <div class="wr-tabs">
         <button class="wr-tab active" data-tab="espera"    onclick="verTab('espera')">En espera <span class="wr-tabn" id="cEspera">0</span></button>
         <button class="wr-tab"        data-tab="atendiendo" onclick="verTab('atendiendo')">Atendiendo <span class="wr-tabn" id="cAtendiendo">0</span></button>
-        <button class="wr-tab"        data-tab="ausentes"  onclick="verTab('ausentes')">Ausentes <span class="wr-tabn" id="cAusentes">0</span></button>
-        <button class="wr-tab"        data-tab="atendidos" onclick="verTab('atendidos')">Atendidos <span class="wr-tabn" id="cAtendidos">0</span></button>
+        <button class="wr-tab"        data-tab="atendidos" onclick="verTab('atendidos')">Finalizados <span class="wr-tabn" id="cAtendidos">0</span></button>
+        <button class="wr-tab wr-tab-der" data-tab="ausentes"  onclick="verTab('ausentes')">Ausentes <span class="wr-tabn" id="cAusentes">0</span></button>
       </div>
       <div id="wrList"><div class="spinner"></div></div>
     </div>
@@ -282,6 +292,44 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
 let selected = null;
+// #1 — Editar turno: cuando recepción corrige el paciente de un turno ya
+// creado, guardamos acá la fila que se va a corregir. Todo el flujo de
+// búsqueda/registro es el mismo; solo cambia que al final se manda
+// 'editarTurno' (misma fila, mismo turno) en vez de crear uno nuevo.
+let _editando = null;   // { rowIndex, turno } o null
+
+function pintarEditBanner() {
+  var el = document.getElementById('editBanner');
+  if (!el) return;
+  if (!_editando) { el.innerHTML = ''; return; }
+  el.innerHTML =
+    '<div class="edit-banner">✏️ <b>Editando el turno '+esc(_editando.turno||'')+'</b> — '+
+    'buscá el paciente correcto y guardá. El turno y su posición NO se pierden; '+
+    'la anamnesis anterior se borra.'+
+    '<button class="edit-cancel" onclick="cancelarEdicion()">Cancelar edición</button></div>';
+}
+function cancelarEdicion() {
+  _editando = null;
+  pintarEditBanner();
+  document.getElementById('regArea').innerHTML = '';
+  document.getElementById('results').innerHTML = '';
+}
+// Recepción toca "✏️ Editar" en una tarjeta de la sala.
+function pedirEditar(rowIndex) {
+  var r = (wrRecords || []).find(function(x){ return x.rowIndex === rowIndex; });
+  if (!r) return;
+  _editando = { rowIndex: rowIndex, turno: r.turno || '' };
+  selected = null;
+  document.getElementById('regArea').innerHTML = '';
+  document.getElementById('results').innerHTML = '';
+  // Prellenamos la búsqueda con lo que hay, para reencontrar rápido.
+  var qc = document.getElementById('qCedula'); if (qc) qc.value = '';
+  var qp = document.getElementById('qPet');    if (qp) qp.value = r.petName || '';
+  var qo = document.getElementById('qOwner');  if (qo) qo.value = r.ownerName || '';
+  pintarEditBanner();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast('Buscá el paciente correcto para el turno ' + (r.turno || ''));
+}
 
 // Las 13 especialidades con su médico.
 const SPECIALTIES = [
@@ -399,6 +447,13 @@ function sumarMinutos(hhmm, mins) {
 // El servicio decide todo: quién es el doctor y si hay agenda. Antes esto
 // miraba el texto del servicio con indexOf; ahora lee la config, que es la
 // única fuente de verdad (ver SERVICIOS).
+// Texto del botón Registrar, considerando el modo edición (#1). En edición
+// el botón siempre dice "Guardar cambios", pase lo que pase con la cita.
+function textoBotonRegistro(conCita) {
+  if (_editando) return 'Guardar cambios del turno ' + (_editando.turno || '') + ' →';
+  return conCita ? 'Registrar como agendado →' : 'Registrar llegada →';
+}
+
 function pintarServicio() {
   var svc = document.getElementById('regService').value;
 
@@ -409,7 +464,7 @@ function pintarServicio() {
       document.getElementById(id).style.display = 'none';
     });
     document.getElementById('regSpec').value = '';
-    document.querySelector('.btn-primary').textContent = 'Registrar llegada →';
+    document.querySelector('.btn-primary').textContent = textoBotonRegistro(false);
     actualizarBotonRegistro();
     return;
   }
@@ -446,9 +501,7 @@ function pintarServicio() {
   var conCita = cfg.agenda && document.getElementById('regAgendado').value === 'si';
   document.getElementById('boxHora').style.display    = conCita ? '' : 'none';
   document.getElementById('boxEsperar').style.display = (cfg.agenda && !conCita) ? '' : 'none';
-  document.querySelector('.btn-primary').textContent  = conCita
-    ? 'Registrar como agendado →'
-    : 'Registrar llegada →';
+  document.querySelector('.btn-primary').textContent  = textoBotonRegistro(conCita);
   if (conCita) document.getElementById('regEsperar').value = '';
   pintarDescongela();
   actualizarBotonRegistro();
@@ -745,6 +798,11 @@ function abrirRegistro(r, esNuevo) {
         // celulares sin datos, gente que no quiere — ese camino no se toca.
         '<div><label>WhatsApp <span class="lbl-tip">(vacío = sin mensaje)</span></label>'+
           '<input id="regTel" type="tel" inputmode="numeric" maxlength="10" placeholder="3001234567" value="'+esc(telSugerido(r.phone))+'"></div>'+
+        // #10 — Varias mascotas en el mismo turno (ej. vacunación de 2-3
+        // juntas). No cambia la anamnesis; solo se muestran los nombres en la
+        // tarjeta. Se escriben separados por coma.
+        '<div><label>Otras mascotas <span class="lbl-tip">(opcional — mismo turno, separá con coma)</span></label>'+
+          '<input id="regPetsExtra" type="text" placeholder="Ej: Toby, Luna" value="'+esc(r.petsExtra||'')+'"></div>'+
         '<div id="boxTieneCita"><label>¿Tiene cita?</label><select id="regAgendado" onchange="pintarServicio()">'+
           '<option value="si">Sí, está en la agenda</option>'+
           '<option value="no">No, el doctor aceptó atenderlo</option>'+
@@ -760,7 +818,7 @@ function abrirRegistro(r, esNuevo) {
           '<div class="lbl-tip" id="descongela"></div></div>'+
       '</div>'+
       '<div class="reg-actions">'+
-        '<button class="btn-primary" onclick="doRegister()">Registrar llegada →</button>'+
+        '<button class="btn-primary" onclick="doRegister()">'+(_editando?'Guardar cambios del turno '+esc(_editando.turno||'')+' →':'Registrar llegada →')+'</button>'+
         '<button class="btn-ghost" onclick="cancelReg()">Cancelar</button>'+
       '</div>'+
     '</div>';
@@ -768,7 +826,7 @@ function abrirRegistro(r, esNuevo) {
   pintarServicio();
 }
 
-function cancelReg(){ selected=null; document.getElementById('regArea').innerHTML=''; }
+function cancelReg(){ selected=null; _editando=null; pintarEditBanner(); document.getElementById('regArea').innerHTML=''; }
 
 // ── Registrar llegada ────────────────────────────────────────
 function doRegister() {
@@ -806,7 +864,8 @@ function doRegister() {
   }
 
   const payload = {
-    action: 'registerArrival',
+    action: _editando ? 'editarTurno' : 'registerArrival',
+    rowIndex: _editando ? _editando.rowIndex : undefined,
     data: {
       vetesoftId: selected.id ? String(selected.id) : '',
       vetesoftHc: selected.registro || '',
@@ -836,7 +895,10 @@ function doRegister() {
       // Médico general pedido por el cliente (opcional). Solo cuando el
       // selector está visible (consulta/control general).
       medicoPref: document.getElementById('boxMedGen').style.display !== 'none'
-        ? document.getElementById('regMedGen').value : ''
+        ? document.getElementById('regMedGen').value : '',
+      // #10 — Otras mascotas del mismo turno (opcional).
+      petsExtra: (document.getElementById('regPetsExtra')||{}).value ?
+        document.getElementById('regPetsExtra').value.trim() : ''
     }
   };
   document.getElementById('regArea').innerHTML = '<div class="spinner"></div>';
@@ -848,7 +910,20 @@ function doRegister() {
         // esperar un mensaje que nunca va a llegar — y eso hay que decirlo
         // ahora, con el cliente todavía enfrente del mostrador.
         var msg, em = '🎫';
-        if (res.esperaFicha) {
+        var eraEdicion = !!_editando;
+        if (eraEdicion) {
+          em = '✏️';
+          if (res.saludo) {
+            msg = 'Turno corregido ✓ Se reenvió el link del formulario al nuevo paciente. ' +
+                  'La anamnesis anterior se borró. El turno y su posición se mantienen.';
+          } else if (res.telIntentado) {
+            em = '⚠️';
+            msg = 'Turno corregido, pero NO se pudo mandar el WhatsApp — revisá el número. ' +
+                  'La anamnesis anterior se borró; el turno se mantiene.';
+          } else {
+            msg = 'Turno corregido ✓ La anamnesis anterior se borró. El turno y su posición se mantienen.';
+          }
+        } else if (res.esperaFicha) {
           msg = 'Le llegó el link por WhatsApp 📲 Que llene la ficha desde el celular. ' +
                 'El médico ya lo ve en la cola; si no la llena, lo atiende igual.';
         } else if (res.telIntentado) {
@@ -867,6 +942,8 @@ function doRegister() {
           '<div class="msg">'+msg+'</div></div>';
         document.getElementById('qOwner').value=''; document.getElementById('qPet').value=''; document.getElementById('qCedula').value='';
         selected = null;
+        _editando = null;
+        pintarEditBanner();
         loadWaitingRoom(true);
         setTimeout(function(){ document.getElementById('regArea').innerHTML=''; }, 6000);
       } else {
@@ -921,6 +998,37 @@ function loadWaitingRoom(silent) {
 // Una fila de la lista. `acts` es el botón principal de la derecha (Ausente
 // o Devolver a la fila, según la pestaña). El de Reenviar lo pone wrItem
 // solo, debajo del nombre, cuando corresponde.
+// #7 — minutos entre dos fechas, para medir espera y duración de atención.
+function wrMinsEntre(a, b) {
+  if (!a || !b) return null;
+  var d1 = new Date(a), d2 = new Date(b);
+  if (isNaN(d1) || isNaN(d2)) return null;
+  return Math.max(0, Math.round((d2 - d1) / 60000));
+}
+function wrFmtMin(m) {
+  if (m === null) return '—';
+  if (m < 60) return m + ' min';
+  var h = Math.floor(m / 60), r = m % 60;
+  return h + ' h' + (r ? ' ' + r + ' min' : '');
+}
+function wrTiemposAtendida(r) {
+  var espera   = wrMinsEntre(r.timestamp, r.calledAt);
+  var atencion = wrMinsEntre(r.calledAt, r.atendidoEn);
+  if (espera === null && atencion === null) return '';
+  var s = '';
+  if (espera   !== null) s += '<div class="wr-ta">⏳ Esperó '+wrFmtMin(espera)+'</div>';
+  if (atencion !== null) s += '<div class="wr-ta">🩺 Atención '+wrFmtMin(atencion)+'</div>';
+  return s;
+}
+
+// #10 — Nombre(s) del turno: si hay varias mascotas, se muestran todas.
+function wrNombreMascotas(r) {
+  var base = String(r.petName || '').trim();
+  var ex   = String(r.petsExtra || '').trim();
+  if (!ex) return base || 'Sin nombre';
+  return (base ? base + ', ' : '') + ex;
+}
+
 function wrItem(r, acts) {
   var color = serviceColor(r.service);
   // Badge de estado, arriba a la izquierda. Si lo están llamando eso manda;
@@ -944,14 +1052,23 @@ function wrItem(r, acts) {
     '<div class="wr-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
     '<div class="wr-info">'+
       '<div class="wr-badge">'+badge+'</div>'+
-      '<div class="wr-name">'+esc(r.petName||'Sin nombre')+
+      '<div class="wr-name">'+esc(wrNombreMascotas(r))+
         (r.vetesoftHc ? ' <span class="wr-hc">HC '+esc(r.vetesoftHc)+'</span>' : '')+'</div>'+
       '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div>'+
       (r.medicoAsignado ? '<div class="wr-medico">🩺 '+esc(r.medicoAsignado)+'</div>' : '')+
+      // #7 — En la pestaña Atendidos: cuánto esperó y cuánto duró la atención.
+      (r.estadoTurno==='atendido' ? wrTiemposAtendida(r) : '')+
+      '<div class="wr-chips">'+
       // Consulta general en cola: chip para asignar/cambiar el médico pedido.
       (/general/i.test(r.service||'') && enCola
         ? '<div class="wr-asignar" onclick="pedirAsignar('+r.rowIndex+')">👨‍⚕️ '+(r.medicoPref?esc(r.medicoPref)+' ✎':'Asignar médico')+'</div>'
         : '')+
+      // #1 — Editar turno: corregir el paciente sin perder el turno. Solo
+      // mientras sigue en la cola (aún no lo atendieron).
+      (enCola
+        ? '<div class="wr-asignar wr-editar" onclick="pedirEditar('+r.rowIndex+')">✏️ Editar</div>'
+        : '')+
+      '</div>'+
       (reenviar ? '<div class="wr-reenviar">'+reenviar+'</div>' : '')+
     '</div>'+
     '<div class="wr-right">'+
@@ -1125,7 +1242,7 @@ function renderTab() {
     });
 
   } else { // atendidos
-    if (!atendidos.length) { el.innerHTML = '<div class="empty">Nadie atendido todavía.</div>'; return; }
+    if (!atendidos.length) { el.innerHTML = '<div class="empty">Nadie finalizado todavía.</div>'; return; }
     atendidos.sort(function(a,b){ return new Date(b.timestamp) - new Date(a.timestamp); });
     atendidos.forEach(function(r){ html += wrItem(r, ''); });
   }
