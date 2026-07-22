@@ -60,36 +60,39 @@
     '.agm-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:.72rem;color:var(--atm);margin-bottom:8px}',
     '.agm-leg span{display:inline-flex;align-items:center;gap:5px}',
     '.agm-dot{width:11px;height:11px;border-radius:3px;display:inline-block}',
-    '.agm-scroll{overflow-x:auto;border:1px solid var(--abd);border-radius:12px}',
+    '.agm-scroll{overflow-x:auto;border:1px solid var(--abd);border-radius:12px;background:#fff}',
     '.agm-grid{display:grid;min-width:520px}',
     '.agm-grid.dia{min-width:auto}',
-    '.agm-gcol{border-left:1px solid #efe7f4;position:relative}',
+    '.agm-gcol{border-left:1px solid #e3d7ec;position:relative}',
     '.agm-gcol:first-child{border-left:none}',
-    '.agm-gh{text-align:center;padding:7px 2px;font-size:.76rem;font-weight:800;color:var(--atx);border-bottom:1px solid var(--abd);position:sticky;top:0;background:#fff;z-index:2}',
+    '.agm-gh{text-align:center;padding:7px 2px;font-size:.76rem;font-weight:800;color:var(--atx);border-bottom:1.5px solid var(--abd);position:sticky;top:0;background:#fff;z-index:3}',
     '.agm-gh small{display:block;font-weight:600;color:var(--atm);font-size:.68rem}',
     '.agm-gh.hoy{color:#fff;background:var(--ap)}',
     '.agm-gh.hoy small{color:#f3e7f7}',
-    '.agm-guth{border-bottom:1px solid var(--abd)}',
+    '.agm-guth{border-bottom:1.5px solid var(--abd)}',
     '.agm-body2{position:relative}',
-    '.agm-hl{position:absolute;left:0;right:0;border-top:1px solid #f3edf7}',
-    '.agm-hlbl{position:absolute;left:0;right:0;text-align:right;padding-right:5px;font-size:.64rem;color:#b0a4bf;transform:translateY(-6px)}',
-    '.agm-ev{position:absolute;left:2px;right:2px;border-radius:6px;padding:2px 5px;font-size:.72rem;line-height:1.2;overflow:hidden;cursor:pointer;border-left:3px solid}',
+    '.agm-hl{position:absolute;left:0;right:0;border-top:1px dashed #efe6f5}',
+    '.agm-hl.hr{border-top:1px solid #d9c9e6}',
+    '.agm-hlbl{position:absolute;left:0;right:0;text-align:right;padding-right:6px;font-size:.66rem;font-weight:700;color:#9c8bb0;transform:translateY(-6px)}',
+    '.agm-hover{position:absolute;left:1px;right:1px;background:rgba(142,63,158,.12);border:1.5px solid var(--ap);border-radius:5px;pointer-events:none;z-index:1;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;font-size:.66rem;font-weight:800;color:var(--apd)}',
+    '.agm-ev{position:absolute;left:2px;right:2px;border-radius:6px;padding:2px 5px;font-size:.72rem;line-height:1.2;overflow:hidden;cursor:pointer;border-left:3px solid;z-index:2}',
     '.agm-ev b{font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.agm-ev.cir{background:#CECBF6;border-color:#534AB7;color:#26215C}',
     '.agm-ev.con{background:#F4C0D1;border-color:#993556;color:#4B1528}',
     '.agm-ev.lleg{background:#C0DD97;border-color:#3B6D11;color:#173404}',
-    '.agm-blk{position:absolute;left:2px;right:2px;border-radius:6px;background:#F7C1C1;border-left:3px solid #A32D2D;color:#501313;font-size:.7rem;padding:2px 5px;overflow:hidden}',
-    '.agm-slotfree{position:absolute;left:0;right:0;cursor:pointer}',
-    '.agm-slotfree:hover{background:rgba(142,63,158,.06)}',
+    '.agm-blk{position:absolute;left:2px;right:2px;border-radius:6px;background:repeating-linear-gradient(45deg,#F7C1C1,#F7C1C1 6px,#f4b4b4 6px,#f4b4b4 12px);border-left:3px solid #A32D2D;color:#501313;font-size:.7rem;font-weight:700;padding:2px 5px;overflow:hidden;cursor:pointer;z-index:2}',
     // ── Modal ──
     '.agm-ov{position:fixed;inset:0;background:rgba(20,8,30,.45);display:flex;align-items:flex-start;justify-content:center;z-index:9999;padding:24px 12px;overflow-y:auto}',
-    '.agm-modal{background:#fff;border-radius:16px;padding:18px;max-width:440px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}',
-    '.agm-mh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:4px}',
-    '.agm-mt{font-size:1rem;font-weight:800;color:var(--atx)}',
-    '.agm-mx{border:none;background:none;font-size:1.3rem;cursor:pointer;color:var(--atm);line-height:1;font-family:inherit}',
-    '.agm-mwhen{font-size:.82rem;color:var(--apd);font-weight:700;background:var(--apl);border-radius:8px;padding:6px 10px;margin-bottom:12px;display:inline-block}',
+    '.agm-modal{background:#fff;border-radius:16px;padding:20px;max-width:460px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}',
+    '.agm-mh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px}',
+    '.agm-mt{font-size:1.05rem;font-weight:800;color:var(--atx)}',
+    '.agm-mx{border:none;background:none;font-size:1.4rem;cursor:pointer;color:var(--atm);line-height:1;font-family:inherit}',
+    '.agm-when{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}',
+    '.agm-wpill{font-size:.82rem;color:var(--apd);font-weight:800;background:var(--apl);border:1.5px solid var(--abd);border-radius:9px;padding:8px 11px;display:inline-flex;align-items:center;gap:6px}',
     '.agm-srch{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
-    '.agm-mact{display:flex;gap:8px;margin-top:14px}'
+    '.agm-mlbl{font-size:.74rem;font-weight:800;color:var(--atm);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 7px}',
+    '.agm-mact{display:flex;gap:8px;margin-top:16px}',
+    '.agm-warn{background:#fff4e6;border:1.5px solid #fed7aa;color:#b45309;border-radius:10px;padding:10px 12px;font-size:.82rem;font-weight:700;margin-bottom:12px;line-height:1.4}'
   ].join('\n');
 
   var cssInjected=false;
@@ -109,6 +112,7 @@
   function bloqueoDe(bloqs, fecha, hhmm){
     for(var i=0;i<(bloqs||[]).length;i++){ var b=bloqs[i];
       if(fecha<b.desdeF||fecha>b.hastaF) continue;
+      if(b.diario){ if(hhmm>=b.desdeH&&hhmm<b.hastaH) return b; continue; }
       if(b.todoDia) return b;
       var s=(fecha===b.desdeF)?b.desdeH:'00:00', e=(fecha===b.hastaF)?b.hastaH:'23:59';
       if(hhmm>=s&&hhmm<e) return b;
@@ -118,8 +122,10 @@
   // Rango [ini,fin] en minutos que un bloqueo ocupa EN un día dado (clamp a la ventana visible).
   function bloqueoRangoDia(b, fecha){
     if(fecha<b.desdeF||fecha>b.hastaF) return null;
-    var s = b.todoDia ? 0    : (fecha===b.desdeF ? hm2min(b.desdeH) : 0);
-    var e = b.todoDia ? 1440 : (fecha===b.hastaF ? hm2min(b.hastaH) : 1440);
+    var s,e;
+    if(b.diario){ s=hm2min(b.desdeH); e=hm2min(b.hastaH); }
+    else if(b.todoDia){ s=0; e=1440; }
+    else { s=(fecha===b.desdeF ? hm2min(b.desdeH) : 0); e=(fecha===b.hastaF ? hm2min(b.hastaH) : 1440); }
     var ini=Math.max(s,H_INI), fin=Math.min(e,H_FIN);
     return (fin>ini) ? {ini:ini,fin:fin} : null;
   }
@@ -234,10 +240,11 @@
       // columnas de días
       dias.forEach(function(d,di){ var iso=isoDe(d);
         h+='<div class="agm-gcol"><div class="agm-body2" data-iso="'+iso+'" style="height:'+ALTO+'px">';
-        for(var mm=H_INI;mm<=H_FIN;mm+=60){ h+='<div class="agm-hl" style="top:'+((mm-H_INI)*PXMIN)+'px"></div>'; }
-        // bloqueos (rojo) al fondo
+        // líneas cada 30 min; las de en punto, más marcadas
+        for(var mm=H_INI;mm<=H_FIN;mm+=30){ h+='<div class="agm-hl'+(mm%60===0?' hr':'')+'" style="top:'+((mm-H_INI)*PXMIN)+'px"></div>'; }
+        // bloqueos (rojo) — clicables para editar
         bloqs.forEach(function(b){ var rg=bloqueoRangoDia(b,iso); if(!rg)return;
-          h+='<div class="agm-blk" style="top:'+((rg.ini-H_INI)*PXMIN)+'px;height:'+((rg.fin-rg.ini)*PXMIN-1)+'px">🚫 '+(b.motivo?esc(b.motivo):'No disponible')+'</div>';
+          h+='<div class="agm-blk" data-bid="'+esc(b.id)+'" title="Tocá para editar" style="top:'+((rg.ini-H_INI)*PXMIN)+'px;height:'+((rg.fin-rg.ini)*PXMIN-1)+'px">🚫 '+(b.motivo?esc(b.motivo):'No disponible')+'</div>';
         });
         // citas de ese día
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
@@ -250,26 +257,44 @@
       });
       h+='</div>';
       W.innerHTML=h;
-      // click en hueco vacío → agendar
+      var slotY=function(bodyEl,clientY){ var rect=bodyEl.getBoundingClientRect(); var y=clientY-rect.top;
+        var minuto=H_INI+Math.round((y/PXMIN)/30)*30; if(minuto<H_INI)minuto=H_INI; if(minuto>H_FIN-30)minuto=H_FIN-30; return minuto; };
       W.querySelectorAll('.agm-body2[data-iso]').forEach(function(bodyEl){
+        var iso=bodyEl.getAttribute('data-iso');
+        var hov=document.createElement('div'); hov.className='agm-hover'; hov.style.display='none';
+        hov.style.height=(30*PXMIN-1)+'px'; bodyEl.appendChild(hov);
+        // hover: resalta la franja de 30 min bajo el mouse y muestra la hora
+        bodyEl.addEventListener('mousemove', function(ev){
+          if(ev.target.closest('.agm-ev')||ev.target.closest('.agm-blk')){ hov.style.display='none'; return; }
+          var m=slotY(bodyEl,ev.clientY); hov.style.top=((m-H_INI)*PXMIN)+'px'; hov.textContent=min2hm(m); hov.style.display='flex';
+        });
+        bodyEl.addEventListener('mouseleave', function(){ hov.style.display='none'; });
+        // click en hueco vacío → agendar (si cae sobre un bloqueo, avisa)
         bodyEl.addEventListener('click', function(ev){
           if(ev.target.closest('.agm-ev')||ev.target.closest('.agm-blk')) return;
-          var rect=bodyEl.getBoundingClientRect(); var y=ev.clientY-rect.top;
-          var minuto=H_INI+Math.round((y/PXMIN)/30)*30; if(minuto<H_INI)minuto=H_INI; if(minuto>H_FIN-30)minuto=H_FIN-30;
-          abrirCrear(bodyEl.getAttribute('data-iso'), min2hm(minuto), med);
+          var m=slotY(bodyEl,ev.clientY); var hm=min2hm(m);
+          var b=bloqueoDe(bloqs,iso,hm);
+          if(b){ if(!confirm('Acá hay un bloqueo'+(b.motivo?' ('+b.motivo+')':'')+'. ¿Agendar una cita igual en este horario?')) return; abrirCrear(iso,hm,med,true); }
+          else abrirCrear(iso,hm,med,false);
         });
       });
-      // click en cita → detalle
       W.querySelectorAll('.agm-ev').forEach(function(evEl){
         evEl.addEventListener('click', function(ev){ ev.stopPropagation();
           var id=evEl.getAttribute('data-id'); var c=citas.filter(function(x){return String(x.id)===id;})[0];
           if(c) abrirDetalle(c);
         });
       });
+      W.querySelectorAll('.agm-blk').forEach(function(bk){
+        bk.addEventListener('click', function(ev){ ev.stopPropagation();
+          var id=bk.getAttribute('data-bid'); var b=bloqs.filter(function(x){return String(x.id)===id;})[0];
+          if(b) abrirBloqueoModal(b, med);
+        });
+      });
     }
 
     // ══════════ MODAL: crear cita ══════════
     function overlay(html){
+      if(S._ov){ S._ov.remove(); S._ov=null; }   // un solo modal a la vez
       var ov=document.createElement('div'); ov.className='agm-ov';
       ov.innerHTML='<div class="agm-modal">'+html+'</div>';
       ov.addEventListener('click', function(e){ if(e.target===ov) cerrarOv(); });
@@ -277,12 +302,18 @@
     }
     function cerrarOv(){ if(S._ov){ S._ov.remove(); S._ov=null; } S.selCliente=null; }
 
-    function abrirCrear(iso, hora, med){
-      S.crear={ fecha:iso, hora:hora, medico:med }; S.selCliente=null;
+    function abrirCrear(iso, hora, med, forzar){
+      S.crear={ fecha:iso, hora:hora, medico:med, forzar:!!forzar }; S.selCliente=null;
       var d=mkFecha(iso);
       overlay(
         '<div class="agm-mh"><div class="agm-mt">Agendar cita</div><button class="agm-mx" id="mX">×</button></div>'+
-        '<div class="agm-mwhen">'+esc(DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1))+' · '+esc(hora)+' · '+esc(med)+'</div>'+
+        '<div class="agm-when">'+
+          '<span class="agm-wpill">📅 '+esc(DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1))+'</span>'+
+          '<span class="agm-wpill">🕐 '+esc(hora)+'</span>'+
+          '<span class="agm-wpill">🩺 '+esc(med)+'</span>'+
+        '</div>'+
+        (forzar?'<div class="agm-warn">⚠️ Este horario está bloqueado. Vas a agendar una cita igual, encima del bloqueo.</div>':'')+
+        '<div class="agm-mlbl">Buscar paciente</div>'+
         '<div class="agm-srch">'+
           '<input type="number" id="mCed" placeholder="Cédula">'+
           '<input type="text" id="mPet" placeholder="Mascota">'+
@@ -329,13 +360,14 @@
           '<div style="margin-top:10px"><label>WhatsApp <span style="font-weight:400">(recordatorios)</span></label><input id="fTel" inputmode="numeric" value="'+esc(S.selCliente.phone||'')+'" placeholder="3001234567"></div>';
       $ov('mForm').innerHTML=
         cab+
+        '<div class="agm-mlbl">Datos de la cita</div>'+
         '<div class="agm-row"><div><label>Servicio</label><select id="fSvc">'+SERVICIOS.map(function(s){return '<option'+(/consulta general/i.test(s)?' selected':'')+'>'+esc(s)+'</option>';}).join('')+'</select></div>'+
           '<div id="fDurWrap"><label>Duración</label><select id="fDur"></select></div></div>'+
         '<div style="margin-top:12px"><label>Notas <span style="font-weight:400">(opcional)</span></label><textarea id="fNot" rows="2" placeholder="Motivo, indicaciones…"></textarea></div>'+
         '<div class="agm-mact"><button class="agm-btn agm-btn-g" id="fCancel" style="flex:0 0 auto">Cancelar</button>'+
         '<button class="agm-btn agm-block" id="fGuardar">Agendar →</button></div>'+
         '<div class="agm-err" id="fErr"></div>';
-      var rs=$ov('fReset'); if(rs) rs.onclick=function(){ S.selCliente=null; abrirCrear(S.crear.fecha,S.crear.hora,S.crear.medico); };
+      var rs=$ov('fReset'); if(rs) rs.onclick=function(){ S.selCliente=null; abrirCrear(S.crear.fecha,S.crear.hora,S.crear.medico,S.crear.forzar); };
       $ov('fCancel').onclick=cerrarOv;
       $ov('fSvc').onchange=syncDur; syncDur();
       $ov('fGuardar').onclick=function(){ guardarCita(manual); };
@@ -349,7 +381,7 @@
     function guardarCita(manual){
       var err=$ov('fErr'); err.textContent='';
       var data={ fecha:S.crear.fecha, hora:S.crear.hora, medico:S.crear.medico,
-        servicio:$ov('fSvc').value, duracion:+($ov('fDur').value||0),
+        servicio:$ov('fSvc').value, duracion:+($ov('fDur').value||0), forzar:!!S.crear.forzar,
         notas:($ov('fNot')||{}).value?$ov('fNot').value.trim():'', phone:($ov('fTel')||{}).value||'' };
       if(S.selCliente){ data.petName=S.selCliente.petName; data.owner=S.selCliente.owner; data.cedula=S.selCliente.cedula; data.vetesoftId=S.selCliente.vetesoftId; data.vetesoftHc=S.selCliente.vetesoftHc; }
       else { data.petName=($ov('fPet')||{}).value||''; data.owner=($ov('fOwn')||{}).value||''; data.cedula=($ov('fCed')||{}).value||''; }
@@ -366,7 +398,8 @@
       var d=mkFecha(c.fecha);
       overlay(
         '<div class="agm-mh"><div class="agm-mt">'+esc(c.petName||c.owner||'Cita')+'</div><button class="agm-mx" id="dX">×</button></div>'+
-        '<div class="agm-mwhen">'+esc(DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1))+' · '+esc(c.hora)+' · '+esc(c.servicio||'')+'</div>'+
+        '<div class="agm-when"><span class="agm-wpill">📅 '+esc(DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1))+'</span>'+
+          '<span class="agm-wpill">🕐 '+esc(c.hora)+'</span><span class="agm-wpill">'+esc(c.servicio||'')+'</span></div>'+
         '<div style="font-size:.85rem;color:var(--atm);line-height:1.6">'+
           (c.owner?'👤 '+esc(c.owner)+'<br>':'')+
           (c.vetesoftHc?'🗂️ HC '+esc(c.vetesoftHc)+'<br>':'')+
@@ -393,8 +426,55 @@
       }).catch(function(){ if(e) e.textContent='Error de conexión.'; });
     }
 
+    // ══════════ MODAL: editar bloqueo (desde el calendario) ══════════
+    function abrirBloqueoModal(b, med){
+      var d=mkFecha(b.desdeF);
+      overlay(
+        '<div class="agm-mh"><div class="agm-mt">🚫 Bloqueo</div><button class="agm-mx" id="eX">×</button></div>'+
+        '<div class="agm-when"><span class="agm-wpill">🩺 '+esc(b.medico)+'</span>'+(b.diario?'<span class="agm-wpill">Todos los días</span>':'')+'</div>'+
+        '<div class="agm-row">'+
+          '<div><label>Desde (día)</label><input type="date" id="eDesF" value="'+esc(b.desdeF)+'"></div>'+
+          '<div><label>Hasta (día)</label><input type="date" id="eHasF" value="'+esc(b.hastaF==='2099-12-31'?'':b.hastaF)+'"></div>'+
+        '</div>'+
+        '<label class="agm-chk"><input type="checkbox" id="eDiario"'+(b.diario?' checked':'')+'> Repetir todos los días (misma franja horaria)</label>'+
+        '<label class="agm-chk"><input type="checkbox" id="eTodo"'+(b.todoDia?' checked':'')+'> Día(s) completo(s), sin horario</label>'+
+        '<div class="agm-row" id="eHoras">'+
+          '<div><label>Desde (hora)</label><select id="eDesH">'+horaOpts(b.desdeH)+'</select></div>'+
+          '<div><label>Hasta (hora)</label><select id="eHasH">'+horaOpts(b.hastaH)+'</select></div>'+
+        '</div>'+
+        '<div style="margin-top:12px"><label>Motivo</label><input id="eMot" value="'+esc(b.motivo||'')+'" placeholder="Vacaciones, tema familiar…"></div>'+
+        '<div class="agm-mact">'+
+          '<button class="agm-btn agm-btn-g" id="eQuitar" style="color:#c0392b;border-color:#f1c0c0">Quitar</button>'+
+          '<button class="agm-btn agm-block" id="eGuardar">Guardar cambios</button>'+
+        '</div>'+
+        '<button class="agm-nuevo" id="eAgendar" style="margin-top:10px">📅 Agendar una cita igual en este horario</button>'+
+        '<div class="agm-err" id="eErr"></div>'
+      );
+      var syncH=function(){ var todo=$ov('eTodo').checked && !$ov('eDiario').checked; $ov('eHoras').style.display=todo?'none':''; };
+      $ov('eDiario').onchange=function(){ if(this.checked)$ov('eTodo').checked=false; syncH(); };
+      $ov('eTodo').onchange=function(){ if(this.checked)$ov('eDiario').checked=false; syncH(); };
+      syncH();
+      $ov('eX').onclick=cerrarOv;
+      $ov('eQuitar').onclick=function(){ if(!confirm('¿Quitar este bloqueo? El horario vuelve a quedar disponible.'))return; accionBloqueo('cancelarBloqueo',{id:b.id}); };
+      $ov('eAgendar').onclick=function(){ abrirCrear(b.desdeF, (b.todoDia?'08:00':b.desdeH), med||b.medico, true); };
+      $ov('eGuardar').onclick=function(){
+        var diario=$ov('eDiario').checked, todo=$ov('eTodo').checked&&!diario;
+        var data={ medico:b.medico, desdeF:$ov('eDesF').value, hastaF:$ov('eHasF').value, diario:diario, todoDia:todo,
+          desdeH:todo?'':$ov('eDesH').value, hastaH:todo?'':$ov('eHasH').value, motivo:$ov('eMot').value.trim() };
+        accionBloqueo('editarBloqueo',{id:b.id,data:data});
+      };
+    }
+    function accionBloqueo(action,payload){
+      var e=$ov('eErr'); if(e)e.textContent='';
+      payload.action=action;
+      fetch(api,{method:'POST',body:JSON.stringify(payload)}).then(function(r){return r.json();}).then(function(res){
+        if(res&&res.ok){ cerrarOv(); cargarCal(); }
+        else { if(e)e.textContent=(res&&res.error)||'No se pudo.'; }
+      }).catch(function(){ if(e)e.textContent='Error de conexión.'; });
+    }
+
     // ══════════ BLOQUEOS ══════════
-    function horaOpts(){ var h='';for(var m=6*60;m<=20*60;m+=30){var v=min2hm(m);h+='<option value="'+v+'">'+v+'</option>';}return h; }
+    function horaOpts(sel){ var h='';for(var m=6*60;m<=20*60;m+=30){var v=min2hm(m);h+='<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>';}return h; }
     function pintarBloquear(){
       body.innerHTML=
         '<div class="agm-card"><div class="agm-t">Marcar no disponible</div>'+
@@ -404,17 +484,21 @@
           '<div><label>Desde (día)</label><input type="date" id="bDesF" value="'+hoyISO()+'"></div>'+
           '<div><label>Hasta (día)</label><input type="date" id="bHasF" value="'+hoyISO()+'"></div>'+
         '</div>'+
+        '<label class="agm-chk"><input type="checkbox" id="bDiario"> Repetir todos los días (ej. 7 a 9 cada día)</label>'+
         '<label class="agm-chk"><input type="checkbox" id="bTodo"> Día(s) completo(s) — sin horario</label>'+
         '<div class="agm-row" id="bHoras">'+
           '<div><label>Desde (hora)</label><select id="bDesH">'+horaOpts()+'</select></div>'+
           '<div><label>Hasta (hora)</label><select id="bHasH">'+horaOpts()+'</select></div>'+
         '</div>'+
+        '<div class="agm-sub" id="bDiarioTip" style="display:none;margin-top:2px">Con "todos los días", dejá "Hasta (día)" vacío para que sea indefinido, o poné una fecha de fin.</div>'+
         '<div style="margin-top:12px"><label>Motivo <span style="font-weight:400">(opcional)</span></label><input id="bMot" placeholder="Vacaciones, tema familiar…"></div>'+
         '<button class="agm-btn agm-block" style="margin-top:14px" id="bGuardar">🚫 Guardar bloqueo</button>'+
         '<div class="agm-err" id="bErr"></div>'+
         '<div class="agm-t" style="margin-top:20px">Bloqueos activos</div>'+
         '<div id="bList"><div class="agm-sp"></div></div></div>';
-      $('bTodo').onchange=function(){ $('bHoras').style.display=this.checked?'none':''; };
+      var syncB=function(){ var todo=$('bTodo').checked&&!$('bDiario').checked; $('bHoras').style.display=todo?'none':''; $('bDiarioTip').style.display=$('bDiario').checked?'':'none'; };
+      $('bDiario').onchange=function(){ if(this.checked)$('bTodo').checked=false; syncB(); };
+      $('bTodo').onchange=function(){ if(this.checked)$('bDiario').checked=false; syncB(); };
       $('bGuardar').onclick=guardarBloqueo;
       cargarBloqueos();
     }
@@ -422,8 +506,8 @@
       var err=$('bErr'); err.textContent='';
       var medico=medicoFijo || (($('bMed')||{}).value||'');
       if(!medico){ err.textContent='Elegí el médico.'; return; }
-      var todo=$('bTodo').checked;
-      var data={ medico:medico, desdeF:$('bDesF').value, hastaF:$('bHasF').value,
+      var diario=$('bDiario').checked, todo=$('bTodo').checked&&!diario;
+      var data={ medico:medico, desdeF:$('bDesF').value, hastaF:$('bHasF').value, diario:diario,
         todoDia:todo, desdeH:todo?'':$('bDesH').value, hastaH:todo?'':$('bHasH').value, motivo:$('bMot').value.trim() };
       if(!data.desdeF){ err.textContent='Poné el día de inicio.'; return; }
       $('bGuardar').textContent='Guardando…'; $('bGuardar').disabled=true;
@@ -442,7 +526,11 @@
         L.querySelectorAll('.agm-cx').forEach(function(b){ b.onclick=function(){ cancelarBloqueo(b.getAttribute('data-id'),b); }; });
       }).catch(function(){ L.innerHTML='<div class="agm-empty">Error de conexión.</div>'; });
     }
-    function bloqRango(b){ var dias=(b.desdeF===b.hastaF)?b.desdeF:(b.desdeF+' → '+b.hastaF); return dias+' · '+(b.todoDia?'todo el día':(b.desdeH+'–'+b.hastaH)); }
+    function bloqRango(b){
+      if(b.diario){ return 'Todos los días '+b.desdeH+'–'+b.hastaH+(b.hastaF&&b.hastaF!=='2099-12-31'?' (hasta '+b.hastaF+')':''); }
+      var dias=(b.desdeF===b.hastaF)?b.desdeF:(b.desdeF+' → '+b.hastaF);
+      return dias+' · '+(b.todoDia?'todo el día':(b.desdeH+'–'+b.hastaH));
+    }
     function bloqHtml(b){
       return '<div style="border:1px solid var(--abd);border-left:5px solid #b45309;border-radius:11px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">'+
         '<div style="color:#b45309;font-size:1.2rem">🚫</div><div style="flex:1;min-width:0">'+
