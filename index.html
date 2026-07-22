@@ -380,6 +380,8 @@ var QUESTIONS = [
     {label:'📋 Control / seguimiento', value:'Control'},
     {label:'💉 Vacunación', value:'Vacunación'},
     {label:'🩹 Inyectología', value:'Inyectología'},
+    {label:'🪱 Desparasitación', value:'Desparasitación'},
+    {label:'🔪 Cirugía', value:'Cirugía'},
     {label:'🩻 Rayos X y Ecografía', value:'Rayos X y Ecografía'},
     {label:'✈️ Viajero / certificado', value:'Viajero'}
   ]},
@@ -428,6 +430,48 @@ var QUESTIONS = [
   {id:'via_modo', group:'VIAJERO', q:'¿Cómo viaja tu mascota?', type:'single', onlyServices:['Viajero'], branch:true, label:'Modo de viaje', options:[
     {label:'En cabina', value:'Cabina'}, {label:'En bodega', value:'Bodega'},
     {label:'Terrestre', value:'Terrestre'}, {label:'No sé todavía', value:'No se'}
+  ]},
+
+  // ── CIRUGÍA (solo ese servicio) ──
+  // Preguntas pre-quirúrgicas de seguridad. El ayuno es lo más importante para
+  // la anestesia. (Medicamentos y alergias ya se preguntan a todos, más abajo.)
+  {id:'cir_ayuno', group:'CIRUGÍA', q:'¿Está en ayuno?', sub:'Sin comida ni agua desde anoche, como se indica antes de una cirugía.', type:'single', onlyServices:['Cirugía'], branch:true, label:'Ayuno', illo:'bandaid', options:[
+    {label:'Sí, en ayuno completo ✓', value:'Ayuno completo'},
+    {label:'No, comió o tomó agua', value:'Comió'},
+    {label:'No sé', value:'No sé'}
+  ]},
+  {id:'cir_ultima', group:'CIRUGÍA', q:'¿Hace cuánto comió o bebió por última vez?', type:'single', onlyServices:['Cirugía'], branch:true, label:'Última comida/agua', conditional:'cir_ayuno===Comió', options:[
+    {label:'Hace menos de 6 horas', value:'Menos de 6 h'},
+    {label:'Entre 6 y 12 horas', value:'6 a 12 h'},
+    {label:'Más de 12 horas', value:'Más de 12 h'},
+    {label:'No sé', value:'No sé'}
+  ]},
+  {id:'cir_previa', group:'CIRUGÍA', q:'¿Ha tenido cirugías o anestesia antes?', type:'single', onlyServices:['Cirugía'], branch:true, label:'Cirugía/anestesia previa', options:[
+    {label:'No, es la primera vez', value:'No'},
+    {label:'Sí, sin problemas', value:'Sí, sin problemas'},
+    {label:'Sí, y reaccionó mal', value:'Sí, reaccionó mal'},
+    {label:'No sé', value:'No sé'}
+  ]},
+
+  // ── DESPARASITACIÓN (solo ese servicio) ──
+  // El peso ya se pregunta a todos (para la dosis). Acá lo puntual.
+  {id:'dep_ultima', group:'DESPARASITACIÓN', q:'¿Cuándo fue la última desparasitación?', type:'single', onlyServices:['Desparasitación'], branch:true, label:'Última desparasitación', illo:'pills', options:[
+    {label:'Nunca / no sé', value:'Nunca/no sé'},
+    {label:'Hace menos de 3 meses', value:'Menos de 3 meses'},
+    {label:'Entre 3 y 6 meses', value:'3 a 6 meses'},
+    {label:'Más de 6 meses', value:'Más de 6 meses'}
+  ]},
+  {id:'dep_tipo', group:'DESPARASITACIÓN', q:'¿Qué desparasitación necesita?', type:'single', onlyServices:['Desparasitación'], branch:true, label:'Tipo', options:[
+    {label:'Interna (lombrices)', value:'Interna'},
+    {label:'Externa (pulgas, garrapatas)', value:'Externa'},
+    {label:'Ambas', value:'Ambas'},
+    {label:'No sé', value:'No sé'}
+  ]},
+  {id:'dep_parasitos', group:'DESPARASITACIÓN', q:'¿Has visto parásitos?', type:'single', onlyServices:['Desparasitación'], branch:true, label:'Parásitos vistos', options:[
+    {label:'No', value:'No'},
+    {label:'Pulgas o garrapatas', value:'Pulgas/garrapatas'},
+    {label:'Gusanos en las heces', value:'Gusanos en heces'},
+    {label:'Sí, otros', value:'Otros'}
   ]},
 
   // ¿El control es con especialista o con médico general?
