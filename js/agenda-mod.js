@@ -11,8 +11,8 @@
 (function(){
   var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Vacunación','Inyectología','Desparasitación','Rayos X y Ecografía','Viajero'];
   var DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  var H_INI=7*60, H_FIN=19*60, PXMIN=0.72;        // 07:00–19:00, 0.72px por minuto
-  var ALTO=(H_FIN-H_INI)*PXMIN;                    // alto total del día
+  var H_INI=6*60, H_FIN=22*60, PXMIN=0.5;          // 06:00–22:00; escala pensada para
+  var ALTO=(H_FIN-H_INI)*PXMIN;                    // que el día entero entre sin scroll
 
   var CSS=[
     '.agm{--ap:#8e3f9e;--apd:#6d2f7a;--apl:#f3e7f7;--abd:#e8daf0;--abg:#faf7ff;--atx:#1a0a2e;--atm:#6b5c7e}',
@@ -48,6 +48,9 @@
     '@keyframes agmsp{to{transform:rotate(360deg)}}',
     '.agm-chk{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:700;color:var(--atx);margin-top:12px;cursor:pointer}',
     '.agm-chk input{width:auto}',
+    '.agm-days{display:flex;gap:5px;flex-wrap:wrap}',
+    '.agm-daychip{border:1.5px solid var(--abd);background:#fff;border-radius:8px;padding:5px 9px;font-size:.78rem;font-weight:700;color:var(--atm);cursor:pointer;font-family:inherit}',
+    '.agm-daychip.on{background:var(--apl);color:var(--apd);border-color:var(--ap)}',
     // ── Calendario ──
     '.agm-cal-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}',
     '.agm-cal-top select{width:auto;min-width:150px;flex:1}',
@@ -59,6 +62,9 @@
     '.agm-seg button.on{background:var(--apl);color:var(--apd)}',
     '.agm-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:.72rem;color:var(--atm);margin-bottom:8px}',
     '.agm-leg span{display:inline-flex;align-items:center;gap:5px}',
+    '.agm-lnk{border:1px solid var(--abd);background:#fff;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;color:#b45309;cursor:pointer;font-family:inherit}',
+    '.agm-lnk:hover{background:#fff7ed}',
+    '.agm-reprog{background:var(--apl);border:1.5px solid var(--ap);border-radius:10px;padding:9px 12px;font-size:.85rem;font-weight:700;color:var(--apd);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
     '.agm-dot{width:11px;height:11px;border-radius:3px;display:inline-block}',
     '.agm-scroll{overflow-x:auto;border:1px solid var(--abd);border-radius:12px;background:#fff}',
     '.agm-grid{display:grid;min-width:520px}',
@@ -110,12 +116,18 @@
   function min2hm(m){ var h=Math.floor(m/60),mm=m%60; return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm; }
   function durServicio(svc){ var s=String(svc||'').toLowerCase(); if(s.indexOf('control')!==-1)return 30; if(s.indexOf('consulta')!==-1)return 60; if(s.indexOf('cirug')!==-1)return 60; return 30; }
   function claseCita(c){ if(c.llego) return 'lleg'; if(/cirug/i.test(c.servicio||'')) return 'cir'; return 'con'; }
+  var DIASEM=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  function diaChips(sel){ var s=String(sel||'').split(','); return DIASEM.map(function(n,i){ return '<button type="button" class="agm-daychip'+(s.indexOf(String(i))!==-1?' on':'')+'" data-d="'+i+'">'+n+'</button>'; }).join(''); }
+  function diasSeleccionados(cont){ return cont?[].slice.call(cont.querySelectorAll('.agm-daychip.on')).map(function(b){return b.getAttribute('data-d');}).join(','):''; }
+  function wireChips(cont){ if(!cont)return; cont.querySelectorAll('.agm-daychip').forEach(function(b){ b.onclick=function(){ b.classList.toggle('on'); }; }); }
 
+  function diaSemanaDe(fecha){ return mkFecha(fecha).getDay(); }
+  function bloqAplicaDia(b, fecha){ return !b.dias || String(b.dias).split(',').indexOf(String(diaSemanaDe(fecha)))!==-1; }
   // ¿Algún bloqueo cubre el slot (fecha, hora)? Espejo del backend.
   function bloqueoDe(bloqs, fecha, hhmm){
     for(var i=0;i<(bloqs||[]).length;i++){ var b=bloqs[i];
       if(fecha<b.desdeF||fecha>b.hastaF) continue;
-      if(b.diario){ if(hhmm>=b.desdeH&&hhmm<b.hastaH) return b; continue; }
+      if(b.diario){ if(bloqAplicaDia(b,fecha)&&hhmm>=b.desdeH&&hhmm<b.hastaH) return b; continue; }
       if(b.todoDia) return b;
       var s=(fecha===b.desdeF)?b.desdeH:'00:00', e=(fecha===b.hastaF)?b.hastaH:'23:59';
       if(hhmm>=s&&hhmm<e) return b;
@@ -125,6 +137,7 @@
   // Rango [ini,fin] en minutos que un bloqueo ocupa EN un día dado (clamp a la ventana visible).
   function bloqueoRangoDia(b, fecha){
     if(fecha<b.desdeF||fecha>b.hastaF) return null;
+    if(b.diario&&!bloqAplicaDia(b,fecha)) return null;   // día de semana que no aplica
     var s,e;
     if(b.diario){ s=hm2min(b.desdeH); e=hm2min(b.hastaH); }
     else if(b.todoDia){ s=0; e=1440; }
@@ -141,17 +154,10 @@
     var esMovil = window.matchMedia && window.matchMedia('(max-width:640px)').matches;
     var S = { medicos:[], sub:'cal', vista: esMovil?'dia':'semana', ancla:new Date(), med:medicoFijo, selCliente:null, crear:null };
 
-    el.innerHTML =
-      '<div class="agm">'+
-        '<div class="agm-tabs">'+
-          '<button class="agm-tab on" data-s="cal">📅 Agenda</button>'+
-          '<button class="agm-tab" data-s="bloquear">🚫 Bloqueos</button>'+
-        '</div>'+
-        '<div class="agm-body"></div>'+
-      '</div>';
+    // Sin tabs: el calendario ES la vista. "Bloqueos" queda como un botón chico
+    // arriba (se usa poco), y desde ahí se vuelve. Así no repetimos "Agenda".
+    el.innerHTML = '<div class="agm"><div class="agm-body"></div></div>';
     var body = el.querySelector('.agm-body');
-    var tabs = el.querySelectorAll('.agm-tab');
-    tabs.forEach(function(t){ t.onclick=function(){ S.sub=t.getAttribute('data-s'); tabs.forEach(function(x){x.classList.toggle('on',x===t);}); pintar(); }; });
 
     fetch(api+'?action=medicos').then(function(r){return r.json();}).then(function(res){
       S.medicos = (res&&res.ok) ? (res.medicos||[]).map(function(m){return m.medico;}) : [];
@@ -198,9 +204,13 @@
           '<span><i class="agm-dot" style="background:#F4C0D1;border:1px solid #993556"></i>Consulta/control</span>'+
           '<span><i class="agm-dot" style="background:#C0DD97;border:1px solid #3B6D11"></i>Llegó</span>'+
           '<span><i class="agm-dot" style="background:#F7C1C1;border:1px solid #A32D2D"></i>No disponible</span>'+
+          '<button class="agm-lnk" id="cBloq" style="margin-left:auto">🚫 Bloqueos</button>'+
         '</div>'+
+        (S.reprog?'<div class="agm-reprog">🔁 Reprogramando a <b>'+esc(S.reprog.pet)+'</b> — tocá el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
         '<div id="cWrap" class="agm-scroll"><div class="agm-sp"></div></div>';
       var sel=$('cMed'); if(sel) sel.onchange=function(){ S.med=sel.value; cargarCal(); };
+      $('cBloq').onclick=function(){ S.sub='bloquear'; pintar(); };
+      var rx=$('cReprogX'); if(rx) rx.onclick=function(){ S.reprog=null; pintarCal(); };
       $('cPrev').onclick=function(){ S.ancla=addDias(S.ancla, S.vista==='dia'?-1:-7); refrescarLbl(); cargarCal(); };
       $('cNext').onclick=function(){ S.ancla=addDias(S.ancla, S.vista==='dia'? 1: 7); refrescarLbl(); cargarCal(); };
       $('cHoy').onclick=function(){ S.ancla=new Date(); refrescarLbl(); cargarCal(); };
@@ -276,9 +286,10 @@
         bodyEl.addEventListener('click', function(ev){
           if(ev.target.closest('.agm-ev')||ev.target.closest('.agm-blk')) return;
           var m=slotY(bodyEl,ev.clientY); var hm=min2hm(m);
-          var b=bloqueoDe(bloqs,iso,hm);
-          if(b){ if(!confirm('Acá hay un bloqueo'+(b.motivo?' ('+b.motivo+')':'')+'. ¿Agendar una cita igual en este horario?')) return; abrirCrear(iso,hm,med,true); }
-          else abrirCrear(iso,hm,med,false);
+          var b=bloqueoDe(bloqs,iso,hm), forz=false;
+          if(b){ if(!confirm('Acá hay un bloqueo'+(b.motivo?' ('+b.motivo+')':'')+'. ¿'+(S.reprog?'Reprogramar':'Agendar una cita')+' igual en este horario?')) return; forz=true; }
+          if(S.reprog) reprogramarA(iso,hm,med,forz);
+          else abrirCrear(iso,hm,med,forz);
         });
       });
       W.querySelectorAll('.agm-ev').forEach(function(evEl){
@@ -320,40 +331,46 @@
         '</div>'+
         (forzar?'<div class="agm-warn">⚠️ Este horario está bloqueado. Vas a agendar una cita igual, encima del bloqueo.</div>':'')+
         '<div class="agm-mlbl">Buscar paciente</div>'+
-        '<div class="agm-srch">'+
-          '<input type="number" id="mCed" placeholder="Cédula">'+
-          '<input type="text" id="mPet" placeholder="Mascota">'+
-        '</div>'+
-        '<input type="text" id="mOwn" placeholder="Dueño (opcional)" style="margin-top:8px">'+
-        '<button class="agm-btn agm-block" style="margin-top:10px" id="mBuscar">🔍 Buscar en Vetesoft</button>'+
+        '<input type="text" id="mQ" placeholder="Escribí cédula, mascota o dueño…" autocomplete="off">'+
         '<div class="agm-res" id="mRes"></div><div id="mForm"></div>'
       );
       $ov('mX').onclick=cerrarOv;
-      $ov('mBuscar').onclick=buscarModal;
-      ['mCed','mPet','mOwn'].forEach(function(id){ $ov(id).onkeydown=function(e){ if(e.key==='Enter')buscarModal(); }; });
+      var q=$ov('mQ');
+      q.oninput=function(){ clearTimeout(S._deb); var v=q.value; S._deb=setTimeout(function(){ buscarModal(v); }, 350); };
+      q.focus();
     }
     function $ov(id){ return S._ov ? S._ov.querySelector('#'+id) : null; }
 
-    function buscarModal(){
-      var ced=$ov('mCed').value.trim(), pet=$ov('mPet').value.trim(), own=$ov('mOwn').value.trim();
-      if(!ced&&!pet&&!own) return;
-      var R=$ov('mRes'); R.innerHTML='<div class="agm-sp"></div>'; $ov('mForm').innerHTML='';
-      fetch(api+'?action=search&cedula='+encodeURIComponent(ced)+'&petName='+encodeURIComponent(pet)+'&ownerName='+encodeURIComponent(own))
-        .then(function(r){return r.json();}).then(function(res){
-          var rows=(res&&res.results)||[]; var html='';
-          rows.forEach(function(r,i){ S['_m'+i]=r;
-            html+='<div class="agm-r" data-i="'+i+'"><div class="agm-rn">'+esc(r.petName||'(sin nombre)')+' — '+esc(r.owner||'')+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
-              '<div class="agm-rm">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+(r.phone?' · 📞 '+esc(r.phone):'')+'</div></div>';
-          });
-          if(!rows.length) html='<div class="agm-hint">Sin resultados en Vetesoft.</div>';
-          html+='<button class="agm-nuevo" id="mNuevo">+ Cliente nuevo (cargar a mano)</button>';
-          R.innerHTML=html;
-          R.querySelectorAll('.agm-r').forEach(function(dv){ dv.onclick=function(){ pickModal(+dv.getAttribute('data-i')); }; });
-          $ov('mNuevo').onclick=nuevoModal;
-        }).catch(function(){ R.innerHTML='<div class="agm-hint">Error de conexión.</div>'; });
+    // Búsqueda en vivo: a medida que se escribe. Si es número, va por cédula;
+    // si es texto, busca por mascota Y por dueño a la vez (une coincidencias),
+    // así "cualquier palabra" encuentra sea nombre de la mascota o del cliente.
+    function buscarModal(term){
+      term=String(term||'').trim();
+      var R=$ov('mRes'); if(!R) return;
+      if(term.length<3 && !/^\d{4,}$/.test(term)){ R.innerHTML=''; return; }
+      var esNum=/^\d+$/.test(term);
+      var url = esNum
+        ? api+'?action=search&cedula='+encodeURIComponent(term)
+        : api+'?action=search&petName='+encodeURIComponent(term)+'&ownerName='+encodeURIComponent(term);
+      R.innerHTML='<div class="agm-sp"></div>'; $ov('mForm').innerHTML='';
+      var miTerm=term; S._term=term;
+      fetch(url).then(function(r){return r.json();}).then(function(res){
+        if(S._term!==miTerm) return;   // llegó viejo, lo ignoramos
+        var rows=(res&&res.results)||[]; var html='';
+        rows.forEach(function(r,i){ S['_m'+i]=r;
+          html+='<div class="agm-r" data-i="'+i+'"><div class="agm-rn">'+esc(r.petName||'(sin nombre)')+' — '+esc(r.owner||'')+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
+            '<div class="agm-rm">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+(r.phone?' · 📞 '+esc(r.phone):'')+'</div></div>';
+        });
+        if(!rows.length) html='<div class="agm-hint">Sin resultados. Probá con la cédula, o cargá cliente nuevo.</div>';
+        html+='<button class="agm-nuevo" id="mNuevo">+ Cliente nuevo (cargar a mano)</button>';
+        R.innerHTML=html;
+        R.querySelectorAll('.agm-r').forEach(function(dv){ dv.onclick=function(){ pickModal(+dv.getAttribute('data-i')); }; });
+        $ov('mNuevo').onclick=nuevoModal;
+      }).catch(function(){ R.innerHTML='<div class="agm-hint">Error de conexión.</div>'; });
     }
     function pickModal(i){ var r=S['_m'+i];
-      S.selCliente={ petName:r.petName||'', owner:r.owner||'', cedula:r.documento||$ov('mCed').value.trim(), phone:r.phone||'', vetesoftId:r.id?String(r.id):'', vetesoftHc:r.registro||'' };
+      var cedTerm=/^\d+$/.test(S._term||'')?S._term:'';
+      S.selCliente={ petName:r.petName||'', owner:r.owner||'', cedula:r.documento||cedTerm, phone:r.phone||'', vetesoftId:r.id?String(r.id):'', vetesoftHc:r.registro||'' };
       $ov('mRes').innerHTML=''; formModal(false);
     }
     function nuevoModal(){ S.selCliente=null; $ov('mRes').innerHTML=''; formModal(true); }
@@ -413,8 +430,9 @@
           (c.notas?'📝 '+esc(c.notas)+'<br>':'')+
           (c.llego?'<b style="color:#3B6D11">✓ Ya llegó — turno '+esc(c.turno||'')+'</b>':'')+
         '</div>'+
-        '<div class="agm-mact">'+
+        '<div class="agm-mact" style="flex-wrap:wrap">'+
           '<button class="agm-btn agm-btn-g" id="dCancel" style="color:#c0392b;border-color:#f1c0c0">Cancelar cita</button>'+
+          (c.llego?'':'<button class="agm-btn agm-btn-g" id="dReprog">🔁 Reprogramar</button>')+
           (c.llego?'':'<button class="agm-btn agm-block" id="dLlego" style="background:#3B6D11">✓ Llegó</button>')+
         '</div>'+
         '<div class="agm-err" id="dErr"></div>'
@@ -422,6 +440,7 @@
       $ov('dX').onclick=cerrarOv;
       $ov('dCancel').onclick=function(){ if(!confirm('¿Cancelar esta cita?'))return; accionCita('cancelarCita',{id:c.id}); };
       var lb=$ov('dLlego'); if(lb) lb.onclick=function(){ accionCita('llegoCita',{id:c.id}); };
+      var rb=$ov('dReprog'); if(rb) rb.onclick=function(){ S.reprog={ id:c.id, pet:(c.petName||c.owner||'la cita') }; cerrarOv(); pintarCal(); };
     }
     function accionCita(action, payload){
       var e=$ov('dErr'); if(e)e.textContent='';
@@ -430,6 +449,17 @@
         if(res&&res.ok){ cerrarOv(); cargarCal(); }
         else { if(e) e.textContent=(res&&res.error)||'No se pudo.'; }
       }).catch(function(){ if(e) e.textContent='Error de conexión.'; });
+    }
+    // Reprograma la cita en modo S.reprog al slot tocado.
+    function reprogramarA(iso, hm, med, forzar){
+      var rp=S.reprog; if(!rp) return;
+      var d=mkFecha(iso);
+      if(!confirm('¿Reprogramar a '+rp.pet+' para '+DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+' a las '+hm+' con '+med+'?')) return;
+      fetch(api,{method:'POST',body:JSON.stringify({action:'editarCita',id:rp.id,data:{fecha:iso,hora:hm,medico:med,forzar:!!forzar}})})
+        .then(function(r){return r.json();}).then(function(res){
+          if(res&&res.ok){ S.reprog=null; pintarCal(); }
+          else { alert((res&&res.error)||'No se pudo reprogramar.'); }
+        }).catch(function(){ alert('Error de conexión.'); });
     }
 
     // ══════════ MODAL: editar bloqueo (desde el calendario) ══════════
@@ -443,6 +473,9 @@
           '<div><label>Hasta (día)</label><input type="date" id="eHasF" value="'+esc(b.hastaF==='2099-12-31'?'':b.hastaF)+'"></div>'+
         '</div>'+
         '<label class="agm-chk"><input type="checkbox" id="eDiario"'+(b.diario?' checked':'')+'> Repetir todos los días (misma franja horaria)</label>'+
+        '<div id="eDiasWrap" style="'+(b.diario?'':'display:none;')+'margin:6px 0 2px">'+
+          '<label style="margin-bottom:6px">Solo estos días <span style="font-weight:400">(vacío = todos)</span></label>'+
+          '<div class="agm-days">'+diaChips(b.dias||'')+'</div></div>'+
         '<label class="agm-chk"><input type="checkbox" id="eTodo"'+(b.todoDia?' checked':'')+'> Día(s) completo(s), sin horario</label>'+
         '<div class="agm-row" id="eHoras">'+
           '<div><label>Desde (hora)</label><select id="eDesH">'+horaOpts(b.desdeH)+'</select></div>'+
@@ -456,7 +489,8 @@
         '<button class="agm-nuevo" id="eAgendar" style="margin-top:10px">📅 Agendar una cita igual en este horario</button>'+
         '<div class="agm-err" id="eErr"></div>'
       );
-      var syncH=function(){ var todo=$ov('eTodo').checked && !$ov('eDiario').checked; $ov('eHoras').style.display=todo?'none':''; };
+      wireChips($ov('eDiasWrap'));
+      var syncH=function(){ var todo=$ov('eTodo').checked && !$ov('eDiario').checked; $ov('eHoras').style.display=todo?'none':''; $ov('eDiasWrap').style.display=$ov('eDiario').checked?'':'none'; };
       $ov('eDiario').onchange=function(){ if(this.checked)$ov('eTodo').checked=false; syncH(); };
       $ov('eTodo').onchange=function(){ if(this.checked)$ov('eDiario').checked=false; syncH(); };
       syncH();
@@ -466,6 +500,7 @@
       $ov('eGuardar').onclick=function(){
         var diario=$ov('eDiario').checked, todo=$ov('eTodo').checked&&!diario;
         var data={ medico:b.medico, desdeF:$ov('eDesF').value, hastaF:$ov('eHasF').value, diario:diario, todoDia:todo,
+          dias: diario ? diasSeleccionados($ov('eDiasWrap')) : '',
           desdeH:todo?'':$ov('eDesH').value, hastaH:todo?'':$ov('eHasH').value, motivo:$ov('eMot').value.trim() };
         accionBloqueo('editarBloqueo',{id:b.id,data:data});
       };
@@ -483,6 +518,7 @@
     function horaOpts(sel){ var h='';for(var m=6*60;m<=20*60;m+=30){var v=min2hm(m);h+='<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>';}return h; }
     function pintarBloquear(){
       body.innerHTML=
+        '<button class="agm-lnk" id="bVolver" style="margin-bottom:12px;color:var(--apd)">‹ Volver a la agenda</button>'+
         '<div class="agm-card"><div class="agm-t">Marcar no disponible</div>'+
         '<div class="agm-sub">'+(medicoFijo?'Bloqueá tu agenda':'Bloqueá la agenda de un médico')+' por vacaciones, un tema familiar, lo que sea. Recepción lo ve y no se puede agendar encima.</div>'+
         (medicoFijo?'':'<div style="margin-bottom:10px"><label>Médico</label><select id="bMed"><option value="">— Elegí el médico —</option>'+medOpts('')+'</select></div>')+
@@ -491,6 +527,9 @@
           '<div><label>Hasta (día)</label><input type="date" id="bHasF" value="'+hoyISO()+'"></div>'+
         '</div>'+
         '<label class="agm-chk"><input type="checkbox" id="bDiario"> Repetir todos los días (ej. 7 a 9 cada día)</label>'+
+        '<div id="bDiasWrap" style="display:none;margin:6px 0 2px">'+
+          '<label style="margin-bottom:6px">Solo estos días <span style="font-weight:400">(vacío = todos)</span></label>'+
+          '<div class="agm-days">'+diaChips('')+'</div></div>'+
         '<label class="agm-chk"><input type="checkbox" id="bTodo"> Día(s) completo(s) — sin horario</label>'+
         '<div class="agm-row" id="bHoras">'+
           '<div><label>Desde (hora)</label><select id="bDesH">'+horaOpts()+'</select></div>'+
@@ -502,7 +541,9 @@
         '<div class="agm-err" id="bErr"></div>'+
         '<div class="agm-t" style="margin-top:20px">Bloqueos activos</div>'+
         '<div id="bList"><div class="agm-sp"></div></div></div>';
-      var syncB=function(){ var todo=$('bTodo').checked&&!$('bDiario').checked; $('bHoras').style.display=todo?'none':''; $('bDiarioTip').style.display=$('bDiario').checked?'':'none'; };
+      $('bVolver').onclick=function(){ S.sub='cal'; pintar(); };
+      wireChips($('bDiasWrap'));
+      var syncB=function(){ var todo=$('bTodo').checked&&!$('bDiario').checked; $('bHoras').style.display=todo?'none':''; $('bDiarioTip').style.display=$('bDiario').checked?'':'none'; $('bDiasWrap').style.display=$('bDiario').checked?'':'none'; };
       $('bDiario').onchange=function(){ if(this.checked)$('bTodo').checked=false; syncB(); };
       $('bTodo').onchange=function(){ if(this.checked)$('bDiario').checked=false; syncB(); };
       $('bGuardar').onclick=guardarBloqueo;
@@ -514,6 +555,7 @@
       if(!medico){ err.textContent='Elegí el médico.'; return; }
       var diario=$('bDiario').checked, todo=$('bTodo').checked&&!diario;
       var data={ medico:medico, desdeF:$('bDesF').value, hastaF:$('bHasF').value, diario:diario,
+        dias: diario ? diasSeleccionados($('bDiasWrap')) : '',
         todoDia:todo, desdeH:todo?'':$('bDesH').value, hastaH:todo?'':$('bHasH').value, motivo:$('bMot').value.trim() };
       if(!data.desdeF){ err.textContent='Poné el día de inicio.'; return; }
       $('bGuardar').textContent='Guardando…'; $('bGuardar').disabled=true;
@@ -533,7 +575,10 @@
       }).catch(function(){ L.innerHTML='<div class="agm-empty">Error de conexión.</div>'; });
     }
     function bloqRango(b){
-      if(b.diario){ return 'Todos los días '+b.desdeH+'–'+b.hastaH+(b.hastaF&&b.hastaF!=='2099-12-31'?' (hasta '+b.hastaF+')':''); }
+      if(b.diario){
+        var dd = b.dias ? b.dias.split(',').map(function(x){return DIASEM[+x];}).join(', ') : 'Todos los días';
+        return dd+' '+b.desdeH+'–'+b.hastaH+(b.hastaF&&b.hastaF!=='2099-12-31'?' (hasta '+b.hastaF+')':'');
+      }
       var dias=(b.desdeF===b.hastaF)?b.desdeF:(b.desdeF+' → '+b.hastaF);
       return dias+' · '+(b.todoDia?'todo el día':(b.desdeH+'–'+b.hastaH));
     }
