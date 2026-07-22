@@ -103,6 +103,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .hc-badge{font-size:.62rem;background:var(--p);color:#fff;border-radius:99px;padding:2px 9px;font-weight:700;letter-spacing:.2px}
 .turno-badge{font-size:.7rem;color:#fff;border-radius:7px;padding:2px 9px;font-weight:700;letter-spacing:.3px;font-variant-numeric:tabular-nums}
 .rec-meta{font-size:.74rem;color:var(--tm);margin-top:3px;display:flex;flex-wrap:wrap;gap:8px}
+.rec-obs{margin-top:5px;font-size:.8rem;font-weight:700;color:#92400e;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:4px 9px;line-height:1.35}
 .rec-service{background:var(--bg2);color:var(--p);border-radius:6px;padding:3px 9px;font-size:.68rem;font-weight:600;flex-shrink:0}
 .rec-time{font-size:.72rem;font-weight:700;color:var(--tm);flex-shrink:0;text-align:right}
 .rec-time.esp-medio{color:#b45309}
@@ -116,6 +117,14 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .anam-overlay.show{display:block}
 .anam-panel{max-width:640px;margin:14px auto}
 .anam-close{display:block;margin:0 0 10px auto;border:none;background:var(--wh);color:var(--tx);font-weight:800;font-family:inherit;font-size:.85rem;border-radius:10px;padding:9px 15px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.quien-ov{position:fixed;inset:0;background:rgba(20,10,30,.55);z-index:210;display:flex;align-items:center;justify-content:center;padding:18px}
+.quien-box{background:var(--wh);border-radius:16px;padding:20px;max-width:380px;width:100%;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.quien-t{font-size:1.05rem;font-weight:800;color:var(--tx)}
+.quien-s{font-size:.82rem;color:var(--tm);margin:6px 0 14px;line-height:1.4}
+.quien-box select{width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:11px 12px;font-size:.95rem;font-family:inherit;color:var(--tx);background:var(--bg);outline:none}
+.quien-acts{display:flex;gap:8px;margin-top:16px}
+.quien-cancel{flex:1;border:1.5px solid var(--bd);background:var(--wh);color:var(--tm);font-weight:700;font-family:inherit;font-size:.9rem;border-radius:10px;padding:11px;cursor:pointer}
+.quien-ok{flex:2;border:none;background:var(--p);color:#fff;font-weight:800;font-family:inherit;font-size:.9rem;border-radius:10px;padding:11px;cursor:pointer}
 
 /* ── Expanded body ── */
 .rec-body{display:none;padding:0 18px 18px;border-top:1px solid var(--bd)}
@@ -467,6 +476,19 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <!-- Panel de anamnesis: se abre al tocar cualquier tarjeta. -->
 <div class="anam-overlay" id="anamOverlay" onclick="if(event.target===this)cerrarAnam()">
   <div class="anam-panel" id="anamPanel"></div>
+</div>
+
+<!-- ¿Quién atiende? — solo para registrar el nombre en el llamado (no cambia el perfil). -->
+<div class="quien-ov" id="quienModal" style="display:none">
+  <div class="quien-box">
+    <div class="quien-t">¿Quién va a atender?</div>
+    <div class="quien-s">Solo para que quede registrado quién atiende este turno. NO cambia tu perfil ni tu vista.</div>
+    <select id="quienSel"></select>
+    <div class="quien-acts">
+      <button class="quien-cancel" onclick="cerrarQuien()">Cancelar</button>
+      <button class="quien-ok" onclick="confirmarQuien()">Continuar →</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1256,24 +1278,39 @@ function toggleLlamar(filaKey) {
   btn.classList.toggle('apagado', vacio);
 }
 
-// Sin médico identificado, un llamado queda SIN registrar quién atendió — y esa
-// info se pierde para siempre (el 34% de los finalizados quedaba así). Antes de
-// llamar/atender/finalizar, exigimos que el médico haya elegido su nombre.
-function exigirIdentidad(){
-  if (miMedico) return true;
-  showToast('👤 Primero elegí tu nombre (arriba) para que quede registrado quién atiende');
-  try { abrirIdentidad(); } catch(e){}
-  return false;
+// Toda acción (llamar/atender/finalizar) tiene que registrar QUIÉN atiende, o el
+// dato se pierde (el 34% de los finalizados quedaba sin médico). Pero exigir
+// identificarse rompía el apoyo entre médicos: un especialista mirando desde
+// "ver todo" quería llamar un general y, al pedirle identidad, se le cambiaba el
+// perfil y desaparecía el turno. Solución: si ya está identificado, se usa su
+// nombre; si no (ver todo), un mini-modal pide SOLO el nombre para ESE llamado,
+// sin tocar el perfil ni la vista.
+var _quienCb = null;
+function conMedico(fn){
+  if (miMedico) { fn(miMedico); return; }
+  _quienCb = fn;
+  var sel = document.getElementById('quienSel');
+  sel.innerHTML = '<option value="">— Elegí quién atiende —</option>' +
+    (medicos || []).map(function(m){ return '<option value="'+esc(m.medico)+'">'+esc(m.medico)+'</option>'; }).join('');
+  document.getElementById('quienModal').style.display = 'flex';
+}
+function cerrarQuien(){ document.getElementById('quienModal').style.display = 'none'; _quienCb = null; }
+function confirmarQuien(){
+  var m = document.getElementById('quienSel').value;
+  if (!m) { showToast('Elegí quién atiende'); return; }
+  document.getElementById('quienModal').style.display = 'none';
+  var cb = _quienCb; _quienCb = null;
+  if (cb) cb(m);
 }
 
 function callNext(rowIndex, filaKey) {
-  if (!exigirIdentidad()) return;
   const sel = document.getElementById('room-'+filaKey);
   const room = sel ? sel.value : '';
   // Sin consultorio no se llama (el botón ya debería estar apagado; esto es
   // la red por si algo se escapa).
   if (!room) { showToast('Elige el consultorio primero'); return; }
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room, medico: miMedico }) })
+  conMedico(function(med){
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room, medico: med }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
         const rec = allRecords.find(x => x.rowIndex === rowIndex);
@@ -1287,21 +1324,23 @@ function callNext(rowIndex, filaKey) {
         showToast('🔔 Turno llamado a ' + room + wa);
       } else showToast('❌ Error al llamar');
     }).catch(function(){ showToast('❌ Error de conexión'); });
+  });
 }
 
 // Volver a llamar al mismo turno (si el cliente no apareció).
 // Actualiza la hora del llamado → vuelve a sonar y a destacarse en la TV.
 function llamarDeNuevo(rowIndex) {
-  if (!exigirIdentidad()) return;
   const rec = allRecords.find(x => x.rowIndex === rowIndex);
   const room = rec ? (rec.consultorio || '') : '';
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room, medico: miMedico }) })
+  conMedico(function(med){
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room, medico: med }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
         if (rec) rec.calledAt = new Date().toISOString();
         showToast('🔔 Llamado otra vez' + (room ? ' a ' + room : ''));
       } else showToast('❌ Error al llamar');
     }).catch(function(){ showToast('❌ Error de conexión'); });
+  });
 }
 
 // No apareció. Vuelve a la cola de recepción como 'ausente' (desde ahí lo
@@ -1327,16 +1366,16 @@ function markAusente(rowIndex) {
 // sigue. El backend, de paso, cierra a 'atendido' al anterior que este
 // mismo médico estaba atendiendo (ver atenderPaciente).
 function atender(rowIndex) {
-  if (!exigirIdentidad()) return;
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atender', rowIndex: rowIndex, medico: miMedico }) })
+  conMedico(function(med){
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atender', rowIndex: rowIndex, medico: med }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
         const rec = allRecords.find(x => x.rowIndex === rowIndex);
         if (rec) rec.estadoTurno = 'atendiendo';
-        // El anterior que yo atendía ya lo cerró el backend: lo reflejo local
-        // para que la vista sea consistente hasta el próximo refresco.
-        if (miMedico) allRecords.forEach(function(x){
-          if (x.rowIndex !== rowIndex && x.estadoTurno === 'atendiendo' && x.calledBy === miMedico) {
+        // El anterior que ese médico atendía ya lo cerró el backend: lo reflejo
+        // local para que la vista sea consistente hasta el próximo refresco.
+        allRecords.forEach(function(x){
+          if (x.rowIndex !== rowIndex && x.estadoTurno === 'atendiendo' && x.calledBy === med) {
             x.estadoTurno = 'atendido'; x.status = 'revisado';
           }
         });
@@ -1345,13 +1384,14 @@ function atender(rowIndex) {
         showToast('✓ Atendiendo · turno liberado');
       } else showToast('❌ Error');
     }).catch(function(){ showToast('❌ Error de conexión'); });
+  });
 }
 
 function markAtendido(rowIndex) {
-  if (!exigirIdentidad()) return;
+  conMedico(function(med){
   // Manda el médico: así, si el turno no tenía registrado quién lo atendió,
   // queda firmado con el que lo finaliza.
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido', medico: miMedico }) })
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido', medico: med }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
         const rec = allRecords.find(x => x.rowIndex === rowIndex);
@@ -1363,6 +1403,7 @@ function markAtendido(rowIndex) {
         showToast('✓ Finalizado · pasó a Finalizados');
       } else showToast('❌ Error');
     }).catch(function(){ showToast('❌ Error de conexión'); });
+  });
 }
 
 function renderAll() {
@@ -1462,6 +1503,14 @@ function fmtEspera(ts) {
   if (m < 60) return 'hace ' + m + ' min';
   const h = Math.floor(m / 60), r = m % 60;
   return 'hace ' + h + ' h' + (r ? ' ' + r + ' min' : '');
+}
+
+// Hora del reloj en que llegó el paciente (HH:MM), para las tarjetas finalizadas.
+function fmtHoraLlegada(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  if (isNaN(d)) return '—';
+  return ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
 }
 
 // A partir de media hora esperando, que se note.
@@ -1593,9 +1642,11 @@ function buildCard(r) {
         <span>👤 ${esc(r.ownerName||'—')}</span>
         ${!reviewed && r.consultorio ? '<span>· 🚪 '+esc(r.consultorio)+'</span>' : ''}
         ${(reviewed || enConsulta) && r.calledBy ? '<span>· 🩺 '+esc(r.calledBy)+'</span>' : ''}
+        ${reviewed ? '<span>· 🕐 Llegó '+esc(fmtHoraLlegada(r.timestamp))+'</span>' : ''}
         ${enConsulta ? '<span class="ta-t" data-inicio="'+esc(r.calledAt||r.timestamp)+'">🕐 '+fmtConsulta(r.calledAt||r.timestamp)+'</span>' : ''}
         ${reviewed ? tiemposAtendida(r) : ''}
       </div>
+      ${r.observaciones ? '<div class="rec-obs">📌 '+esc(r.observaciones)+'</div>' : ''}
     </div>
     ${enConsulta ? '<button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button>' : ''}
     <div class="rec-arrow">▼</div>

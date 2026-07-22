@@ -126,6 +126,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .wr-pets{background:#8e3f9e22;color:#8e3f9e;border-radius:8px;padding:1px 7px;font-size:.72rem;font-weight:800}
 .wr-ta{display:inline-block;margin-top:3px;margin-right:6px;font-size:.72rem;font-weight:700;color:#475569;background:#eef2f7;border-radius:8px;padding:1px 8px}
 .wr-consulta{display:inline-block;margin-top:4px;font-size:.74rem;font-weight:800;color:#1d4ed8;background:#dbeafe;border-radius:8px;padding:2px 9px;font-variant-numeric:tabular-nums}
+.wr-obs{margin-top:4px;font-size:.78rem;font-weight:700;color:#92400e;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:4px 9px;line-height:1.35}
 .edit-banner{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:9px 12px;font-size:.82rem;margin-bottom:10px;line-height:1.4}
 .edit-cancel{margin-left:auto;font-size:.75rem;font-weight:700;color:#9a3412;background:#fff;border:1px solid #fdba74;border-radius:8px;padding:4px 10px;cursor:pointer}
 .edit-cancel:hover{background:#fff1e6}
@@ -457,6 +458,8 @@ var SERVICIOS = [
   { v:'Control general',        doctor:'ninguno', agenda:false, desc:'Seguimiento con médico general' },
   { v:'Vacunación',             doctor:'ninguno', agenda:false, desc:'Solo vacunas' },
   { v:'Inyectología',           doctor:'ninguno', agenda:false, desc:'Aplicar inyección' },
+  { v:'Cirugía',                doctor:'ninguno', agenda:false, desc:'Cirugía · médico general' },
+  { v:'Desparasitación',        doctor:'ninguno', agenda:false, desc:'Desparasitación · médico general' },
   { v:'Viajero',                doctor:'auto', fijo:'Dr. Freddy Vera',   agenda:false, label:'Viajero / certificado', desc:'Certificado de viaje · Dr. Freddy' },
   { v:'Rayos X y Ecografía',    doctor:'eligeDoc', fijo:'Dra. Angie Valero', agenda:false, desc:'Imágenes · normalmente Dra. Angie' }
 ];
@@ -566,7 +569,7 @@ function pintarServicio() {
   if (cfg.doctor !== 'elige') document.getElementById('regSpec').value = '';
 
   // ── Médico general pedido (solo consultas/controles generales) ──
-  var esGen = cfg.doctor === 'ninguno' && /general/i.test(svc);
+  var esGen = cfg.doctor === 'ninguno' && (/general/i.test(svc) || /cirug|desparasit/i.test(svc));
   var boxMG = document.getElementById('boxMedGen');
   boxMG.style.display = esGen ? '' : 'none';
   if (esGen) document.getElementById('regMedGen').innerHTML = buildMedGenOptions();
@@ -889,6 +892,8 @@ function abrirRegistro(r, esNuevo) {
         // tarjeta. Se escriben separados por coma.
         '<div><label>Otras mascotas <span class="lbl-tip">(opcional — mismo turno, separá con coma)</span></label>'+
           '<input id="regPetsExtra" type="text" placeholder="Ej: Toby, Luna" value="'+esc(r.petsExtra||'')+'"></div>'+
+        '<div style="grid-column:1/-1"><label>Observaciones para el médico <span class="lbl-tip">(opcional — ej: es inquieto, viene recomendado)</span></label>'+
+          '<textarea id="regObs" rows="2" placeholder="Algo importante que el médico deba saber…" style="width:100%;border:1.5px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:.87rem;font-family:inherit;outline:none;background:var(--bg);color:var(--tx);resize:vertical">'+esc(r.observaciones||'')+'</textarea></div>'+
         '<div id="boxTieneCita"><label>¿Tiene cita?</label><select id="regAgendado" onchange="pintarServicio()">'+
           '<option value="si">Sí, está en la agenda</option>'+
           '<option value="no">No, el doctor aceptó atenderlo</option>'+
@@ -987,7 +992,10 @@ function doRegister() {
             ? document.getElementById('regRayosDoc').value : ''),
       // #10 — Otras mascotas del mismo turno (opcional).
       petsExtra: (document.getElementById('regPetsExtra')||{}).value ?
-        document.getElementById('regPetsExtra').value.trim() : ''
+        document.getElementById('regPetsExtra').value.trim() : '',
+      // Observaciones de recepción para el médico (opcional).
+      observaciones: (document.getElementById('regObs')||{}).value ?
+        document.getElementById('regObs').value.trim() : ''
     }
   };
   document.getElementById('regArea').innerHTML = '<div class="spinner"></div>';
@@ -1152,8 +1160,10 @@ function wrItem(r, acts) {
         (r.vetesoftHc ? ' <span class="wr-hc">HC '+esc(r.vetesoftHc)+'</span>' : '')+'</div>'+
       '<div class="wr-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+(r.consultorio?' · Cons. '+esc(r.consultorio):'')+'</div>'+
       (r.medicoAsignado ? '<div class="wr-medico">🩺 '+esc(r.medicoAsignado)+'</div>' : '')+
-      // #7 — En la pestaña Atendidos: cuánto esperó y cuánto duró la atención.
-      (r.estadoTurno==='atendido' ? wrTiemposAtendida(r) : '')+
+      // Observaciones de recepción (es inquieto, viene recomendado, etc.).
+      (r.observaciones ? '<div class="wr-obs">📌 '+esc(r.observaciones)+'</div>' : '')+
+      // #7 — En la pestaña Atendidos: hora de llegada + espera + atención.
+      (r.estadoTurno==='atendido' ? '<div class="wr-ta">🕐 Llegó '+esc(fmtHora(r.timestamp))+'</div>'+wrTiemposAtendida(r) : '')+
       '<div class="wr-chips">'+
       // Consulta general en cola: chip para asignar/cambiar el médico pedido.
       (/general/i.test(r.service||'') && enCola
@@ -1211,6 +1221,7 @@ function wrItemAtendiendo(r) {
       '<div class="wr-meta">'+esc(r.service||'')+(r.specialty?' · '+esc(r.specialty):'')+'</div>'+
       (quienDonde ? '<div class="wr-medico">'+quienDonde+'</div>' : '')+
       '<div class="wr-consulta" data-consulta="'+esc(r.calledAt||r.timestamp)+'">🕐 En consulta '+wrFmtMin(wrMinsDesde(r.calledAt||r.timestamp))+'</div>'+
+      (r.observaciones ? '<div class="wr-obs">📌 '+esc(r.observaciones)+'</div>' : '')+
       motivoHtml +
     '</div>'+
     '<div class="wr-right">'+
