@@ -220,15 +220,53 @@ function serviceColor(s){
   return'#94a3b8';
 }
 
+// ── Hora del servidor (NO del equipo del TV) ─────────────────
+// El equipo de la sala puede tener el reloj/fecha mal configurado. Si la
+// pantalla se guiara por él, mostraría una hora equivocada y —peor— podría
+// dejar de reconocer los turnos "de hoy" (tablero vacío, sin sonido). Por eso
+// tomamos la hora del servidor (que corre en horario Colombia) una vez y la
+// seguimos con un offset local. Todo lo demás se calcula desde acá.
+var serverOffset = 0;     // ms a sumarle a Date.now() para llegar a la hora real
+var serverHoy    = null;  // 'YYYY-MM-DD' en Colombia, según el servidor
+var horaSync     = false; // ¿ya sincronizamos al menos una vez?
+
+function sincronizarHora(){
+  fetch(API_URL + '?action=now')
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (res && res.ok) {
+        var primerSync = !horaSync;
+        serverOffset = res.ms - Date.now();
+        serverHoy    = res.hoy;
+        horaSync     = true;
+        reloj();
+        // En el primer sync, repintamos el tablero: el cargar() inicial pudo
+        // correr con la fecha del equipo (equivocada). Ahora "hoy" ya es la del
+        // servidor. Si la fecha cambió (medianoche), también refrescamos.
+        if (primerSync) cargar();
+      }
+    })
+    .catch(function(){});
+}
+function ahoraMs(){ return Date.now() + serverOffset; }
+// Fecha 'YYYY-MM-DD' de un instante, SIEMPRE en horario Colombia (no importa la
+// zona del equipo, porque la forzamos).
+function fechaBogota(ms){
+  return new Date(ms).toLocaleDateString('en-CA', { timeZone:'America/Bogota' });
+}
+
 function reloj(){
-  var n = new Date();
+  if (!horaSync) return;   // sin hora del servidor, no mostramos nada dudoso
   document.getElementById('clock').textContent =
-    String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+    new Date(ahoraMs()).toLocaleTimeString('es-CO',
+      { timeZone:'America/Bogota', hour:'2-digit', minute:'2-digit', hour12:false });
 }
 
 function esHoy(ts){
   var d = new Date(ts);
-  return !isNaN(d) && d.toDateString() === new Date().toDateString();
+  if (isNaN(d)) return false;
+  var hoy = serverHoy || fechaBogota(ahoraMs());
+  return fechaBogota(d.getTime()) === hoy;
 }
 
 function cargar(){
@@ -312,7 +350,10 @@ function pintar(llamando, esperando){
   }
 }
 
-reloj();
+// Primero la hora del servidor; cuando llega, refrescamos reloj y tablero para
+// que "hoy" se calcule con la fecha correcta, no con la del equipo.
+sincronizarHora();
+setInterval(sincronizarHora, 300000);   // re-sincroniza cada 5 min
 setInterval(reloj, 20000);
 
 // Detección casi en vivo: en vez de traer TODOS los registros cada 8s (lento),
