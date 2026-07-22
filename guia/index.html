@@ -90,6 +90,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <div class="role-t">🏥 Recepción</div>
       <div class="role-s">Registrar a los que llegan</div>
     </button>
+    <button class="role" data-r="agenda" onclick="verRol('agenda')">
+      <div class="role-t">📅 La Agenda</div>
+      <div class="role-s">Citas, la semana y bloqueos</div>
+    </button>
     <button class="role" data-r="medicos" onclick="verRol('medicos')">
       <div class="role-t">👨‍⚕️ Médicos</div>
       <div class="role-s">Llamar y atender</div>
@@ -177,6 +181,70 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <div class="paso-t">Atendidos</div>
       <div class="paso-d">En esa pestaña quedan los que ya pasaron. Es solo para consultar.</div>
     </div></div>
+
+    <div class="nota" style="border-color:#8e3f9e;background:#f7edfb">
+      <b>📅 ¿Y los que tienen cita?</b> Ya <b>no</b> los registras acá. Los pacientes con cita entran por la <b>Agenda</b>: cuando llegan, tocas <span class="pill">✓ Llegó</span> en su cita y solos pasan a la sala con el médico. Por eso el campo "¿tiene cita?" desapareció de recepción — acá solo registras a los que llegan <b>sin</b> cita. Mira la pestaña <b>📅 La Agenda</b> arriba.
+    </div>
+  </div>
+
+  <!-- ============ AGENDA ============ -->
+  <div class="seccion" id="s-agenda">
+    <div class="h2">La Agenda — citas, la semana y bloqueos</div>
+    <div class="h2-sub">Un solo tablero, como Google Calendar: ves la semana del médico y agendas en el mismo lugar. Está arriba, en la pestaña <b>📅 Agenda</b> (en recepción y en la página de cada médico).</div>
+
+    <div class="paso"><div class="paso-n">1</div><div class="paso-c">
+      <div class="paso-t">Elige el médico y mira su semana</div>
+      <div class="paso-d">Arriba eliges el <b>médico</b> y ves toda su <b>semana</b> de un vistazo (o cambias a <span class="pill">Día</span> con el botón). Con las flechas <b>‹ ›</b> te mueves de semana, y <span class="pill">Hoy</span> te trae al día de hoy. En el celular arranca en vista de <b>Día</b>.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">2</div><div class="paso-c">
+      <div class="paso-t">Los colores te cuentan todo</div>
+      <div class="paso-d">
+        <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#CECBF6;border:1px solid #534AB7;vertical-align:middle"></span> <b>Morado</b> = cirugía &nbsp;·&nbsp;
+        <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#F4C0D1;border:1px solid #993556;vertical-align:middle"></span> <b>Rosado</b> = consulta / control &nbsp;·&nbsp;
+        <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#C0DD97;border:1px solid #3B6D11;vertical-align:middle"></span> <b>Verde</b> = ya llegó &nbsp;·&nbsp;
+        <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#F7C1C1;border:1px solid #A32D2D;vertical-align:middle"></span> <b>Rojo rayado</b> = no disponible.<br>
+        Sirve sobre todo para las <b>cirugías</b>: de un vistazo sabes cuántas hay y cuáles ya llegaron (verde) y cuáles no.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">3</div><div class="paso-c">
+      <div class="paso-t">Para agendar, toca un espacio vacío</div>
+      <div class="paso-d">Pasas el mouse y se resalta la franja con la hora. <b>Tocas el hueco libre</b> y se abre la tarjeta con el día, la hora y el médico ya puestos. Buscas al paciente (cédula, mascota o dueño), eliges el <b>servicio</b>, y <span class="pill">Agendar →</span>. Listo.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">4</div><div class="paso-c">
+      <div class="paso-t">Cada servicio dura lo suyo</div>
+      <div class="paso-d">El <b>control</b> ocupa <b>media hora</b>; la <b>consulta</b>, <b>una hora</b>. Si necesitas meter un paciente y no hay campo, en una consulta puedes bajar la duración a <b>30 min</b> desde la tarjeta. El sistema no te deja pisar otra cita: si se cruza, te avisa.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">5</div><div class="paso-c">
+      <div class="paso-t">Cuando el paciente con cita llega → «Llegó»</div>
+      <div class="paso-d">Tocas la cita y le das <span class="pill">✓ Llegó</span>. Con eso el paciente <b>entra a la sala</b> (le sale turno al médico), le llega el <b>link de la anamnesis</b> por WhatsApp, y la cita se pone <b>verde</b>. No hay que registrarlo aparte: la cita ya tiene sus datos.</div>
+    </div></div>
+
+    <div class="titulo-bloque">La prioridad de las citas — lo importante</div>
+
+    <div class="nota" style="border-color:#b45309;background:#fff7ed">
+      <b>Una cita agendada tiene prioridad sobre el que llega sin cita.</b> Ejemplo: hay una cita general a las <b>2:00</b> y llega alguien <b>sin</b> cita a la 1:50. El sistema <b>congela</b> a ese walk-in: al médico le aparece <b style="color:#b45309">⏸ hasta 2:15</b> y no lo puede llamar todavía, para que no le gane el turno al de las 2:00. Si el de la cita <b>no llega</b> para las 2:15, el walk-in <b>se libera solo</b> y ya se puede llamar. <b>Todo automático</b> — recepción no marca nada, el sistema mira la agenda.
+    </div>
+
+    <div class="titulo-bloque">Bloquear horarios — cuando el doctor no atiende</div>
+
+    <div class="paso"><div class="paso-n">🚫</div><div class="paso-c">
+      <div class="paso-t">Marca no disponible (vacaciones, reuniones, festivos)</div>
+      <div class="paso-d">En la pestaña <span class="pill">🚫 Bloqueos</span> eliges el médico, el rango de días y las horas, y guardas. Aparece en <b>rojo</b> en la agenda y nadie puede agendar encima.<br>
+      <b>¿Todos los días a la misma hora?</b> (ej. de <b>7 a 9 cada día</b>): marca <span class="pill">Repetir todos los días</span> y pon la franja. Deja "Hasta (día)" vacío para que sea indefinido.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">✎</div><div class="paso-c">
+      <div class="paso-t">Editar o quitar un bloqueo desde el calendario</div>
+      <div class="paso-d">Tocas el <b>bloque rojo</b> en la agenda y se abre una tarjeta para <b>cambiar</b> las horas/días, <b>Quitar</b> el bloqueo, o <b>Agendar una cita igual</b> ahí (te avisa que está bloqueado y te pide confirmar).</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">👀</div><div class="paso-c">
+      <div class="paso-t">Ver cuándo está libre un doctor general</div>
+      <div class="paso-d">Si un cliente quiere agendar con un doctor general, eliges ese médico en la agenda y ves su semana: en <b>rojo</b> cuando no está, y los huecos libres son cuando <b>sí</b> puede. Ojo: una <b>cita general agendada tiene prioridad</b> sobre los servicios generales sin cita, así que agendar le asegura su lugar.</div>
+    </div></div>
   </div>
 
   <!-- ============ MÉDICOS ============ -->
@@ -230,6 +298,14 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div class="nota">
       <b>Tú decides, no el sistema.</b> Si el siguiente turno todavía no hizo su registro, puedes pasarlo igual — no lo hagas esperar. La etiqueta solo te avisa que aún no lo llenó.
     </div>
+
+    <div class="nota" style="border-color:#b45309;background:#fff7ed">
+      <b>⏸ ¿Un paciente en espera que no puedes llamar?</b> Si ves <b style="color:#b45309">⏸ hasta 3:15</b> en una tarjeta, es que hay una <b>cita agendada</b> antes que él: llegó sin cita y el sistema lo <b>congela</b> hasta esa hora para no pisarle el turno al agendado. Cuando pase esa hora (o llegue el de la cita), se libera solo. Es a propósito — la cita manda.
+    </div>
+
+    <div class="nota" style="border-color:#8e3f9e;background:#f7edfb">
+      <b>📅 Tu agenda de la semana.</b> Arriba tienes la pestaña <b>📅 Agenda</b>: ves tus citas de la semana con colores, y también puedes agendar o marcar cuándo <b>no vas a atender</b> (bloqueos). Mira la guía de <b>📅 La Agenda</b> arriba.
+    </div>
   </div>
 
   <!-- ============ CLIENTE ============ -->
@@ -264,10 +340,14 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
     <div class="paso"><div class="paso-n">1</div><div class="paso-c">
       <div class="paso-t">Abre la pantalla de sala</div>
-      <div class="paso-d">En el computador conectado a los <b>parlantes</b>, abre en el navegador <span class="pill">servicios.animalcenter.com.co/pantalla</span> y toca <span class="pill">Activar</span>.<br>
-      Ese toque de <b>Activar</b> desbloquea la voz — hay que hacerlo <b>cada vez</b> que se abra o se reinicie el computador.<br>
+      <div class="paso-d">En el computador conectado a los <b>parlantes</b>, abre en el navegador <span class="pill">servicios.animalcenter.com.co/pantalla</span> y toca <span class="pill">Activar</span> una vez.<br>
+      Ese toque desbloquea la voz. Con <b>una sola vez en la mañana alcanza para todo el día</b>: la pantalla ya no se recarga a cada rato (solo lo hace de madrugada, con la clínica cerrada), así que el sonido se queda activo.<br>
       <b>Muy importante:</b> deja esa pestaña <b>al frente / pantalla completa</b> (no la tapes con otra pestaña) y que el computador <b>no se duerma</b> — si queda en segundo plano o dormido, deja de sonar.</div>
     </div></div>
+
+    <div class="nota" style="border-color:#0891b2;background:#ecfeff">
+      <b>💡 ¿Que NUNCA te pida "Activar"?</b> Se puede, pero es del navegador, no del sistema: hay que abrir <b>Chrome permitiendo el sonido automático</b>. Una vez, en ese computador: haz clic derecho en el acceso directo de Chrome → <b>Propiedades</b> → en <b>Destino</b>, al final (después de <code>chrome.exe"</code>, con un espacio) agrega <code>--autoplay-policy=no-user-gesture-required</code> → Aceptar. Cierra Chrome del todo y ábrelo desde ese acceso directo. Desde entonces la pantalla <b>se activa sola</b> y el botón no aparece. (Si no lo configuras, no pasa nada: solo hay que tocar Activar una vez en la mañana.)
+    </div>
 
     <div class="nota">
       <b>🔊 Volúmenes (para que se oiga bien la voz sobre la música):</b> volumen del <b>computador en 70</b> y el de <b>Spotify en 40</b>.<br>
