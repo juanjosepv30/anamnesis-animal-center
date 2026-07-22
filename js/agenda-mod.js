@@ -11,8 +11,9 @@
 (function(){
   var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Vacunación','Inyectología','Desparasitación','Rayos X y Ecografía','Viajero'];
   var DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  var H_INI=6*60, H_FIN=22*60, PXMIN=0.5;          // 06:00–22:00; escala pensada para
-  var ALTO=(H_FIN-H_INI)*PXMIN;                    // que el día entero entre sin scroll
+  var H_INI=6*60, H_FIN=22*60, PXMIN=0.9;          // 06:00–22:00; casillas cómodas
+  var Y0=10;                                        // margen arriba (para que 06:00 no pise el header)
+  var ALTO=(H_FIN-H_INI)*PXMIN + Y0*2;             // alto total; la PÁGINA scrollea, no un cuadro interno
 
   var CSS=[
     '.agm{--ap:#8e3f9e;--apd:#6d2f7a;--apl:#f3e7f7;--abd:#e8daf0;--abg:#faf7ff;--atx:#1a0a2e;--atm:#6b5c7e}',
@@ -66,12 +67,12 @@
     '.agm-lnk:hover{background:#fff7ed}',
     '.agm-reprog{background:var(--apl);border:1.5px solid var(--ap);border-radius:10px;padding:9px 12px;font-size:.85rem;font-weight:700;color:var(--apd);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
     '.agm-dot{width:11px;height:11px;border-radius:3px;display:inline-block}',
-    '.agm-scroll{overflow-x:auto;border:1px solid var(--abd);border-radius:12px;background:#fff}',
+    '.agm-scroll{overflow:visible;border:1px solid var(--abd);border-radius:12px;background:#fff}',
     '.agm-grid{display:grid;min-width:520px}',
     '.agm-grid.dia{min-width:auto}',
     '.agm-gcol{border-left:1px solid #e3d7ec;position:relative}',
     '.agm-gcol:first-child{border-left:none}',
-    '.agm-gh{text-align:center;padding:7px 2px;font-size:.76rem;font-weight:800;color:var(--atx);border-bottom:1.5px solid var(--abd);position:sticky;top:0;background:#fff;z-index:3}',
+    '.agm-gh{text-align:center;padding:8px 2px;font-size:.8rem;font-weight:800;color:var(--atx);border-bottom:1.5px solid var(--abd);background:#fff}',
     '.agm-gh small{display:block;font-weight:600;color:var(--atm);font-size:.68rem}',
     '.agm-gh.hoy{color:#fff;background:var(--ap)}',
     '.agm-gh.hoy small{color:#f3e7f7}',
@@ -246,25 +247,26 @@
       dias.forEach(function(d){ var iso=isoDe(d);
         h+='<div class="agm-gh'+(iso===hoy?' hoy':'')+'">'+DIAS[d.getDay()]+' <small>'+d.getDate()+'</small></div>';
       });
+      var yOf=function(mn){ return Y0+(mn-H_INI)*PXMIN; };   // px del minuto, con margen arriba
       // columna de horas (gutter)
       h+='<div class="agm-gcol"><div class="agm-body2" style="height:'+ALTO+'px">';
-      for(var m=H_INI;m<=H_FIN;m+=60){ var top=(m-H_INI)*PXMIN;
-        h+='<div class="agm-hlbl" style="top:'+top+'px">'+min2hm(m)+'</div>';
+      for(var m=H_INI;m<=H_FIN;m+=60){
+        h+='<div class="agm-hlbl" style="top:'+yOf(m)+'px">'+min2hm(m)+'</div>';
       }
       h+='</div></div>';
       // columnas de días
       dias.forEach(function(d,di){ var iso=isoDe(d);
         h+='<div class="agm-gcol"><div class="agm-body2" data-iso="'+iso+'" style="height:'+ALTO+'px">';
         // líneas cada 30 min; las de en punto, más marcadas
-        for(var mm=H_INI;mm<=H_FIN;mm+=30){ h+='<div class="agm-hl'+(mm%60===0?' hr':'')+'" style="top:'+((mm-H_INI)*PXMIN)+'px"></div>'; }
+        for(var mm=H_INI;mm<=H_FIN;mm+=30){ h+='<div class="agm-hl'+(mm%60===0?' hr':'')+'" style="top:'+yOf(mm)+'px"></div>'; }
         // bloqueos (rojo) — clicables para editar
         bloqs.forEach(function(b){ var rg=bloqueoRangoDia(b,iso); if(!rg)return;
-          h+='<div class="agm-blk" data-bid="'+esc(b.id)+'" title="Tocá para editar" style="top:'+((rg.ini-H_INI)*PXMIN)+'px;height:'+((rg.fin-rg.ini)*PXMIN-1)+'px">🚫 '+(b.motivo?esc(b.motivo):'No disponible')+'</div>';
+          h+='<div class="agm-blk" data-bid="'+esc(b.id)+'" title="Tocá para editar" style="top:'+yOf(rg.ini)+'px;height:'+((rg.fin-rg.ini)*PXMIN-1)+'px">🚫 '+(b.motivo?esc(b.motivo):'No disponible')+'</div>';
         });
         // citas de ese día
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
-          var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio); var top=(ini-H_INI)*PXMIN, alt=Math.max(dur*PXMIN-1,15);
-          h+='<div class="agm-ev '+claseCita(c)+'" data-id="'+esc(c.id)+'" style="top:'+top+'px;height:'+alt+'px">'+
+          var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio); var alt=Math.max(dur*PXMIN-1,18);
+          h+='<div class="agm-ev '+claseCita(c)+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px">'+
              '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(c.llego?' ✓':'')+'</b>'+
              (alt>28?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+'</div>';
         });
@@ -272,7 +274,7 @@
       });
       h+='</div>';
       W.innerHTML=h;
-      var slotY=function(bodyEl,clientY){ var rect=bodyEl.getBoundingClientRect(); var y=clientY-rect.top;
+      var slotY=function(bodyEl,clientY){ var rect=bodyEl.getBoundingClientRect(); var y=clientY-rect.top-Y0;
         var minuto=H_INI+Math.round((y/PXMIN)/30)*30; if(minuto<H_INI)minuto=H_INI; if(minuto>H_FIN-30)minuto=H_FIN-30; return minuto; };
       W.querySelectorAll('.agm-body2[data-iso]').forEach(function(bodyEl){
         var iso=bodyEl.getAttribute('data-iso');
@@ -283,7 +285,7 @@
           // Sobre una cita ya ocupada, no; sobre un BLOQUEO sí (se puede agendar
           // la excepción), así que el hover se ve igual y muestra la hora.
           if(ev.target.closest('.agm-ev')){ hov.style.display='none'; return; }
-          var m=slotY(bodyEl,ev.clientY); hov.style.top=((m-H_INI)*PXMIN)+'px'; hov.textContent=min2hm(m); hov.style.display='flex';
+          var m=slotY(bodyEl,ev.clientY); hov.style.top=yOf(m)+'px'; hov.textContent=min2hm(m); hov.style.display='flex';
         });
         bodyEl.addEventListener('mouseleave', function(){ hov.style.display='none'; });
         // click en hueco vacío → agendar (si cae sobre un bloqueo, avisa)
