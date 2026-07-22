@@ -531,9 +531,9 @@ function sumarMinutos(hhmm, mins) {
 // única fuente de verdad (ver SERVICIOS).
 // Texto del botón Registrar, considerando el modo edición (#1). En edición
 // el botón siempre dice "Guardar cambios", pase lo que pase con la cita.
-function textoBotonRegistro(conCita) {
+function textoBotonRegistro() {
   if (_editando) return 'Guardar cambios del turno ' + (_editando.turno || '') + ' →';
-  return conCita ? 'Registrar como agendado →' : 'Registrar llegada →';
+  return 'Registrar llegada →';
 }
 
 function pintarServicio() {
@@ -542,11 +542,11 @@ function pintarServicio() {
   // Sin servicio elegido no se muestra nada más ni se puede registrar: hay
   // que elegir primero. Esconde doctor y agenda, y apaga el botón.
   if (!svc) {
-    ['boxSpec','boxAutoDoc','boxMedGen','boxRayosDoc','boxTieneCita','boxHora','boxEsperar'].forEach(function(id){
+    ['boxSpec','boxAutoDoc','boxMedGen','boxRayosDoc'].forEach(function(id){
       document.getElementById(id).style.display = 'none';
     });
     document.getElementById('regSpec').value = '';
-    document.querySelector('.btn-primary').textContent = textoBotonRegistro(false);
+    document.querySelector('.btn-primary').textContent = textoBotonRegistro();
     actualizarBotonRegistro();
     return;
   }
@@ -575,21 +575,10 @@ function pintarServicio() {
   if (esGen) document.getElementById('regMedGen').innerHTML = buildMedGenOptions();
   else document.getElementById('regMedGen').value = '';
 
-  // ── Agenda ──
-  // Solo los servicios con agenda preguntan por cita. El resto entra por
-  // orden de llegada: preguntar "¿tiene cita?" ahí es hacer pensar de más.
-  document.getElementById('boxTieneCita').style.display = cfg.agenda ? '' : 'none';
-  if (!cfg.agenda) {
-    document.getElementById('regAgendado').value = 'no';
-    document.getElementById('regEsperar').value  = '';
-  }
-
-  var conCita = cfg.agenda && document.getElementById('regAgendado').value === 'si';
-  document.getElementById('boxHora').style.display    = conCita ? '' : 'none';
-  document.getElementById('boxEsperar').style.display = (cfg.agenda && !conCita) ? '' : 'none';
-  document.querySelector('.btn-primary').textContent  = textoBotonRegistro(conCita);
-  if (conCita) document.getElementById('regEsperar').value = '';
-  pintarDescongela();
+  // Los pacientes con cita ya no se registran acá (llegan por la agenda con
+  // "Llegó"). Recepción registra al que llega SIN cita; el backend lo frena
+  // solo si hay una cita agendada en camino para ese servicio general.
+  document.querySelector('.btn-primary').textContent = textoBotonRegistro();
   actualizarBotonRegistro();
 }
 
@@ -602,16 +591,6 @@ function actualizarBotonRegistro() {
   var falta = !svc || (cfg && cfg.doctor === 'elige' && !document.getElementById('regSpec').value);
   var btn = document.querySelector('.btn-primary');
   if (btn) { btn.disabled = !!falta; btn.classList.toggle('apagado', !!falta); }
-}
-
-// Le mostramos a recepción a qué hora se descongela, para que pueda
-// decírselo al cliente: "si no llega a las 3:15, usted pasa".
-function pintarDescongela() {
-  var cita = document.getElementById('regEsperar').value;
-  var el = document.getElementById('descongela');
-  el.textContent = cita
-    ? '→ Si no llega, pasa a las ' + sumarMinutos(cita, TOLERANCIA_CITA)
-    : '';
 }
 
 // Media hora más cercana a la hora actual.
@@ -894,19 +873,10 @@ function abrirRegistro(r, esNuevo) {
           '<input id="regPetsExtra" type="text" placeholder="Ej: Toby, Luna" value="'+esc(r.petsExtra||'')+'"></div>'+
         '<div style="grid-column:1/-1"><label>Observaciones para el médico <span class="lbl-tip">(opcional — ej: es inquieto, viene recomendado)</span></label>'+
           '<textarea id="regObs" rows="2" placeholder="Algo importante que el médico deba saber…" style="width:100%;border:1.5px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:.87rem;font-family:inherit;outline:none;background:var(--bg);color:var(--tx);resize:vertical">'+esc(r.observaciones||'')+'</textarea></div>'+
-        '<div id="boxTieneCita"><label>¿Tiene cita?</label><select id="regAgendado" onchange="pintarServicio()">'+
-          '<option value="si">Sí, está en la agenda</option>'+
-          '<option value="no">No, el doctor aceptó atenderlo</option>'+
-        '</select></div>'+
-        '<div id="boxHora"><label>Hora de su cita</label><select id="regHora">'+buildHoraOptions(hh)+'</select></div>'+
-        // Sin cita: se pone la hora de la cita que hay antes —lo que se ve en
-        // el calendario— y el sistema le suma los 15 min. Pedirle que calcule
-        // "3:00 + 15" es pedirle que se equivoque a las 6 de la tarde.
-        '<div id="boxEsperar" style="display:none"><label>¿Hay una cita antes? <span class="lbl-tip">(hora de esa cita)</span></label>'+
-          '<select id="regEsperar" onchange="pintarDescongela()">'+
-          '<option value="">— No, puede pasar cuando le toque —</option>'+
-          buildHoraOptions('')+'</select>'+
-          '<div class="lbl-tip" id="descongela"></div></div>'+
+        // Los pacientes CON cita ya no se registran acá: llegan por la agenda
+        // (el botón "Llegó" de su cita). Recepción registra al que llega SIN
+        // cita, y el sistema lo frena solo si hay una cita agendada en camino
+        // (ver ventanaEsperaAuto_ en el backend).
       '</div>'+
       '<div class="reg-actions">'+
         '<button class="btn-primary" onclick="doRegister()">'+(_editando?'Guardar cambios del turno '+esc(_editando.turno||'')+' →':'Registrar llegada →')+'</button>'+
@@ -968,18 +938,13 @@ function doRegister() {
       owner: mascota.owner,
       service: service,
       specialty: specialty,
-      agendado: document.getElementById('regAgendado').value,
-      // La hora de cita solo viaja si de verdad tiene cita: si no, le
-      // estaríamos dando prioridad de agendado a alguien que llegó sin ella.
-      horaCita: document.getElementById('regAgendado').value === 'si'
-        ? document.getElementById('regHora').value : '',
-      // Guardamos la hora YA sumada: el dashboard solo compara contra el
-      // reloj, no tiene que saber de tolerancias.
-      esperarHasta: (function(){
-        if (document.getElementById('regAgendado').value === 'si') return '';
-        var c = document.getElementById('regEsperar').value;
-        return c ? sumarMinutos(c, TOLERANCIA_CITA) : '';
-      })(),
+      // Recepción registra SIEMPRE al que llega sin cita (los agendados entran
+      // por la agenda con "Llegó"). El congelado —para que un walk-in no le gane
+      // el turno a una cita en camino— lo calcula solo el backend mirando la
+      // agenda del día (ver ventanaEsperaAuto_).
+      agendado: 'no',
+      horaCita: '',
+      esperarHasta: '',
       // Si va vacío, el backend no manda nada y el paciente entra directo
       // a la fila, como toda la vida.
       phone: document.getElementById('regTel').value.trim(),
