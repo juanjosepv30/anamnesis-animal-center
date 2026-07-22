@@ -80,7 +80,7 @@
     '.agm-hl{position:absolute;left:0;right:0;border-top:1px dashed #efe6f5}',
     '.agm-hl.hr{border-top:1px solid #d9c9e6}',
     '.agm-hlbl{position:absolute;left:0;right:0;text-align:right;padding-right:6px;font-size:.66rem;font-weight:700;color:#9c8bb0;transform:translateY(-6px)}',
-    '.agm-hover{position:absolute;left:1px;right:1px;background:rgba(142,63,158,.12);border:1.5px solid var(--ap);border-radius:5px;pointer-events:none;z-index:1;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;font-size:.66rem;font-weight:800;color:var(--apd)}',
+    '.agm-hover{position:absolute;left:1px;right:1px;background:rgba(142,63,158,.16);border:1.5px solid var(--ap);border-radius:5px;pointer-events:none;z-index:4;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;font-size:.66rem;font-weight:800;color:var(--apd)}',
     '.agm-ev{position:absolute;left:2px;right:2px;border-radius:6px;padding:2px 5px;font-size:.72rem;line-height:1.2;overflow:hidden;cursor:pointer;border-left:3px solid;z-index:2}',
     '.agm-ev b{font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.agm-ev.cir{background:#CECBF6;border-color:#534AB7;color:#26215C}',
@@ -99,7 +99,9 @@
     '.agm-mlbl{font-size:.72rem;font-weight:800;color:var(--apd);text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--abd)}',
     '.agm-modal .agm-row{margin-top:0}',
     '.agm-modal .agm-row>div{min-width:0}',
-    '.agm-modal input,.agm-modal select,.agm-modal textarea{width:100%;box-sizing:border-box}',
+    '.agm-modal input:not([type=checkbox]),.agm-modal select,.agm-modal textarea{width:100%;box-sizing:border-box}',
+    '.agm-modal .agm-chk{align-items:center}',
+    '.agm-modal .agm-chk input[type=checkbox]{width:16px;height:16px;flex:0 0 auto;margin:0}',
     '.agm-mact{display:flex;gap:8px;margin-top:18px}',
     '.agm-warn{background:#fff4e6;border:1.5px solid #fed7aa;color:#b45309;border-radius:10px;padding:10px 12px;font-size:.82rem;font-weight:700;margin-bottom:12px;line-height:1.4}'
   ].join('\n');
@@ -278,7 +280,9 @@
         hov.style.height=(30*PXMIN-1)+'px'; bodyEl.appendChild(hov);
         // hover: resalta la franja de 30 min bajo el mouse y muestra la hora
         bodyEl.addEventListener('mousemove', function(ev){
-          if(ev.target.closest('.agm-ev')||ev.target.closest('.agm-blk')){ hov.style.display='none'; return; }
+          // Sobre una cita ya ocupada, no; sobre un BLOQUEO sí (se puede agendar
+          // la excepción), así que el hover se ve igual y muestra la hora.
+          if(ev.target.closest('.agm-ev')){ hov.style.display='none'; return; }
           var m=slotY(bodyEl,ev.clientY); hov.style.top=((m-H_INI)*PXMIN)+'px'; hov.textContent=min2hm(m); hov.style.display='flex';
         });
         bodyEl.addEventListener('mouseleave', function(){ hov.style.display='none'; });
@@ -521,7 +525,7 @@
         '<button class="agm-lnk" id="bVolver" style="margin-bottom:12px;color:var(--apd)">‹ Volver a la agenda</button>'+
         '<div class="agm-card"><div class="agm-t">Marcar no disponible</div>'+
         '<div class="agm-sub">'+(medicoFijo?'Bloqueá tu agenda':'Bloqueá la agenda de un médico')+' por vacaciones, un tema familiar, lo que sea. Recepción lo ve y no se puede agendar encima.</div>'+
-        (medicoFijo?'':'<div style="margin-bottom:10px"><label>Médico</label><select id="bMed"><option value="">— Elegí el médico —</option>'+medOpts('')+'</select></div>')+
+        (medicoFijo?'':'<div style="margin-bottom:10px"><label>Médico</label><select id="bMed">'+medOpts(S.med)+'</select></div>')+
         '<div class="agm-row">'+
           '<div><label>Desde (día)</label><input type="date" id="bDesF" value="'+hoyISO()+'"></div>'+
           '<div><label>Hasta (día)</label><input type="date" id="bHasF" value="'+hoyISO()+'"></div>'+
@@ -542,6 +546,7 @@
         '<div class="agm-t" style="margin-top:20px">Bloqueos activos</div>'+
         '<div id="bList"><div class="agm-sp"></div></div></div>';
       $('bVolver').onclick=function(){ S.sub='cal'; pintar(); };
+      var bm=$('bMed'); if(bm) bm.onchange=function(){ cargarBloqueos(); };
       wireChips($('bDiasWrap'));
       var syncB=function(){ var todo=$('bTodo').checked&&!$('bDiario').checked; $('bHoras').style.display=todo?'none':''; $('bDiarioTip').style.display=$('bDiario').checked?'':'none'; $('bDiasWrap').style.display=$('bDiario').checked?'':'none'; };
       $('bDiario').onchange=function(){ if(this.checked)$('bTodo').checked=false; syncB(); };
@@ -567,9 +572,10 @@
     }
     function cargarBloqueos(){
       var L=$('bList'); if(!L) return; L.innerHTML='<div class="agm-sp"></div>';
-      fetch(api+'?action=bloqueos&medico='+encodeURIComponent(medicoFijo||'')).then(function(r){return r.json();}).then(function(res){
+      var med=medicoFijo || (($('bMed')||{}).value||'');
+      fetch(api+'?action=bloqueos&medico='+encodeURIComponent(med)).then(function(r){return r.json();}).then(function(res){
         var bs=(res&&res.bloqueos)||[];
-        if(!bs.length){ L.innerHTML='<div class="agm-empty">Sin bloqueos activos.</div>'; return; }
+        if(!bs.length){ L.innerHTML='<div class="agm-empty">'+(med?'Sin bloqueos activos para este médico.':'Elegí un médico para ver sus bloqueos.')+'</div>'; return; }
         L.innerHTML=bs.map(bloqHtml).join('');
         L.querySelectorAll('.agm-cx').forEach(function(b){ b.onclick=function(){ cancelarBloqueo(b.getAttribute('data-id'),b); }; });
       }).catch(function(){ L.innerHTML='<div class="agm-empty">Error de conexión.</div>'; });
