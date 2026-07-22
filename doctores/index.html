@@ -1250,7 +1250,18 @@ function toggleLlamar(filaKey) {
   btn.classList.toggle('apagado', vacio);
 }
 
+// Sin médico identificado, un llamado queda SIN registrar quién atendió — y esa
+// info se pierde para siempre (el 34% de los finalizados quedaba así). Antes de
+// llamar/atender/finalizar, exigimos que el médico haya elegido su nombre.
+function exigirIdentidad(){
+  if (miMedico) return true;
+  showToast('👤 Primero elegí tu nombre (arriba) para que quede registrado quién atiende');
+  try { abrirIdentidad(); } catch(e){}
+  return false;
+}
+
 function callNext(rowIndex, filaKey) {
+  if (!exigirIdentidad()) return;
   const sel = document.getElementById('room-'+filaKey);
   const room = sel ? sel.value : '';
   // Sin consultorio no se llama (el botón ya debería estar apagado; esto es
@@ -1275,6 +1286,7 @@ function callNext(rowIndex, filaKey) {
 // Volver a llamar al mismo turno (si el cliente no apareció).
 // Actualiza la hora del llamado → vuelve a sonar y a destacarse en la TV.
 function llamarDeNuevo(rowIndex) {
+  if (!exigirIdentidad()) return;
   const rec = allRecords.find(x => x.rowIndex === rowIndex);
   const room = rec ? (rec.consultorio || '') : '';
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room, medico: miMedico }) })
@@ -1309,6 +1321,7 @@ function markAusente(rowIndex) {
 // sigue. El backend, de paso, cierra a 'atendido' al anterior que este
 // mismo médico estaba atendiendo (ver atenderPaciente).
 function atender(rowIndex) {
+  if (!exigirIdentidad()) return;
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atender', rowIndex: rowIndex, medico: miMedico }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
@@ -1329,7 +1342,10 @@ function atender(rowIndex) {
 }
 
 function markAtendido(rowIndex) {
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido' }) })
+  if (!exigirIdentidad()) return;
+  // Manda el médico: así, si el turno no tenía registrado quién lo atendió,
+  // queda firmado con el que lo finaliza.
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido', medico: miMedico }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
         const rec = allRecords.find(x => x.rowIndex === rowIndex);
