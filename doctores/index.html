@@ -439,6 +439,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <button class="fbtn active" id="f-sala" onclick="setView('sala')">🔔 Sala de espera</button>
       <button class="fbtn" id="f-atendiendo" onclick="setView('atendiendo')">🩺 Atendiendo</button>
       <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Finalizados</button>
+      <button class="fbtn" id="f-agenda" onclick="setView('agenda')">📅 Mi agenda</button>
     </div>
     <div class="date-filter-wrap" id="dateFilterWrap" style="display:none">
       <span class="df-lbl">📅 Ver otro día</span>
@@ -712,9 +713,14 @@ function pickNext(list, filaKey, yaLlamados) {
 
 function setView(v) {
   activeView = v;
-  ['sala','atendiendo','reviewed'].forEach(id =>
+  ['sala','atendiendo','reviewed','agenda'].forEach(id =>
     document.getElementById('f-'+id).classList.toggle('active', id === v));
   document.getElementById('dateFilterWrap').style.display = (v === 'reviewed') ? 'flex' : 'none';
+  // Mi agenda: monta el módulo de citas (filtrado por el médico logueado).
+  if (v === 'agenda') {
+    AgendaMod.mount(document.getElementById('mainCnt'), { medicoFijo: miMedico, api: API_URL });
+    return;
+  }
   renderAll();
 }
 
@@ -1360,6 +1366,7 @@ function markAtendido(rowIndex) {
 }
 
 function renderAll() {
+  if (activeView === 'agenda') return;   // la agenda se monta aparte; no la pisamos
   if (activeView === 'sala') { renderSala(); return; }
   const today = new Date();
   const dfVal = document.getElementById('dateFilter').value;
@@ -1817,5 +1824,6 @@ recordsDelCache();          // pinta la última cola guardada AL INSTANTE
 cargarMedicos();
 loadRecords();              // refresca con el backend por detrás
 </script>
+<script src="/js/agenda-mod.js"></script>
 </body>
 </html>

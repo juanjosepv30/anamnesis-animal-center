@@ -178,6 +178,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .toast.show{opacity:1}
 .hdr-acts{display:flex;gap:8px;align-items:center}
 .btn-turno-cfg{background:var(--pl);color:var(--pd);border:1.5px solid var(--bd);border-radius:10px;padding:9px 14px;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.rec-toptabs{display:flex;gap:8px;margin-bottom:14px}
+.rec-toptab{flex:1;border:1.5px solid var(--bd);background:var(--wh);border-radius:12px;padding:11px;font-size:.9rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:inherit}
+.rec-toptab.on{background:var(--pl);color:var(--pd);border-color:var(--p)}
 
 /* ── Móvil: recepción se usa mucho desde el celular ── */
 @media(max-width:560px){
@@ -238,7 +241,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <div><div class="hdr-t">Recepción</div><div class="hdr-s" id="hdrSub">Sala de espera</div></div>
     </div>
     <div class="hdr-acts">
-      <a href="/agenda/" class="btn-turno-cfg" style="text-decoration:none;display:inline-flex;align-items:center">📅 Agenda</a>
       <button class="btn-turno-cfg" onclick="abrirTurnos()">🩺 Médicos de turno</button>
     </div>
   </header>
@@ -294,6 +296,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
   </div>
 
   <div class="wrap">
+    <div class="rec-toptabs">
+      <button class="rec-toptab on" id="rt-sala" onclick="verVista('sala')">🏠 Recepción</button>
+      <button class="rec-toptab" id="rt-agenda" onclick="verVista('agenda')">📅 Agenda</button>
+    </div>
+    <div id="recVista">
     <div class="card">
       <div class="card-t">Registrar llegada</div>
       <div class="card-sub">Busca al paciente en Vetesoft, valida contra el calendar y regístralo en la sala. Sirve para los que tienen cita y para los que no.</div>
@@ -323,6 +330,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       </div>
       <div id="wrList"><div class="spinner"></div></div>
     </div>
+    </div><!-- /recVista -->
+    <div id="agendaVista" style="display:none"></div>
   </div>
 </div>
 
@@ -330,6 +339,19 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_NJckbQb-ZVlkzuY27cZRRBbVwsae9QAAJvfysla7e_DSU/exec';
+
+// Cambia entre la vista de Recepción (registro + sala) y la de Agenda (citas).
+var _agendaMontada = false;
+function verVista(v){
+  document.getElementById('rt-sala').classList.toggle('on', v==='sala');
+  document.getElementById('rt-agenda').classList.toggle('on', v==='agenda');
+  document.getElementById('recVista').style.display   = v==='agenda' ? 'none' : '';
+  document.getElementById('agendaVista').style.display = v==='agenda' ? '' : 'none';
+  if (v==='agenda' && !_agendaMontada) {
+    _agendaMontada = true;
+    AgendaMod.mount(document.getElementById('agendaVista'), { medicoFijo:'', api:API_URL });
+  }
+}
 let selected = null;
 // #1 — Editar turno: cuando recepción corrige el paciente de un turno ya
 // creado, guardamos acá la fila que se va a corregir. Todo el flujo de
@@ -1372,5 +1394,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+<script src="/js/agenda-mod.js"></script>
 </body>
 </html>
