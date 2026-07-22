@@ -119,8 +119,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .anam-close{display:block;margin:0 0 10px auto;border:none;background:var(--wh);color:var(--tx);font-weight:800;font-family:inherit;font-size:.85rem;border-radius:10px;padding:9px 15px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .quien-ov{position:fixed;inset:0;background:rgba(20,10,30,.55);z-index:210;display:flex;align-items:center;justify-content:center;padding:18px}
 .quien-box{background:var(--wh);border-radius:16px;padding:20px;max-width:380px;width:100%;box-shadow:0 18px 50px rgba(0,0,0,.3)}
-.quien-t{font-size:1.05rem;font-weight:800;color:var(--tx)}
-.quien-s{font-size:.82rem;color:var(--tm);margin:6px 0 14px;line-height:1.4}
+.quien-t{font-size:1.05rem;font-weight:800;color:var(--tx);margin-bottom:12px}
 .quien-box select{width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:11px 12px;font-size:.95rem;font-family:inherit;color:var(--tx);background:var(--bg);outline:none}
 .quien-acts{display:flex;gap:8px;margin-top:16px}
 .quien-cancel{flex:1;border:1.5px solid var(--bd);background:var(--wh);color:var(--tm);font-weight:700;font-family:inherit;font-size:.9rem;border-radius:10px;padding:11px;cursor:pointer}
@@ -482,7 +481,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <div class="quien-ov" id="quienModal" style="display:none">
   <div class="quien-box">
     <div class="quien-t">¿Quién va a atender?</div>
-    <div class="quien-s">Solo para que quede registrado quién atiende este turno. NO cambia tu perfil ni tu vista.</div>
     <select id="quienSel"></select>
     <div class="quien-acts">
       <button class="quien-cancel" onclick="cerrarQuien()">Cancelar</button>
