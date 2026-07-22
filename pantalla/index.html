@@ -112,6 +112,26 @@ function activar() {
   cargar();
 }
 
+// Intenta activar el sonido SOLO, sin botón. Solo funciona si el navegador de
+// esa TV está configurado para permitir autoplay (ver la guía: abrir Chrome con
+// --autoplay-policy=no-user-gesture-required, o kiosco). Si el navegador lo
+// permite, el AudioContext arranca 'running' y escondemos el botón "Activar"
+// para siempre. Si lo bloquea (Chrome normal), queda el botón para tocarlo una
+// vez. El tablero se carga igual en los dos casos.
+function intentarAutoActivar() {
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  cargar();   // el tablero se muestra siempre
+  if (!audioCtx) { return; }
+  var listo = function(){
+    if (audioCtx.state === 'running') {
+      document.getElementById('soundHint').style.display = 'none';
+      try { if ('speechSynthesis' in window) cargarVoces(); } catch(e){}
+    }
+  };
+  try { audioCtx.resume().then(listo).catch(function(){}); } catch(e) {}
+  listo();
+}
+
 // Campanita generada por código (sin archivos externos)
 function ding() {
   if (!audioCtx) return;
@@ -397,7 +417,7 @@ setInterval(function(){
 // plano, y el equipo pudo dormirse) recuperamos de inmediato lo perdido.
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) { try { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {} chequearVersion(); cargar(); } });
 window.addEventListener('focus', function(){ chequearVersion(); });
-cargar();
+intentarAutoActivar();
 </script>
 <script>
 if ('serviceWorker' in navigator) {
