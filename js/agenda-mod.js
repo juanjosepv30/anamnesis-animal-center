@@ -90,8 +90,11 @@
     '.agm-when{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}',
     '.agm-wpill{font-size:.82rem;color:var(--apd);font-weight:800;background:var(--apl);border:1.5px solid var(--abd);border-radius:9px;padding:8px 11px;display:inline-flex;align-items:center;gap:6px}',
     '.agm-srch{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
-    '.agm-mlbl{font-size:.74rem;font-weight:800;color:var(--atm);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 7px}',
-    '.agm-mact{display:flex;gap:8px;margin-top:16px}',
+    '.agm-mlbl{font-size:.72rem;font-weight:800;color:var(--apd);text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--abd)}',
+    '.agm-modal .agm-row{margin-top:0}',
+    '.agm-modal .agm-row>div{min-width:0}',
+    '.agm-modal input,.agm-modal select,.agm-modal textarea{width:100%;box-sizing:border-box}',
+    '.agm-mact{display:flex;gap:8px;margin-top:18px}',
     '.agm-warn{background:#fff4e6;border:1.5px solid #fed7aa;color:#b45309;border-radius:10px;padding:10px 12px;font-size:.82rem;font-weight:700;margin-bottom:12px;line-height:1.4}'
   ].join('\n');
 
@@ -295,7 +298,10 @@
     // ══════════ MODAL: crear cita ══════════
     function overlay(html){
       if(S._ov){ S._ov.remove(); S._ov=null; }   // un solo modal a la vez
-      var ov=document.createElement('div'); ov.className='agm-ov';
+      // La clase 'agm' es CLAVE: el overlay vive en <body>, fuera del contenedor
+      // del módulo, así que sin ella los estilos scopeados (.agm input, .agm label…)
+      // no lo alcanzan y los campos se ven crudos.
+      var ov=document.createElement('div'); ov.className='agm agm-ov';
       ov.innerHTML='<div class="agm-modal">'+html+'</div>';
       ov.addEventListener('click', function(e){ if(e.target===ov) cerrarOv(); });
       document.body.appendChild(ov); S._ov=ov; return ov;
