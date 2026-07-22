@@ -127,6 +127,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .wr-ta{display:inline-block;margin-top:3px;margin-right:6px;font-size:.72rem;font-weight:700;color:#475569;background:#eef2f7;border-radius:8px;padding:1px 8px}
 .wr-consulta{display:inline-block;margin-top:4px;font-size:.74rem;font-weight:800;color:#1d4ed8;background:#dbeafe;border-radius:8px;padding:2px 9px;font-variant-numeric:tabular-nums}
 .wr-obs{margin-top:4px;font-size:.78rem;font-weight:700;color:#92400e;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:4px 9px;line-height:1.35}
+.wr-aus-tel{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.wr-aus-btn{display:inline-flex;align-items:center;gap:4px;font-size:.74rem;font-weight:800;text-decoration:none;border-radius:8px;padding:4px 10px;background:#eef2f7;color:#334155;border:1px solid #dbe2ea}
+.wr-aus-btn:hover{background:#e2e8f0}
+.wr-aus-wa{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+.wr-aus-wa:hover{background:#bbf7d0}
+.wr-aus-sin{margin-top:5px;font-size:.72rem;color:#b0a4bf}
 .edit-banner{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:9px 12px;font-size:.82rem;margin-bottom:10px;line-height:1.4}
 .edit-cancel{margin-left:auto;font-size:.75rem;font-weight:700;color:#9a3412;background:#fff;border:1px solid #fdba74;border-radius:8px;padding:4px 10px;cursor:pointer}
 .edit-cancel:hover{background:#fff1e6}
@@ -1090,6 +1096,18 @@ function wrAusenteEspera(r) {
   if (mins === null) return ' · se fue antes de que lo llamaran';
   return ' · lo llamaron '+esc(fmtHora(r.calledAt))+' — esperó '+wrFmtMin(mins);
 }
+// Teléfono del ausente + acciones para RECUPERARLO: llamar y escribir por
+// WhatsApp (reprogramar). Si no dejó número, se dice, para no perder tiempo.
+function wrAusenteTel(r) {
+  var t = String(r.ownerPhone||'').replace(/[^0-9]/g,'');
+  if (!t) return '<div class="wr-aus-tel wr-aus-sin">Sin teléfono — no dejó número</div>';
+  var wa = (t.length===10 && t.charAt(0)==='3') ? '57'+t : t;
+  var msg = encodeURIComponent('Hola, te esperábamos en Animal Center para tu turno y no alcanzaste a pasar. ¿Todo bien? ¿Querés que te reprogramemos?');
+  return '<div class="wr-aus-tel">'+
+    '<a class="wr-aus-btn" href="tel:'+esc(t)+'">📞 '+esc(r.ownerPhone)+'</a>'+
+    '<a class="wr-aus-btn wr-aus-wa" href="https://wa.me/'+esc(wa)+'?text='+msg+'" target="_blank" rel="noopener">💬 WhatsApp</a>'+
+  '</div>';
+}
 // Minutos que lleva EN CONSULTA (del llamado a ahora), para el cronómetro vivo
 // de la pestaña Atendiendo.
 function wrMinsDesde(iso){ if(!iso) return null; var d=new Date(iso); if(isNaN(d)) return null; return Math.max(0, Math.floor((Date.now()-d.getTime())/60000)); }
@@ -1139,7 +1157,7 @@ function wrItem(r, acts) {
       (r.estadoTurno==='atendido' ? '<div class="wr-ta">🕐 Llegó '+esc(fmtHora(r.timestamp))+'</div>'+wrTiemposAtendida(r) : '')+
       // Ausentes: hora de llegada y cuánto esperó antes de irse, para saber si
       // se fue por demora o si ni alcanzaron a llamarlo.
-      (r.estadoTurno==='ausente' ? '<div class="wr-ta">🕐 Llegó '+esc(fmtHora(r.timestamp))+wrAusenteEspera(r)+'</div>' : '')+
+      (r.estadoTurno==='ausente' ? '<div class="wr-ta">🕐 Llegó '+esc(fmtHora(r.timestamp))+wrAusenteEspera(r)+'</div>'+wrAusenteTel(r) : '')+
       '<div class="wr-chips">'+
       // Consulta general en cola: chip para asignar/cambiar el médico pedido.
       (/general/i.test(r.service||'') && enCola
