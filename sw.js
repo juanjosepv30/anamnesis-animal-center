@@ -34,11 +34,16 @@ self.addEventListener('fetch', function (e) {
   // Así que para las páginas pedimos siempre a la red, saltándonos ese
   // caché. Es lo contrario de lo que suele hacer un service worker, y es a
   // propósito: acá el enemigo es el código viejo, no la latencia.
-  if (e.request.mode === 'navigate') {
+  // Además del HTML, forzamos fresco NUESTRO JS/CSS (mismo origen): son código,
+  // y cachearlos deja al médico corriendo lógica vieja igual que el HTML viejo.
+  // (Las imágenes y la API siguen derecho a la red, sin que nos metamos.)
+  var mismoOrigen = false;
+  try { mismoOrigen = new URL(e.request.url).origin === self.location.origin; } catch (x) {}
+  var esCodigo = e.request.destination === 'script' || e.request.destination === 'style';
+  if (e.request.mode === 'navigate' || (mismoOrigen && esCodigo)) {
     e.respondWith(
       fetch(e.request, { cache: 'reload' })
         .catch(function () { return fetch(e.request); })   // sin red, lo que haya
     );
   }
-  // Todo lo demás (API, imágenes) va derecho a la red, sin que nos metamos.
 });

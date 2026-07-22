@@ -47,7 +47,16 @@
     '.agm-ok .em{font-size:2.3rem;margin-bottom:8px}',
     '.agm-err{color:#c0392b;font-size:.82rem;margin-top:8px;min-height:16px}',
     '.agm-sp{width:24px;height:24px;border:3px solid var(--abd);border-top-color:var(--ap);border-radius:50%;animation:agmsp .8s linear infinite;margin:18px auto}',
-    '@keyframes agmsp{to{transform:rotate(360deg)}}'
+    '@keyframes agmsp{to{transform:rotate(360deg)}}',
+    '.agm-day{border:1.5px solid var(--abd);border-radius:11px;max-height:340px;overflow-y:auto;margin-top:6px}',
+    '.agm-slot{display:flex;align-items:center;gap:10px;padding:8px 11px;border-bottom:1px solid #f0e8f5;font-size:.85rem}',
+    '.agm-slot:last-child{border-bottom:none}',
+    '.agm-sh{font-weight:800;color:var(--atm);min-width:46px;font-variant-numeric:tabular-nums}',
+    '.agm-free{flex:1;background:none;border:1px dashed #cdbcda;color:var(--apd);border-radius:8px;padding:6px 10px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:left}',
+    '.agm-free:hover{background:var(--apl)}',
+    '.agm-free.pick{background:var(--ap);color:#fff;border-color:var(--ap)}',
+    '.agm-busy{flex:1;background:#fdecef;color:#a01b34;border-radius:8px;padding:6px 10px;font-size:.8rem;font-weight:700}',
+    '.agm-daymsg{color:#b0a4bf;font-size:.85rem;text-align:center;padding:14px}'
   ].join('\n');
   var cssInjected=false;
   function injectCSS(){ if(cssInjected)return; cssInjected=true; var s=document.createElement('style'); s.textContent=CSS; document.head.appendChild(s); }
@@ -138,18 +147,50 @@
           '<div><label>Médico</label><select id="fMed">'+medOpts(medicoFijo)+'</select></div>'+
           '<div><label>Servicio</label><select id="fSvc">'+svcOpts()+'</select></div>'+
           '<div><label>Fecha</label><input type="date" id="fFec" value="'+hoyISO()+'"></div>'+
-          '<div><label>Hora</label><select id="fHor">'+horaOpts()+'</select></div>'+
         '</div>'+
+        '<div style="margin-top:12px"><label>Horario <span style="font-weight:400" id="fHsel">(elegí un espacio libre)</span></label>'+
+          '<div class="agm-day" id="fDay"><div class="agm-daymsg">Elegí médico y fecha para ver los horarios.</div></div></div>'+
         '<div style="margin-top:12px"><label>Notas <span style="font-weight:400">(opcional)</span></label><textarea id="fNot" rows="2" placeholder="Motivo, indicaciones…"></textarea></div>'+
         '<button class="agm-btn agm-block" style="margin-top:14px" id="fGuardar">Agendar cita →</button>'+
         '<div class="agm-err" id="fErr"></div>';
-      var rs=$('fReset'); if(rs) rs.onclick=function(){ S.selCliente=null; $('aForm').innerHTML=''; };
+      var rs=$('fReset'); if(rs) rs.onclick=function(){ S.selCliente=null; S.horaSel=''; $('aForm').innerHTML=''; };
+      S.horaSel='';
+      $('fMed').onchange=refrescarDia; $('fFec').onchange=refrescarDia;
       $('fGuardar').onclick=function(){ guardar(manual); };
+      if(medicoFijo) refrescarDia();   // ya sabemos el médico → mostramos el día
+    }
+    // Muestra el día del médico como una línea de tiempo (libre / ocupado), tipo
+    // agenda. Los espacios libres se tocan para elegir la hora.
+    function refrescarDia(){
+      var med=$('fMed').value, fec=$('fFec').value;
+      var D=$('fDay'); if(!D) return;
+      S.horaSel=''; $('fHsel').textContent='(elegí un espacio libre)';
+      if(!med||!fec){ D.innerHTML='<div class="agm-daymsg">Elegí médico y fecha para ver los horarios.</div>'; return; }
+      D.innerHTML='<div class="agm-sp"></div>';
+      fetch(api+'?action=citas&fecha='+encodeURIComponent(fec)+'&medico='+encodeURIComponent(med)).then(function(r){return r.json();}).then(function(res){
+        var ocup={}; ((res&&res.citas)||[]).forEach(function(c){ ocup[c.hora]=c; });
+        var html='';
+        for(var m=6*60;m<=20*60;m+=30){
+          var hh=Math.floor(m/60),mm=m%60; var v=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+          var c=ocup[v];
+          html+='<div class="agm-slot"><span class="agm-sh">'+v+'</span>'+
+            (c ? '<span class="agm-busy">🔴 '+esc(c.petName||c.owner||'Ocupado')+(c.servicio?' · '+esc(c.servicio):'')+'</span>'
+               : '<button class="agm-free" data-h="'+v+'">Libre — tocá para elegir</button>')+'</div>';
+        }
+        D.innerHTML=html;
+        D.querySelectorAll('.agm-free').forEach(function(b){ b.onclick=function(){ elegirHora(b.getAttribute('data-h')); }; });
+      }).catch(function(){ D.innerHTML='<div class="agm-daymsg">Error al cargar los horarios.</div>'; });
+    }
+    function elegirHora(h){
+      S.horaSel=h;
+      var D=$('fDay'); D.querySelectorAll('.agm-free').forEach(function(b){ b.classList.toggle('pick', b.getAttribute('data-h')===h); if(b.getAttribute('data-h')===h) b.textContent='✓ '+h+' elegido'; else b.textContent='Libre — tocá para elegir'; });
+      $('fHsel').textContent='→ '+h;
     }
     function guardar(manual){
       var medico=$('fMed').value, err=$('fErr');
       if(!medico){ err.textContent='Elegí el médico.'; return; }
-      var data={ fecha:$('fFec').value, hora:$('fHor').value, medico:medico, servicio:$('fSvc').value, notas:$('fNot').value.trim(), phone:($('fTel')||{}).value||'' };
+      if(!S.horaSel){ err.textContent='Elegí un horario libre en la agenda del día.'; return; }
+      var data={ fecha:$('fFec').value, hora:S.horaSel, medico:medico, servicio:$('fSvc').value, notas:$('fNot').value.trim(), phone:($('fTel')||{}).value||'' };
       if(S.selCliente){ data.petName=S.selCliente.petName; data.owner=S.selCliente.owner; data.cedula=S.selCliente.cedula; data.vetesoftId=S.selCliente.vetesoftId; data.vetesoftHc=S.selCliente.vetesoftHc; }
       else { data.petName=($('fPet')||{}).value||''; data.owner=($('fOwn')||{}).value||''; data.cedula=($('fCed')||{}).value||''; }
       if(!data.petName&&!data.owner){ err.textContent='Falta el paciente.'; return; }
