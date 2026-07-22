@@ -1082,6 +1082,14 @@ function wrTiemposAtendida(r) {
   if (atencion !== null) s += '<div class="wr-ta">🩺 Atención '+wrFmtMin(atencion)+'</div>';
   return s;
 }
+// Cuánto esperó un ausente. Si lo llamaron, la espera va de la llegada al
+// llamado (y decimos a qué hora lo llamaron). Si nunca lo llamaron, no hubo
+// demora nuestra: se fue antes de que le tocara.
+function wrAusenteEspera(r) {
+  var mins = wrMinsEntre(r.timestamp, r.calledAt);
+  if (mins === null) return ' · se fue antes de que lo llamaran';
+  return ' · lo llamaron '+esc(fmtHora(r.calledAt))+' — esperó '+wrFmtMin(mins);
+}
 // Minutos que lleva EN CONSULTA (del llamado a ahora), para el cronómetro vivo
 // de la pestaña Atendiendo.
 function wrMinsDesde(iso){ if(!iso) return null; var d=new Date(iso); if(isNaN(d)) return null; return Math.max(0, Math.floor((Date.now()-d.getTime())/60000)); }
@@ -1129,6 +1137,9 @@ function wrItem(r, acts) {
       (r.observaciones ? '<div class="wr-obs">📌 '+esc(r.observaciones)+'</div>' : '')+
       // #7 — En la pestaña Atendidos: hora de llegada + espera + atención.
       (r.estadoTurno==='atendido' ? '<div class="wr-ta">🕐 Llegó '+esc(fmtHora(r.timestamp))+'</div>'+wrTiemposAtendida(r) : '')+
+      // Ausentes: hora de llegada y cuánto esperó antes de irse, para saber si
+      // se fue por demora o si ni alcanzaron a llamarlo.
+      (r.estadoTurno==='ausente' ? '<div class="wr-ta">🕐 Llegó '+esc(fmtHora(r.timestamp))+wrAusenteEspera(r)+'</div>' : '')+
       '<div class="wr-chips">'+
       // Consulta general en cola: chip para asignar/cambiar el médico pedido.
       (/general/i.test(r.service||'') && enCola
