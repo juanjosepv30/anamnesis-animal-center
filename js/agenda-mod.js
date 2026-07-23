@@ -16,7 +16,11 @@
   var ALTO=(H_FIN-H_INI)*PXMIN + Y0*2;             // alto total; la PÁGINA scrollea, no un cuadro interno
 
   var CSS=[
-    '.agm{--ap:#8e3f9e;--apd:#6d2f7a;--apl:#f3e7f7;--abd:#e8daf0;--abg:#faf7ff;--atx:#1a0a2e;--atm:#6b5c7e}',
+    '.agm{--ap:#8e3f9e;--apd:#6d2f7a;--apl:#f3e7f7;--abd:#e8daf0;--abg:#faf7ff;--atx:#1a0a2e;--atm:#6b5c7e;-webkit-user-select:none;user-select:none}',
+    // No dejar seleccionar/copiar los textos de la UI (botones, tarjetas). El
+    // "selector del mouse" que se activaba al arrastrar molestaba. En los campos
+    // de texto SÍ se puede seleccionar, obvio.
+    '.agm input,.agm textarea,.agm select{-webkit-user-select:text;user-select:text}',
     '.agm-tabs{display:flex;gap:8px;margin-bottom:14px}',
     '.agm-tab{flex:1;border:1.5px solid var(--abd);background:#fff;border-radius:11px;padding:10px;font-size:.88rem;font-weight:700;color:var(--atm);cursor:pointer;font-family:inherit}',
     '.agm-tab.on{background:var(--apl);color:var(--apd);border-color:var(--ap)}',
@@ -201,12 +205,14 @@
     function diasVista(){
       var base=new Date(S.ancla.getFullYear(),S.ancla.getMonth(),S.ancla.getDate());
       if(S.vista==='dia') return [ base ];
-      // 3 días (celular): desde el día ancla, ese y los dos siguientes.
-      if(S.vista==='3dias') return [ base, addDias(base,1), addDias(base,2) ];
+      // '3dias' (celular) y 'semana' (escritorio) muestran la MISMA semana
+      // completa (Lun–Sáb). La diferencia es solo visual: en '3dias' las
+      // columnas son angostas y se ven ~3 a la vez, con scroll horizontal para
+      // recorrer la semana; las flechas cambian de SEMANA.
       var lun=lunesDe(S.ancla), out=[]; for(var i=0;i<6;i++) out.push(addDias(lun,i)); return out;   // Lun–Sáb
     }
     function rangoVista(){ var d=diasVista(); return { desde:isoDe(d[0]), hasta:isoDe(d[d.length-1]) }; }
-    function pasoVista(){ return S.vista==='dia'?1 : (S.vista==='3dias'?3 : 7); }
+    function pasoVista(){ return S.vista==='dia'?1:7; }
     function etiquetaRango(){
       var d=diasVista();
       if(S.vista==='dia') return DIAS[d[0].getDay()]+' '+d[0].getDate()+'/'+(d[0].getMonth()+1);
@@ -287,9 +293,12 @@
 
     function pintarGrid(W, med, citas, bloqs){
       var dias=diasVista(), hoy=hoyISO();
-      var cols='60px repeat('+dias.length+',minmax(90px,1fr))';
-      // Solo la vista 'día' (1 columna) se ajusta al ancho; 3 días y semana
-      // usan el ancho mínimo del grid y scrollean en horizontal en pantalla chica.
+      // '3dias' (celular): columnas fijas y angostas → se ven ~3 a la vez y la
+      // semana entera se recorre con scroll horizontal. 'día' se ajusta al
+      // ancho; 'semana' (escritorio) reparte a lo ancho.
+      var cols = (S.vista==='3dias')
+        ? '48px repeat('+dias.length+',105px)'
+        : '60px repeat('+dias.length+',minmax(90px,1fr))';
       var h='<div class="agm-grid'+(S.vista==='dia'?' dia':'')+'" style="grid-template-columns:'+cols+'">';
       // encabezados
       h+='<div class="agm-guth"></div>';
@@ -317,7 +326,7 @@
           var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio); var alt=Math.max(dur*PXMIN-1,18);
           var col=svcColor(c.servicio);
           h+='<div class="agm-ev'+(c.llego?' lleg':'')+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+col+'22;border-left-color:'+col+';color:#1a0a2e">'+
-             '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(c.llego?' ✓':'')+'</b>'+
+             '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(c.llego?' ✓':'')+(c.pagado?' 💵':'')+'</b>'+
              (alt>28?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+'</div>';
         });
         h+='</div></div>';
@@ -489,10 +498,14 @@
           (c.owner?'👤 '+esc(c.owner)+'<br>':'')+
           (c.vetesoftHc?'🗂️ HC '+esc(c.vetesoftHc)+'<br>':'')+
           (c.phone?'📞 '+esc(c.phone)+'<br>':'')+
-          (c.notas?'📝 '+esc(c.notas)+'<br>':'')+
           (c.llego?'<b style="color:#3B6D11">✓ Ya llegó — turno '+esc(c.turno||'')+'</b>':'')+
         '</div>'+
-        '<div class="agm-mact" style="flex-wrap:wrap">'+
+        // Nota + marca de pago: editables acá mismo, sin reprogramar.
+        '<div class="agm-mlbl">Nota y pago</div>'+
+        '<textarea id="dNota" rows="2" placeholder="Nota para esta cita…">'+esc(c.notas||'')+'</textarea>'+
+        '<label class="agm-chk"><input type="checkbox" id="dPago"'+(c.pagado?' checked':'')+'> 💵 El cliente ya pagó</label>'+
+        '<button class="agm-btn agm-btn-g" id="dGuardarNota" style="width:100%;margin-top:10px">Guardar nota / pago</button>'+
+        '<div class="agm-mact" style="flex-wrap:wrap;margin-top:14px">'+
           '<button class="agm-btn agm-btn-g" id="dCancel" style="color:#c0392b;border-color:#f1c0c0">Cancelar cita</button>'+
           (c.llego?'':'<button class="agm-btn agm-btn-g" id="dReprog">🔁 Reprogramar</button>')+
           (c.llego?'':'<button class="agm-btn agm-block" id="dLlego" style="background:#3B6D11">✓ Llegó</button>')+
@@ -503,6 +516,16 @@
       $ov('dCancel').onclick=function(){ if(!confirm('¿Cancelar esta cita?'))return; accionCita('cancelarCita',{id:c.id}); };
       var lb=$ov('dLlego'); if(lb) lb.onclick=function(){ accionCita('llegoCita',{id:c.id}); };
       var rb=$ov('dReprog'); if(rb) rb.onclick=function(){ S.reprog={ id:c.id, pet:(c.petName||c.owner||'la cita') }; cerrarOv(); pintarCal(); };
+      var gn=$ov('dGuardarNota'); if(gn) gn.onclick=function(){
+        var e=$ov('dErr'); if(e)e.textContent='';
+        gn.textContent='Guardando…'; gn.disabled=true;
+        var payload={ id:c.id, data:{ notas:($ov('dNota')||{}).value||'', pagado:!!($ov('dPago')||{}).checked } };
+        fetch(api,{method:'POST',body:JSON.stringify({action:'marcarPagoNota',id:payload.id,data:payload.data})})
+          .then(function(r){return r.json();}).then(function(res){
+            if(res&&res.ok){ cerrarOv(); cargarCal(); }
+            else { gn.textContent='Guardar nota / pago'; gn.disabled=false; if(e) e.textContent=(res&&res.error)||'No se pudo guardar.'; }
+          }).catch(function(){ gn.textContent='Guardar nota / pago'; gn.disabled=false; if(e) e.textContent='Error de conexión.'; });
+      };
     }
     function accionCita(action, payload){
       var e=$ov('dErr'); if(e)e.textContent='';

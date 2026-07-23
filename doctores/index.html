@@ -25,6 +25,10 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+/* No dejar seleccionar/copiar los textos de la UI (botones, tarjetas, chips).
+   En inputs y áreas de texto SÍ se puede, para poder editar. */
+button,.fbtn,.mini,.turno-badge,.rec-service,.fila-hd,.calling,.next-box,.q-item{-webkit-user-select:none;user-select:none}
+input,textarea,select{-webkit-user-select:text;user-select:text}
 :root{
   --bg:#faf7ff;--bg2:#f3eeff;
   --tx:#1a0a2e;--tm:#6b5c7e;--ts:#b0a4bf;
