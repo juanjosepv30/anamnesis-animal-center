@@ -229,17 +229,21 @@ function hablarTurno(r){
 
 function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// Paleta ÚNICA de servicios: la misma en recepción, pantalla y agenda.
+// Si cambia un color, cambiarlo en las tres (serviceColor / svcColor).
 function serviceColor(s){
   s=(s||'').toLowerCase();
   // Control primero: "Control especializado" tiene las dos palabras y se
   // agrupa (azul) con los controles, no con la naranja de especializada.
-  if(s.indexOf('control')!==-1)return'#2563eb';
-  if(s.indexOf('especial')!==-1)return'#f97316';
-  if(s.indexOf('vacun')!==-1)return'#8e3f9e';
-  if(s.indexOf('inyect')!==-1)return'#eab308';
-  if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1)return'#be123c';
-  if(s.indexOf('viajer')!==-1)return'#0891b2';
-  if(s.indexOf('general')!==-1)return'#16a34a';
+  if(s.indexOf('control')!==-1)   return'#2563eb'; // azul
+  if(s.indexOf('cirug')!==-1)     return'#7c3aed'; // morado
+  if(s.indexOf('desparasit')!==-1)return'#0d9488'; // verde azulado
+  if(s.indexOf('especial')!==-1)  return'#f97316'; // naranja
+  if(s.indexOf('vacun')!==-1)     return'#ec4899'; // rosado
+  if(s.indexOf('inyect')!==-1)    return'#6b7280'; // gris
+  if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1)return'#be123c'; // rojo vino
+  if(s.indexOf('viajer')!==-1)    return'#0891b2'; // cian
+  if(s.indexOf('general')!==-1||s.indexOf('consulta')!==-1)return'#16a34a'; // verde
   return'#94a3b8';
 }
 

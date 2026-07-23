@@ -123,15 +123,15 @@
   // pantalla/index.html), para que la clínica maneje una sola paleta. Cirugía y
   // desparasitación no existen como turno, así que les damos un tono propio.
   function svcColor(s){ s=String(s||'').toLowerCase();
-    if(s.indexOf('control')!==-1)   return '#2563eb';
-    if(s.indexOf('cirug')!==-1)     return '#7c3aed';
-    if(s.indexOf('desparasit')!==-1)return '#0d9488';
-    if(s.indexOf('especial')!==-1)  return '#f97316';
-    if(s.indexOf('vacun')!==-1)     return '#8e3f9e';
-    if(s.indexOf('inyect')!==-1)    return '#eab308';
-    if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1) return '#be123c';
-    if(s.indexOf('viajer')!==-1)    return '#0891b2';
-    if(s.indexOf('general')!==-1||s.indexOf('consulta')!==-1) return '#16a34a';
+    if(s.indexOf('control')!==-1)   return '#2563eb'; // azul
+    if(s.indexOf('cirug')!==-1)     return '#7c3aed'; // morado
+    if(s.indexOf('desparasit')!==-1)return '#0d9488'; // verde azulado
+    if(s.indexOf('especial')!==-1)  return '#f97316'; // naranja
+    if(s.indexOf('vacun')!==-1)     return '#ec4899'; // rosado
+    if(s.indexOf('inyect')!==-1)    return '#6b7280'; // gris
+    if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1) return '#be123c'; // rojo vino
+    if(s.indexOf('viajer')!==-1)    return '#0891b2'; // cian
+    if(s.indexOf('general')!==-1||s.indexOf('consulta')!==-1) return '#16a34a'; // verde
     return '#94a3b8';
   }
   var DIASEM=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
