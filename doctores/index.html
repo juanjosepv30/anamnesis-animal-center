@@ -1132,13 +1132,15 @@ function renderSala() {
           '<div class="calling-m">'+esc(nombreConMascotas(r))+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
         '</div>'+
         '<div class="calling-btns">'+
+          // Botón único: ya no hay "Atender" manual acá. El paciente pasa solo a
+          // consulta a los 2 min (gracia). Acá queda Ausente (no llegó), volver a
+          // llamar (si no oyó), y cerrar directo cuando el médico terminó.
           '<div class="calling-fila1">'+
             '<button class="btn-aus" onclick="markAusente('+r.rowIndex+')">Ausente</button>'+
-            '<button class="btn-atender" onclick="atender('+r.rowIndex+')">✓ Atender</button>'+
+            '<button class="btn-again" onclick="llamarDeNuevo('+r.rowIndex+')">🔔 Llamar otra vez</button>'+
           '</div>'+
           '<div class="calling-fila2">'+
-            '<button class="btn-again" onclick="llamarDeNuevo('+r.rowIndex+')">🔔 Llamar otra vez</button>'+
-            '<button class="btn-sutil" onclick="markAtendido('+r.rowIndex+')" title="Cerrar sin llamar al siguiente">Marcar atendido</button>'+
+            '<button class="btn-sutil" onclick="markAtendido('+r.rowIndex+')" title="Cerrar sin llamar al siguiente">✓ Terminé, cerrar</button>'+
           '</div>'+
         '</div></div>'+
         anuncio +
@@ -1196,7 +1198,7 @@ function renderSala() {
             (miPacienteAbierto
               ? ' disabled title="Cierra primero a '+esc(miPacienteAbierto.petName||miPacienteAbierto.turno)+'"'
               : ' style="background:'+nc+'"'+(pref?'':' disabled')+' onclick="callNext('+next.rowIndex+',\''+f.key+'\')"')+
-          '>🔔 Llamar</button>'+
+          '>✓ Atender</button>'+
         '</div></div>';
     } else {
       body += '<div class="q-empty">Nadie esperando</div>';
@@ -1312,6 +1314,9 @@ function confirmarQuien(){
   if (cb) cb(m);
 }
 
+// Botón ÚNICO "Atender": un toque llama al paciente (lo anuncia en la sala),
+// cierra el anterior del médico, y lleva al médico a la pestaña Atendiendo con
+// la tarjeta. El paciente queda en gracia 2 min (ver atenderDirecto en backend).
 function callNext(rowIndex, filaKey) {
   const sel = document.getElementById('room-'+filaKey);
   const room = sel ? sel.value : '';
@@ -1319,19 +1324,20 @@ function callNext(rowIndex, filaKey) {
   // la red por si algo se escapa).
   if (!room) { showToast('Elige el consultorio primero'); return; }
   conMedico(function(med){
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'llamando', consultorio: room, medico: med }) })
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atenderDirecto', rowIndex: rowIndex, consultorio: room, medico: med }) })
     .then(r => r.json()).then(function(res){
       if (res && res.ok) {
         const rec = allRecords.find(x => x.rowIndex === rowIndex);
-        if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; }
-        renderSala();
-        // avisoEnviado: true = el WhatsApp al cliente salió; false = no se pudo
-        // (número malo o sin teléfono); null = no había teléfono que avisar.
+        if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; rec.calledBy = med; rec.calledAt = new Date().toISOString(); }
+        // Cierro en memoria al paciente anterior de este médico (lo mismo que hizo el backend).
+        allRecords.forEach(function(x){ if (x.rowIndex !== rowIndex && (x.estadoTurno==='atendiendo'||x.estadoTurno==='llamando') && x.calledBy===med) { x.estadoTurno='atendido'; x.status='revisado'; } });
         var wa = res.avisoEnviado === true ? ' · 📱 aviso enviado al cliente'
                : res.avisoEnviado === false ? ' · ⚠️ no se pudo avisar al cliente (revisar número)'
                : '';
-        showToast('🔔 Turno llamado a ' + room + wa);
-      } else showToast('❌ Error al llamar');
+        showToast('✓ Atendiendo a ' + room + wa);
+        setView('atendiendo');   // llevo al médico a su pestaña con la tarjeta
+        updateCounts();
+      } else showToast('❌ Error al atender');
     }).catch(function(){ showToast('❌ Error de conexión'); });
   });
 }
@@ -1429,8 +1435,9 @@ function renderAll() {
     // "ver todo" (sin identificarse, miMedico vacío) ve el de todos.
     const mio = !miMedico || r.calledBy === miMedico;
     if (activeView === 'atendiendo') {
-      // Los que están EN CONSULTA ahora — solo los míos (o todos en ver-todo).
-      return r.estadoTurno === 'atendiendo' && mio && isSameDay(r.timestamp, today);
+      // En consulta ahora (atendiendo) + los recién llamados en su ventana de
+      // gracia ('llamando') — solo los míos (o todos en ver-todo).
+      return (r.estadoTurno === 'atendiendo' || r.estadoTurno === 'llamando') && mio && isSameDay(r.timestamp, today);
     } else {
       // Atendidas: por defecto SOLO las de hoy. Otros días con el selector.
       if (!atendido || !mio) return false;
@@ -1632,6 +1639,9 @@ function serviceColor(s) {
 function buildCard(r) {
   const reviewed = r.estadoTurno === 'atendido';
   const enConsulta = r.estadoTurno === 'atendiendo';
+  // Gracia: recién llamado con el botón único. Aún no cuenta como atención;
+  // el médico puede marcarlo Ausente. A los 2 min pasa solo a 'atendiendo'.
+  const grace = r.estadoTurno === 'llamando';
   const em = r.species === 'Felino' ? '🐈' : '🐕';
   const rowIdx = r.rowIndex;
   const svc = r.service || '';
@@ -1658,11 +1668,13 @@ function buildCard(r) {
         ${(reviewed || enConsulta) && r.calledBy ? '<span>· 🩺 '+esc(r.calledBy)+'</span>' : ''}
         ${reviewed ? '<span>· 🕐 Llegó '+esc(fmtHoraLlegada(r.timestamp))+'</span>' : ''}
         ${enConsulta ? '<span class="ta-t" data-inicio="'+esc(r.calledAt||r.timestamp)+'">🕐 '+fmtConsulta(r.calledAt||r.timestamp)+'</span>' : ''}
+        ${grace ? '<span class="ta-t" style="color:#b45309">⏳ Confirmando llegada — pasa a consulta en ~2 min</span>' : ''}
         ${reviewed ? tiemposAtendida(r) : ''}
       </div>
       ${r.observaciones ? '<div class="rec-obs">📌 '+esc(r.observaciones)+'</div>' : ''}
     </div>
     ${enConsulta ? '<div class="rec-acts"><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button></div>' : ''}
+    ${grace ? '<div class="rec-acts"><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button></div>' : ''}
     <div class="rec-arrow">▼</div>
   </div>
   <div class="rec-body">
