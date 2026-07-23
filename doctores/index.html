@@ -88,6 +88,16 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 /* ── Main content ── */
 .cnt{max-width:900px;margin:0 auto;padding:20px 24px}
+/* Barra persistente de "mi paciente en consulta" (en todas las pestañas). */
+#consultaBar{max-width:900px;margin:0 auto}
+#consultaBar:empty{display:none}
+.cbar{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#eef6ff;border:1.5px solid #bcd8ff;border-left:5px solid #2563eb;border-radius:11px;padding:10px 14px;margin:12px 24px 0;cursor:pointer}
+.cbar-venc{background:#fff7e6;border-color:#fed7aa;border-left-color:#d97706;animation:cbarpulse 1.6s ease-in-out infinite}
+@keyframes cbarpulse{0%,100%{box-shadow:0 0 0 0 rgba(217,119,6,0)}50%{box-shadow:0 0 0 4px rgba(217,119,6,.18)}}
+.cbar-l{font-size:.9rem;color:#1e3a5f;font-weight:600;flex:1;min-width:0}
+.cbar-venc .cbar-l{color:#92400e}
+.cbar-btn{flex-shrink:0;border:none;background:#16a34a;color:#fff;font-weight:800;font-family:inherit;font-size:.85rem;border-radius:9px;padding:9px 14px;cursor:pointer}
+@media(max-width:560px){.cbar{margin:8px 12px 0;padding:9px 12px}.cbar-l{font-size:.84rem}}
 .date-group{margin-bottom:24px}
 .date-lbl{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ts);margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .date-lbl::after{content:'';flex:1;height:1px;background:var(--bd)}
@@ -466,12 +476,17 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <span class="lg"><span class="lg-dot" style="background:#16a34a"></span>General</span>
     <span class="lg"><span class="lg-dot" style="background:#f97316"></span>Especializada</span>
     <span class="lg"><span class="lg-dot" style="background:#2563eb"></span>Control</span>
-    <span class="lg"><span class="lg-dot" style="background:#8e3f9e"></span>Vacunación</span>
-    <span class="lg"><span class="lg-dot" style="background:#eab308"></span>Inyectología</span>
+    <span class="lg"><span class="lg-dot" style="background:#ec4899"></span>Vacunación</span>
+    <span class="lg"><span class="lg-dot" style="background:#6b7280"></span>Inyectología</span>
+    <span class="lg"><span class="lg-dot" style="background:#e11d48"></span>Cardiología</span>
     <span class="lg"><span class="lg-dot" style="background:#be123c"></span>Rayos X y Ecografía</span>
     <span class="lg"><span class="lg-dot" style="background:#0891b2"></span>Viajero</span>
   </div>
 </div>
+
+<!-- Barra PERSISTENTE: mi paciente en consulta, visible en TODAS las pestañas
+     para que el médico no olvide cerrar mientras navega. La llena renderConsultaBar(). -->
+<div id="consultaBar"></div>
 
 <div class="cnt" id="mainCnt">
   <div class="spinner"></div>
@@ -746,6 +761,7 @@ function setView(v) {
   // Mi agenda: monta el módulo de citas (filtrado por el médico logueado).
   if (v === 'agenda') {
     AgendaMod.mount(document.getElementById('mainCnt'), { medicoFijo: miMedico, api: API_URL });
+    renderConsultaBar();   // la barra de "en consulta" sigue visible en la agenda
     return;
   }
   renderAll();
@@ -1398,6 +1414,7 @@ function markAtendido(rowIndex) {
 }
 
 function renderAll() {
+  renderConsultaBar();   // barra persistente (en todas las pestañas)
   if (activeView === 'agenda') return;   // la agenda se monta aparte; no la pisamos
   if (activeView === 'sala') { renderSala(); return; }
   const today = new Date();
@@ -1580,6 +1597,33 @@ function tickConsultas() {
     const t = fmtConsulta(els[i].getAttribute('data-inicio'));
     if (t) els[i].textContent = t;
   }
+  renderConsultaBar();   // re-arma la barra: capta cuando cruza a "¿ya terminaste?"
+}
+
+// Barra PERSISTENTE de "mi paciente en consulta": aparece en TODAS las pestañas
+// para que el médico no olvide cerrar la consulta mientras navega. Muestra el
+// cronómetro y el botón Finalizar; si lleva mucho, se pone ámbar con "¿ya
+// terminaste?". Ancla en calledAt (igual que el tiempo que se registra al cerrar).
+function renderConsultaBar() {
+  const bar = document.getElementById('consultaBar');
+  if (!bar) return;
+  if (!miMedico) { bar.innerHTML = ''; return; }
+  const today = new Date();
+  const mios = allRecords.filter(r => r.estadoTurno === 'atendiendo' &&
+    r.calledBy === miMedico && isSameDay(r.timestamp, today));
+  if (!mios.length) { bar.innerHTML = ''; return; }
+  mios.sort((a,b) => new Date(a.calledAt||a.timestamp) - new Date(b.calledAt||b.timestamp));
+  bar.innerHTML = mios.map(function(r){
+    const ini = r.calledAt || r.timestamp;
+    const venc = minsDesde(ini) >= umbralRecordatorio(r.service);
+    return '<div class="cbar'+(venc?' cbar-venc':'')+'" onclick="goToAnamnesis('+r.rowIndex+')">'+
+      '<div class="cbar-l">'+(venc?'🔔 ¿Ya terminaste? · ':'🩺 En consulta · ')+
+        '<b>'+esc(r.turno||'')+' '+esc(nombreConMascotas(r))+'</b>'+
+        (r.consultorio?' · '+esc(r.consultorio):'')+
+        ' · <span data-inicio="'+esc(ini)+'">'+fmtConsulta(ini)+'</span></div>'+
+      '<button class="cbar-btn" onclick="event.stopPropagation();markAtendido('+r.rowIndex+')">✓ Finalizar</button>'+
+    '</div>';
+  }).join('');
 }
 
 // #10 — Nombre(s) de la(s) mascota(s) del turno. Si vienen varias (petsExtra),
