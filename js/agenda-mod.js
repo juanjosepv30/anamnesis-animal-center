@@ -96,6 +96,12 @@
     '.agm-hlbl{position:absolute;left:0;right:0;text-align:right;padding-right:6px;font-size:.66rem;font-weight:700;color:#9c8bb0;transform:translateY(-6px)}',
     '.agm-hover{position:absolute;left:1px;right:1px;background:rgba(142,63,158,.16);border:1.5px solid var(--ap);border-radius:5px;pointer-events:none;z-index:4;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;font-size:.66rem;font-weight:800;color:var(--apd)}',
     '.agm-ev{position:absolute;left:2px;right:2px;border-radius:6px;padding:2px 5px;font-size:.72rem;line-height:1.2;overflow:hidden;cursor:pointer;border-left:3px solid;z-index:2}',
+    // Arrastrar/estirar citas. touch-action:none para poder arrastrar en celular.
+    '.agm-ev.agm-drag{cursor:grab;touch-action:none}',
+    '.agm-ev.agm-dragging{opacity:.35}',
+    '.agm-rz{position:absolute;left:0;right:0;bottom:0;height:10px;cursor:ns-resize;touch-action:none;display:flex;align-items:flex-end;justify-content:center}',
+    '.agm-rz:after{content:"";width:26px;height:3px;margin-bottom:2px;border-radius:2px;background:rgba(0,0,0,.28)}',
+    '.agm-ghost{position:fixed;z-index:9998;border-radius:6px;background:rgba(109,47,122,.94);color:#fff;font-size:.72rem;font-weight:700;padding:3px 6px;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.3);overflow:hidden;white-space:nowrap}',
     '.agm-ev b{font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     // El color de fondo/borde de cada cita se pone en línea según el servicio
     // (svcColor). "Llegó" NO cambia el color del servicio: agrega un anillo
@@ -294,6 +300,18 @@
       }).catch(function(){ W.innerHTML='<div class="agm-empty">Error al cargar la agenda.</div>'; });
     }
 
+    // Guarda una cita movida/estirada (editarCita revalida choque y bloqueo).
+    // Si cae sobre un bloqueo, pregunta si mover igual (forzar). Si choca con
+    // otra cita, avisa y no fuerza (dos citas encimadas no se permiten).
+    function guardarMoverCita(c, fecha, hora, duracion, forzar){
+      fetch(api,{method:'POST',body:JSON.stringify({action:'editarCita', id:c.id, data:{fecha:fecha, hora:hora, duracion:duracion, servicio:c.servicio, forzar:!!forzar}})})
+        .then(function(r){return r.json();}).then(function(res){
+          if(res&&res.ok){ cargarCal(); return; }
+          if(res&&res.bloqueado){ if(confirm((res.error||'Hay un bloqueo en ese horario.')+' ¿Mover igual?')){ guardarMoverCita(c,fecha,hora,duracion,true); } else { cargarCal(); } return; }
+          alert((res&&res.error)||'No se pudo mover la cita.'); cargarCal();
+        }).catch(function(){ alert('Error de conexión.'); cargarCal(); });
+    }
+
     function pintarGrid(W, med, citas, bloqs){
       var dias=diasVista(), hoy=hoyISO();
       // '3dias' (celular): columnas fijas y angostas → se ven ~3 a la vez y la
@@ -328,9 +346,12 @@
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
           var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio); var alt=Math.max(dur*PXMIN-1,18);
           var col=svcColor(c.servicio);
-          h+='<div class="agm-ev'+(c.llego?' lleg':'')+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+col+'22;border-left-color:'+col+';color:#1a0a2e">'+
+          // Las citas ya llegadas NO se arrastran ni estiran (editarCita las bloquea).
+          var movible=!c.llego;
+          h+='<div class="agm-ev'+(c.llego?' lleg':'')+(movible?' agm-drag':'')+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+col+'22;border-left-color:'+col+';color:#1a0a2e">'+
              '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(c.llego?' ✓':'')+(c.pagado?' 💵':'')+'</b>'+
-             (alt>28?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+'</div>';
+             (alt>28?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+
+             (movible?'<div class="agm-rz" title="Estirar para cambiar la duración"></div>':'')+'</div>';
         });
         h+='</div></div>';
       });
@@ -357,6 +378,7 @@
         bodyEl.addEventListener('mouseleave', function(){ hov.style.display='none'; });
         // click en hueco vacío → agendar (si cae sobre un bloqueo, avisa)
         bodyEl.addEventListener('click', function(ev){
+          if(S._noClick) return;   // recién soltó un arrastre/estirón: no agendar
           if(ev.target.closest('.agm-ev')||ev.target.closest('.agm-blk')) return;
           var m=slotY(bodyEl,ev.clientY); var hm=min2hm(m);
           var b=bloqueoDe(bloqs,iso,hm), forz=false;
@@ -365,10 +387,62 @@
           else abrirCrear(iso,hm,med,forz);
         });
       });
+      // Columnas (para saber sobre qué DÍA se suelta al arrastrar entre días).
+      var colsBody=[].slice.call(W.querySelectorAll('.agm-body2[data-iso]'));
+      function colBajoX(x){ for(var i=0;i<colsBody.length;i++){ var r=colsBody[i].getBoundingClientRect(); if(x>=r.left&&x<=r.right) return colsBody[i]; } return null; }
+      function minDesdeTop(col, topClientY){ var r=col.getBoundingClientRect(); var m=H_INI+Math.round((((topClientY-r.top)-Y0)/PXMIN)/30)*30; if(m<H_INI)m=H_INI; if(m>H_FIN-30)m=H_FIN-30; return m; }
+
+      // Citas NO llegadas: arrastrar para MOVER, estirar (handle) para la DURACIÓN.
+      // Ambas piden confirmación antes de guardar. Las llegadas solo abren detalle.
       W.querySelectorAll('.agm-ev').forEach(function(evEl){
-        evEl.addEventListener('click', function(ev){ ev.stopPropagation();
-          var id=evEl.getAttribute('data-id'); var c=citas.filter(function(x){return String(x.id)===id;})[0];
-          if(c) abrirDetalle(c);
+        var id=evEl.getAttribute('data-id');
+        var c=citas.filter(function(x){return String(x.id)===id;})[0];
+        if(!c) return;
+        if(!evEl.classList.contains('agm-drag')){   // llegada: solo abre detalle
+          evEl.addEventListener('click', function(ev){ ev.stopPropagation(); abrirDetalle(c); });
+          return;
+        }
+        var dur=+c.duracion||durServicio(c.servicio);
+        // ── Estirar (handle inferior): cambia la duración ──
+        var rz=evEl.querySelector('.agm-rz');
+        if(rz) rz.addEventListener('pointerdown', function(ev){ ev.preventDefault(); ev.stopPropagation();
+          var y0=ev.clientY, dur0=dur, nueva=dur0;
+          evEl.classList.add('agm-rzing');
+          function mv(e){ nueva=Math.max(30, Math.round((((dur0*PXMIN)+(e.clientY-y0))/PXMIN)/30)*30); evEl.style.height=Math.max(nueva*PXMIN-1,18)+'px'; }
+          function up(){ document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up); evEl.classList.remove('agm-rzing'); S._noClick=true; setTimeout(function(){S._noClick=false;},350);
+            if(nueva===dur0){ return; }
+            if(!confirm('¿Cambiar la duración de la cita de '+(c.petName||c.owner||'')+' a '+nueva+' min?')){ cargarCal(); return; }
+            guardarMoverCita(c, c.fecha, c.hora, nueva, false);
+          }
+          document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up);
+        });
+        // ── Arrastrar el bloque: cambia día/hora ──
+        evEl.addEventListener('pointerdown', function(ev){
+          if(ev.target.closest('.agm-rz')) return;
+          if(ev.button&&ev.button!==0) return;
+          var x0=ev.clientX, y0=ev.clientY, grab=y0-evEl.getBoundingClientRect().top;
+          var moviendo=false, tIso=c.fecha, tMin=hm2min(c.hora), ghost=null;
+          function mv(e){ var dx=e.clientX-x0, dy=e.clientY-y0;
+            if(!moviendo){ if(Math.abs(dx)+Math.abs(dy)<6) return; moviendo=true; evEl.classList.add('agm-dragging'); }
+            var col=colBajoX(e.clientX)||evEl.closest('.agm-body2[data-iso]'); if(!col) return;
+            tIso=col.getAttribute('data-iso'); tMin=minDesdeTop(col, e.clientY-grab);
+            if(!ghost){ ghost=document.createElement('div'); ghost.className='agm-ghost'; ghost.innerHTML='<b></b>'; document.body.appendChild(ghost); }
+            var r=col.getBoundingClientRect();
+            ghost.style.left=(r.left+2)+'px'; ghost.style.width=(r.width-4)+'px';
+            ghost.style.top=(r.top+yOf(tMin))+'px'; ghost.style.height=Math.max(dur*PXMIN-1,18)+'px';
+            ghost.firstChild.textContent=min2hm(tMin)+' '+(c.petName||c.owner||'');
+          }
+          function up(){ document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up);
+            evEl.classList.remove('agm-dragging'); if(ghost) ghost.remove();
+            if(!moviendo){ abrirDetalle(c); return; }
+            S._noClick=true; setTimeout(function(){S._noClick=false;},350);
+            var nHora=min2hm(tMin);
+            if(tIso===c.fecha && nHora===c.hora){ return; }
+            var d=mkFecha(tIso);
+            if(!confirm('¿Mover la cita de '+(c.petName||c.owner||'')+' a '+DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+' a las '+nHora+'?')){ cargarCal(); return; }
+            guardarMoverCita(c, tIso, nHora, dur, false);
+          }
+          document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up);
         });
       });
       W.querySelectorAll('.agm-blk').forEach(function(bk){
