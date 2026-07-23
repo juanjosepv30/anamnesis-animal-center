@@ -580,6 +580,17 @@ var QUESTIONS = [
   ]},
   {id:'sp_card_4b', group:'CARDIOLOGÍA', q:'¿Cuántas veces se despierta?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Cardiología', conditional:'sp_card_4===Se despierta', branch:true, label:'Veces que se despierta', placeholder:'Ej: 3 o 4 veces'},
 
+  // Ecocardiograma / Electrocardiograma (cardiología · principalmente Dr. Wilmer Páez)
+  {id:'cardio_agitado', group:'ECO / ELECTROCARDIOGRAMA', q:'¿El paciente está agitado?', type:'single', onlyServices:['Ecocardiograma','Electrocardiograma'], branch:true, label:'Agitado', options:[
+    {label:'No', value:'No'}, {label:'Sí', value:'Sí'}
+  ]},
+  {id:'cardio_morado', group:'ECO / ELECTROCARDIOGRAMA', q:'¿Le has visto las encías o la lengua moradas?', type:'single', onlyServices:['Ecocardiograma','Electrocardiograma'], branch:true, label:'Encías/lengua moradas', options:[
+    {label:'No', value:'No'}, {label:'Sí', value:'Sí'}
+  ]},
+  {id:'cardio_ejercicio', group:'ECO / ELECTROCARDIOGRAMA', q:'Al hacer ejercicio, ¿se cansa muy rápido?', type:'single', onlyServices:['Ecocardiograma','Electrocardiograma'], branch:true, label:'Se cansa al hacer ejercicio', options:[
+    {label:'No', value:'No'}, {label:'Sí', value:'Sí'}
+  ]},
+
   // Dermatología (el rascado y su frecuencia ya se preguntan en la general)
   {id:'sp_derm_2', group:'DERMATOLOGÍA', q:'¿Qué zonas están afectadas?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Dermatología', branch:true, label:'Zonas afectadas', placeholder:'Ej: orejas, patas, lomo'},
   {id:'sp_derm_3', group:'DERMATOLOGÍA', q:'¿Notas pérdida de pelo, mal olor o secreción?', type:'text', onlyServices:['Consulta especializada'], onlySpecialty:'Dermatología', branch:true, label:'Hallazgos en piel', placeholder:'Describe lo que ves', skippable:true},

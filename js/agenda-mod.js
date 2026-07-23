@@ -9,7 +9,7 @@
 // agendar ahí mismo. Colores: cirugía morado, consulta/control rosado, verde
 // cuando el paciente ya llegó, rojo cuando el médico no está disponible.
 (function(){
-  var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Vacunación','Inyectología','Desparasitación','Rayos X y Ecografía','Viajero'];
+  var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Vacunación','Inyectología','Desparasitación','Rayos X y Ecografía','Ecocardiograma','Electrocardiograma','Viajero'];
   var DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   var H_INI=6*60, H_FIN=22*60, PXMIN=0.9;          // 06:00–22:00; casillas cómodas
   var Y0=10;                                        // margen arriba (para que 06:00 no pise el header)
@@ -80,6 +80,7 @@
     // no recorta porque el alto del grid es exacto (ALTO), así la página sigue
     // scrolleando en vertical y solo lo horizontal queda dentro del cuadro.
     '.agm-hscroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}',
+    '.agm-shint{font-size:.74rem;color:var(--apd);text-align:center;font-weight:700;padding:6px 4px}',
     '.agm-grid{display:grid;min-width:520px}',
     '.agm-grid.dia{min-width:auto}',
     '.agm-gcol{border-left:1px solid #e3d7ec;position:relative}',
@@ -141,6 +142,7 @@
     if(s.indexOf('especial')!==-1)  return '#f97316'; // naranja
     if(s.indexOf('vacun')!==-1)     return '#ec4899'; // rosado
     if(s.indexOf('inyect')!==-1)    return '#6b7280'; // gris
+    if(s.indexOf('cardiograma')!==-1) return '#e11d48'; // rosa fuerte (cardio)
     if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1) return '#be123c'; // rojo vino
     if(s.indexOf('viajer')!==-1)    return '#0891b2'; // cian
     if(s.indexOf('general')!==-1||s.indexOf('consulta')!==-1) return '#16a34a'; // verde
@@ -254,6 +256,7 @@
           '<button class="agm-lnk" id="cBloq" style="margin-left:auto">🚫 Bloqueos</button>'+
         '</div>'+
         (S.reprog?'<div class="agm-reprog">🔁 Reprogramando a <b>'+esc(S.reprog.pet)+'</b> — toca el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
+        (S.vista==='3dias'?'<div class="agm-shint">👉 Desliza para ver toda la semana</div>':'')+
         '<div id="cWrap" class="agm-scroll'+(S.vista==='3dias'?' agm-hscroll':'')+'"><div class="agm-sp"></div></div>';
       var sel=$('cMed'); if(sel) sel.onchange=function(){ S.med=sel.value; cargarCal(); };
       $('cBloq').onclick=function(){ S.sub='bloquear'; pintar(); };
@@ -333,6 +336,11 @@
       });
       h+='</div>';
       W.innerHTML=h;
+      // Rebote de scroll UNA vez: muestra que el cuadro se desliza (los médicos
+      // no sabían que había más días a la derecha).
+      if(S.vista==='3dias' && !S._hintDone){ S._hintDone=true;
+        setTimeout(function(){ try{ W.scrollTo({left:90,behavior:'smooth'});
+          setTimeout(function(){ try{ W.scrollTo({left:0,behavior:'smooth'}); }catch(e){} }, 550); }catch(e){} }, 450); }
       var slotY=function(bodyEl,clientY){ var rect=bodyEl.getBoundingClientRect(); var y=clientY-rect.top-Y0;
         var minuto=H_INI+Math.round((y/PXMIN)/30)*30; if(minuto<H_INI)minuto=H_INI; if(minuto>H_FIN-30)minuto=H_FIN-30; return minuto; };
       W.querySelectorAll('.agm-body2[data-iso]').forEach(function(bodyEl){
