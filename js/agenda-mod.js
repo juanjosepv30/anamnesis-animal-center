@@ -213,7 +213,7 @@
                      :'<select id="cMed">'+medOpts(S.med)+'</select>')+
           '<div class="agm-nav">'+
             '<button class="agm-navb" id="cPrev">‹</button>'+
-            '<span class="agm-navlbl" id="cLbl" title="Tocá para saltar a otra fecha">'+esc(etiquetaRango())+'</span>'+
+            '<span class="agm-navlbl" id="cLbl" title="Toca para saltar a otra fecha">'+esc(etiquetaRango())+'</span>'+
             '<input type="date" id="cPick" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">'+
             '<button class="agm-navb" id="cNext">›</button>'+
             '<button class="agm-navb" id="cHoy" style="font-size:.76rem">Hoy</button>'+
@@ -234,7 +234,7 @@
           '<span><i class="agm-dot" style="background:#F7C1C1;border:1px solid #A32D2D"></i>No disponible</span>'+
           '<button class="agm-lnk" id="cBloq" style="margin-left:auto">🚫 Bloqueos</button>'+
         '</div>'+
-        (S.reprog?'<div class="agm-reprog">🔁 Reprogramando a <b>'+esc(S.reprog.pet)+'</b> — tocá el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
+        (S.reprog?'<div class="agm-reprog">🔁 Reprogramando a <b>'+esc(S.reprog.pet)+'</b> — toca el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
         '<div id="cWrap" class="agm-scroll"><div class="agm-sp"></div></div>';
       var sel=$('cMed'); if(sel) sel.onchange=function(){ S.med=sel.value; cargarCal(); };
       $('cBloq').onclick=function(){ S.sub='bloquear'; pintar(); };
@@ -258,7 +258,7 @@
     function cargarCal(){
       var med = medicoFijo || S.med;
       var W=$('cWrap'); if(!W) return;
-      if(!med){ W.innerHTML='<div class="agm-empty">Elegí un médico para ver su agenda.</div>'; return; }
+      if(!med){ W.innerHTML='<div class="agm-empty">Elige un médico para ver su agenda.</div>'; return; }
       W.innerHTML='<div class="agm-sp"></div>';
       var r=rangoVista();
       Promise.all([
@@ -293,7 +293,7 @@
         for(var mm=H_INI;mm<=H_FIN;mm+=30){ h+='<div class="agm-hl'+(mm%60===0?' hr':'')+'" style="top:'+yOf(mm)+'px"></div>'; }
         // bloqueos (rojo) — clicables para editar
         bloqs.forEach(function(b){ var rg=bloqueoRangoDia(b,iso); if(!rg)return;
-          h+='<div class="agm-blk" data-bid="'+esc(b.id)+'" title="Tocá para editar" style="top:'+yOf(rg.ini)+'px;height:'+((rg.fin-rg.ini)*PXMIN-1)+'px">🚫 '+(b.motivo?esc(b.motivo):'No disponible')+'</div>';
+          h+='<div class="agm-blk" data-bid="'+esc(b.id)+'" title="Toca para editar" style="top:'+yOf(rg.ini)+'px;height:'+((rg.fin-rg.ini)*PXMIN-1)+'px">🚫 '+(b.motivo?esc(b.motivo):'No disponible')+'</div>';
         });
         // citas de ese día
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
@@ -376,7 +376,7 @@
         '</div>'+
         (forzar?'<div class="agm-warn">⚠️ Este horario está bloqueado. Vas a agendar una cita igual, encima del bloqueo.</div>':'')+
         '<div class="agm-mlbl">Buscar paciente</div>'+
-        '<input type="text" id="mQ" placeholder="Escribí cédula, mascota o dueño…" autocomplete="off">'+
+        '<input type="text" id="mQ" placeholder="Escribe cédula, mascota o dueño…" autocomplete="off">'+
         '<div class="agm-res" id="mRes"></div><div id="mForm"></div>'
       );
       $ov('mX').onclick=cerrarOv;
@@ -565,7 +565,7 @@
       body.innerHTML=
         '<button class="agm-lnk" id="bVolver" style="margin-bottom:12px;color:var(--apd)">‹ Volver a la agenda</button>'+
         '<div class="agm-card"><div class="agm-t">Marcar no disponible</div>'+
-        '<div class="agm-sub">'+(medicoFijo?'Bloqueá tu agenda':'Bloqueá la agenda de un médico')+' por vacaciones, un tema familiar, lo que sea. Recepción lo ve y no se puede agendar encima.</div>'+
+        '<div class="agm-sub">'+(medicoFijo?'Bloquea tu agenda':'Bloquea la agenda de un médico')+' por vacaciones, un tema familiar, lo que sea. Recepción lo ve y no se puede agendar encima.</div>'+
         (medicoFijo?'':'<div style="margin-bottom:10px"><label>Médico</label><select id="bMed">'+medOpts(S.med)+'</select></div>')+
         '<div class="agm-row">'+
           '<div><label>Desde (día)</label><input type="date" id="bDesF" value="'+hoyISO()+'"></div>'+
@@ -598,12 +598,12 @@
     function guardarBloqueo(){
       var err=$('bErr'); err.textContent='';
       var medico=medicoFijo || (($('bMed')||{}).value||'');
-      if(!medico){ err.textContent='Elegí el médico.'; return; }
+      if(!medico){ err.textContent='Elige el médico.'; return; }
       var diario=$('bDiario').checked, todo=$('bTodo').checked&&!diario;
       var data={ medico:medico, desdeF:$('bDesF').value, hastaF:$('bHasF').value, diario:diario,
         dias: diario ? diasSeleccionados($('bDiasWrap')) : '',
         todoDia:todo, desdeH:todo?'':$('bDesH').value, hastaH:todo?'':$('bHasH').value, motivo:$('bMot').value.trim() };
-      if(!data.desdeF){ err.textContent='Poné el día de inicio.'; return; }
+      if(!data.desdeF){ err.textContent='Pon el día de inicio.'; return; }
       $('bGuardar').textContent='Guardando…'; $('bGuardar').disabled=true;
       fetch(api,{method:'POST',body:JSON.stringify({action:'crearBloqueo',data:data})}).then(function(r){return r.json();}).then(function(res){
         var g=$('bGuardar'); if(g){ g.textContent='🚫 Guardar bloqueo'; g.disabled=false; }
@@ -616,7 +616,7 @@
       var med=medicoFijo || (($('bMed')||{}).value||'');
       fetch(api+'?action=bloqueos&medico='+encodeURIComponent(med)).then(function(r){return r.json();}).then(function(res){
         var bs=(res&&res.bloqueos)||[];
-        if(!bs.length){ L.innerHTML='<div class="agm-empty">'+(med?'Sin bloqueos activos para este médico.':'Elegí un médico para ver sus bloqueos.')+'</div>'; return; }
+        if(!bs.length){ L.innerHTML='<div class="agm-empty">'+(med?'Sin bloqueos activos para este médico.':'Elige un médico para ver sus bloqueos.')+'</div>'; return; }
         L.innerHTML=bs.map(bloqHtml).join('');
         L.querySelectorAll('.agm-cx').forEach(function(b){ b.onclick=function(){ cancelarBloqueo(b.getAttribute('data-id'),b); }; });
       }).catch(function(){ L.innerHTML='<div class="agm-empty">Error de conexión.</div>'; });
