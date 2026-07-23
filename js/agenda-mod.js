@@ -307,7 +307,13 @@
       W.querySelectorAll('.agm-blk').forEach(function(bk){
         bk.addEventListener('click', function(ev){ ev.stopPropagation();
           var id=bk.getAttribute('data-bid'); var b=bloqs.filter(function(x){return String(x.id)===id;})[0];
-          if(b) abrirBloqueoModal(b, med);
+          if(!b) return;
+          // Capturamos el DÍA (columna) y la HORA (posición del click) reales,
+          // para que "Agendar igual" use ESE horario y no el inicio del bloqueo.
+          var col=bk.closest('.agm-body2[data-iso]');
+          var iso=col?col.getAttribute('data-iso'):b.desdeF;
+          var hm=col?min2hm(slotY(col,ev.clientY)):(b.desdeH||'08:00');
+          abrirBloqueoModal(b, med, iso, hm);
         });
       });
     }
@@ -357,7 +363,7 @@
       var esNum=/^\d+$/.test(term);
       var url = esNum
         ? api+'?action=search&cedula='+encodeURIComponent(term)
-        : api+'?action=search&petName='+encodeURIComponent(term)+'&ownerName='+encodeURIComponent(term);
+        : api+'?action=search&q='+encodeURIComponent(term);
       R.innerHTML='<div class="agm-sp"></div>'; $ov('mForm').innerHTML='';
       var miTerm=term; S._term=term;
       fetch(url).then(function(r){return r.json();}).then(function(res){
@@ -469,7 +475,7 @@
     }
 
     // ══════════ MODAL: editar bloqueo (desde el calendario) ══════════
-    function abrirBloqueoModal(b, med){
+    function abrirBloqueoModal(b, med, isoClic, hmClic){
       var d=mkFecha(b.desdeF);
       overlay(
         '<div class="agm-mh"><div class="agm-mt">🚫 Bloqueo</div><button class="agm-mx" id="eX">×</button></div>'+
@@ -502,7 +508,7 @@
       syncH();
       $ov('eX').onclick=cerrarOv;
       $ov('eQuitar').onclick=function(){ if(!confirm('¿Quitar este bloqueo? El horario vuelve a quedar disponible.'))return; accionBloqueo('cancelarBloqueo',{id:b.id}); };
-      $ov('eAgendar').onclick=function(){ abrirCrear(b.desdeF, (b.todoDia?'08:00':b.desdeH), med||b.medico, true); };
+      $ov('eAgendar').onclick=function(){ abrirCrear(isoClic||b.desdeF, hmClic||(b.todoDia?'08:00':b.desdeH), med||b.medico, true); };
       $ov('eGuardar').onclick=function(){
         var diario=$ov('eDiario').checked, todo=$ov('eTodo').checked&&!diario;
         var data={ medico:b.medico, desdeF:$ov('eDesF').value, hastaF:$ov('eHasF').value, diario:diario, todoDia:todo,
