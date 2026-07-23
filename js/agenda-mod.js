@@ -84,9 +84,10 @@
     '.agm-hover{position:absolute;left:1px;right:1px;background:rgba(142,63,158,.16);border:1.5px solid var(--ap);border-radius:5px;pointer-events:none;z-index:4;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;font-size:.66rem;font-weight:800;color:var(--apd)}',
     '.agm-ev{position:absolute;left:2px;right:2px;border-radius:6px;padding:2px 5px;font-size:.72rem;line-height:1.2;overflow:hidden;cursor:pointer;border-left:3px solid;z-index:2}',
     '.agm-ev b{font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '.agm-ev.cir{background:#CECBF6;border-color:#534AB7;color:#26215C}',
-    '.agm-ev.con{background:#F4C0D1;border-color:#993556;color:#4B1528}',
-    '.agm-ev.lleg{background:#C0DD97;border-color:#3B6D11;color:#173404}',
+    // El color de fondo/borde de cada cita se pone en línea según el servicio
+    // (svcColor). "Llegó" NO cambia el color del servicio: agrega un anillo
+    // verde para que se note que el paciente ya está en la clínica.
+    '.agm-ev.lleg{box-shadow:inset 0 0 0 2px #16a34a}',
     '.agm-blk{position:absolute;left:2px;right:2px;border-radius:6px;background:repeating-linear-gradient(45deg,#F7C1C1,#F7C1C1 6px,#f4b4b4 6px,#f4b4b4 12px);border-left:3px solid #A32D2D;color:#501313;font-size:.7rem;font-weight:700;padding:2px 5px;overflow:hidden;cursor:pointer;z-index:2}',
     // ── Modal ──
     '.agm-ov{position:fixed;inset:0;background:rgba(20,8,30,.45);display:flex;align-items:flex-start;justify-content:center;z-index:9999;padding:24px 12px;overflow-y:auto}',
@@ -118,7 +119,21 @@
   function hm2min(hm){ var p=String(hm||'').split(':'); return (+p[0]||0)*60+(+p[1]||0); }
   function min2hm(m){ var h=Math.floor(m/60),mm=m%60; return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm; }
   function durServicio(svc){ var s=String(svc||'').toLowerCase(); if(s.indexOf('control')!==-1)return 30; if(s.indexOf('consulta')!==-1)return 60; if(s.indexOf('cirug')!==-1)return 60; return 30; }
-  function claseCita(c){ if(c.llego) return 'lleg'; if(/cirug/i.test(c.servicio||'')) return 'cir'; return 'con'; }
+  // Color del servicio = MISMOS colores de los turnos (ver serviceColor en
+  // pantalla/index.html), para que la clínica maneje una sola paleta. Cirugía y
+  // desparasitación no existen como turno, así que les damos un tono propio.
+  function svcColor(s){ s=String(s||'').toLowerCase();
+    if(s.indexOf('control')!==-1)   return '#2563eb';
+    if(s.indexOf('cirug')!==-1)     return '#7c3aed';
+    if(s.indexOf('desparasit')!==-1)return '#0d9488';
+    if(s.indexOf('especial')!==-1)  return '#f97316';
+    if(s.indexOf('vacun')!==-1)     return '#8e3f9e';
+    if(s.indexOf('inyect')!==-1)    return '#eab308';
+    if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1) return '#be123c';
+    if(s.indexOf('viajer')!==-1)    return '#0891b2';
+    if(s.indexOf('general')!==-1||s.indexOf('consulta')!==-1) return '#16a34a';
+    return '#94a3b8';
+  }
   var DIASEM=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   function diaChips(sel){ var s=String(sel||'').split(','); return DIASEM.map(function(n,i){ return '<button type="button" class="agm-daychip'+(s.indexOf(String(i))!==-1?' on':'')+'" data-d="'+i+'">'+n+'</button>'; }).join(''); }
   function diasSeleccionados(cont){ return cont?[].slice.call(cont.querySelectorAll('.agm-daychip.on')).map(function(b){return b.getAttribute('data-d');}).join(','):''; }
@@ -155,7 +170,7 @@
     var api = opts.api || window.API_URL;
     var medicoFijo = opts.medicoFijo || '';
     var esMovil = window.matchMedia && window.matchMedia('(max-width:640px)').matches;
-    var S = { medicos:[], sub:'cal', vista: esMovil?'dia':'semana', ancla:new Date(), med:medicoFijo, selCliente:null, crear:null };
+    var S = { medicos:[], sub:'cal', vista: esMovil?'3dias':'semana', ancla:new Date(), med:medicoFijo, selCliente:null, crear:null };
 
     // Sin tabs: el calendario ES la vista. "Bloqueos" queda como un botón chico
     // arriba (se usa poco), y desde ahí se vuelve. Así no repetimos "Agenda".
@@ -176,14 +191,19 @@
 
     // ══════════ CALENDARIO ══════════
     function diasVista(){
-      if(S.vista==='dia') return [ new Date(S.ancla.getFullYear(),S.ancla.getMonth(),S.ancla.getDate()) ];
+      var base=new Date(S.ancla.getFullYear(),S.ancla.getMonth(),S.ancla.getDate());
+      if(S.vista==='dia') return [ base ];
+      // 3 días (celular): desde el día ancla, ese y los dos siguientes.
+      if(S.vista==='3dias') return [ base, addDias(base,1), addDias(base,2) ];
       var lun=lunesDe(S.ancla), out=[]; for(var i=0;i<6;i++) out.push(addDias(lun,i)); return out;   // Lun–Sáb
     }
     function rangoVista(){ var d=diasVista(); return { desde:isoDe(d[0]), hasta:isoDe(d[d.length-1]) }; }
+    function pasoVista(){ return S.vista==='dia'?1 : (S.vista==='3dias'?3 : 7); }
     function etiquetaRango(){
       var d=diasVista();
       if(S.vista==='dia') return DIAS[d[0].getDay()]+' '+d[0].getDate()+'/'+(d[0].getMonth()+1);
-      return d[0].getDate()+'/'+(d[0].getMonth()+1)+' – '+d[5].getDate()+'/'+(d[5].getMonth()+1);
+      var u=d[d.length-1];
+      return d[0].getDate()+'/'+(d[0].getMonth()+1)+' – '+u.getDate()+'/'+(u.getMonth()+1);
     }
 
     function pintarCal(){
@@ -193,19 +213,24 @@
                      :'<select id="cMed">'+medOpts(S.med)+'</select>')+
           '<div class="agm-nav">'+
             '<button class="agm-navb" id="cPrev">‹</button>'+
-            '<span class="agm-navlbl" id="cLbl">'+esc(etiquetaRango())+'</span>'+
+            '<span class="agm-navlbl" id="cLbl" title="Tocá para saltar a otra fecha">'+esc(etiquetaRango())+'</span>'+
+            '<input type="date" id="cPick" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">'+
             '<button class="agm-navb" id="cNext">›</button>'+
             '<button class="agm-navb" id="cHoy" style="font-size:.76rem">Hoy</button>'+
           '</div>'+
           '<div class="agm-seg">'+
             '<button id="cDia" class="'+(S.vista==='dia'?'on':'')+'">Día</button>'+
-            '<button id="cSem" class="'+(S.vista==='semana'?'on':'')+'">Semana</button>'+
+            (esMovil
+              ? '<button id="cSem" class="'+(S.vista==='3dias'?'on':'')+'">3 días</button>'
+              : '<button id="cSem" class="'+(S.vista==='semana'?'on':'')+'">Semana</button>')+
           '</div>'+
         '</div>'+
         '<div class="agm-leg">'+
-          '<span><i class="agm-dot" style="background:#CECBF6;border:1px solid #534AB7"></i>Cirugía</span>'+
-          '<span><i class="agm-dot" style="background:#F4C0D1;border:1px solid #993556"></i>Consulta/control</span>'+
-          '<span><i class="agm-dot" style="background:#C0DD97;border:1px solid #3B6D11"></i>Llegó</span>'+
+          '<span><i class="agm-dot" style="background:#16a34a22;border:1px solid #16a34a"></i>Consulta</span>'+
+          '<span><i class="agm-dot" style="background:#2563eb22;border:1px solid #2563eb"></i>Control</span>'+
+          '<span><i class="agm-dot" style="background:#f9731622;border:1px solid #f97316"></i>Especializada</span>'+
+          '<span><i class="agm-dot" style="background:#7c3aed22;border:1px solid #7c3aed"></i>Cirugía</span>'+
+          '<span><i class="agm-dot" style="background:#fff;box-shadow:inset 0 0 0 2px #16a34a"></i>Llegó</span>'+
           '<span><i class="agm-dot" style="background:#F7C1C1;border:1px solid #A32D2D"></i>No disponible</span>'+
           '<button class="agm-lnk" id="cBloq" style="margin-left:auto">🚫 Bloqueos</button>'+
         '</div>'+
@@ -214,11 +239,18 @@
       var sel=$('cMed'); if(sel) sel.onchange=function(){ S.med=sel.value; cargarCal(); };
       $('cBloq').onclick=function(){ S.sub='bloquear'; pintar(); };
       var rx=$('cReprogX'); if(rx) rx.onclick=function(){ S.reprog=null; pintarCal(); };
-      $('cPrev').onclick=function(){ S.ancla=addDias(S.ancla, S.vista==='dia'?-1:-7); refrescarLbl(); cargarCal(); };
-      $('cNext').onclick=function(){ S.ancla=addDias(S.ancla, S.vista==='dia'? 1: 7); refrescarLbl(); cargarCal(); };
+      $('cPrev').onclick=function(){ S.ancla=addDias(S.ancla, -pasoVista()); refrescarLbl(); cargarCal(); };
+      $('cNext').onclick=function(){ S.ancla=addDias(S.ancla,  pasoVista()); refrescarLbl(); cargarCal(); };
       $('cHoy').onclick=function(){ S.ancla=new Date(); refrescarLbl(); cargarCal(); };
       $('cDia').onclick=function(){ S.vista='dia'; pintarCal(); };
-      $('cSem').onclick=function(){ S.vista='semana'; pintarCal(); };
+      $('cSem').onclick=function(){ S.vista=esMovil?'3dias':'semana'; pintarCal(); };
+      // Tocar la fecha abre el calendario nativo para saltar a un día lejano.
+      var pk=$('cPick'), lbl=$('cLbl');
+      if(pk&&lbl){
+        lbl.style.cursor='pointer'; lbl.style.textDecoration='underline dotted';
+        pk.onchange=function(){ if(pk.value){ S.ancla=mkFecha(pk.value); refrescarLbl(); cargarCal(); } };
+        lbl.onclick=function(){ pk.value=isoDe(S.ancla); if(pk.showPicker){ try{ pk.showPicker(); }catch(e){ pk.focus(); pk.click(); } } else { pk.focus(); pk.click(); } };
+      }
       cargarCal();
     }
     function refrescarLbl(){ var l=$('cLbl'); if(l) l.textContent=etiquetaRango(); }
@@ -241,7 +273,7 @@
     function pintarGrid(W, med, citas, bloqs){
       var dias=diasVista(), hoy=hoyISO();
       var cols='60px repeat('+dias.length+',minmax(90px,1fr))';
-      var h='<div class="agm-grid'+(S.vista==='dia'?' dia':'')+'" style="grid-template-columns:'+cols+'">';
+      var h='<div class="agm-grid'+(S.vista==='semana'?'':' dia')+'" style="grid-template-columns:'+cols+'">';
       // encabezados
       h+='<div class="agm-guth"></div>';
       dias.forEach(function(d){ var iso=isoDe(d);
@@ -266,7 +298,8 @@
         // citas de ese día
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
           var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio); var alt=Math.max(dur*PXMIN-1,18);
-          h+='<div class="agm-ev '+claseCita(c)+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px">'+
+          var col=svcColor(c.servicio);
+          h+='<div class="agm-ev'+(c.llego?' lleg':'')+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+col+'22;border-left-color:'+col+';color:#1a0a2e">'+
              '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(c.llego?' ✓':'')+'</b>'+
              (alt>28?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+'</div>';
         });
