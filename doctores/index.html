@@ -810,8 +810,11 @@ function destinatarios(r) {
 function atiendo(r) {
   const mis = misEspecialidades();
   if (!mis.length) return true;            // sin identidad, ve todo
-  // Si el cliente pidió un general específico, ese turno es SOLO de ese médico.
-  if (r.medicoPref && miMedico && r.medicoPref !== miMedico) return false;
+  // Turno asignado a un médico PUNTUAL (cita agendada, o general que el cliente
+  // pidió por nombre): ese médico —y solo ese— lo ve. Sin esto una cita
+  // especializada, que llega SIN 'specialty', no matchea por especialidad y no
+  // le aparecía a nadie aunque el aviso sí saliera.
+  if (r.medicoPref) return r.medicoPref === miMedico;
   return destinatarios(r).some(t => t && mis.indexOf(t) !== -1);
 }
 

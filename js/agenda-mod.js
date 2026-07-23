@@ -72,6 +72,10 @@
     '.agm-reprog{background:var(--apl);border:1.5px solid var(--ap);border-radius:10px;padding:9px 12px;font-size:.85rem;font-weight:700;color:var(--apd);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
     '.agm-dot{width:11px;height:11px;border-radius:3px;display:inline-block}',
     '.agm-scroll{overflow:visible;border:1px solid var(--abd);border-radius:12px;background:#fff}',
+    // 3 días (celular): scroll HORIZONTAL dentro del cuadro. overflow-y:hidden
+    // no recorta porque el alto del grid es exacto (ALTO), así la página sigue
+    // scrolleando en vertical y solo lo horizontal queda dentro del cuadro.
+    '.agm-hscroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}',
     '.agm-grid{display:grid;min-width:520px}',
     '.agm-grid.dia{min-width:auto}',
     '.agm-gcol{border-left:1px solid #e3d7ec;position:relative}',
@@ -244,7 +248,7 @@
           '<button class="agm-lnk" id="cBloq" style="margin-left:auto">🚫 Bloqueos</button>'+
         '</div>'+
         (S.reprog?'<div class="agm-reprog">🔁 Reprogramando a <b>'+esc(S.reprog.pet)+'</b> — toca el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
-        '<div id="cWrap" class="agm-scroll"><div class="agm-sp"></div></div>';
+        '<div id="cWrap" class="agm-scroll'+(S.vista==='3dias'?' agm-hscroll':'')+'"><div class="agm-sp"></div></div>';
       var sel=$('cMed'); if(sel) sel.onchange=function(){ S.med=sel.value; cargarCal(); };
       $('cBloq').onclick=function(){ S.sub='bloquear'; pintar(); };
       var rx=$('cReprogX'); if(rx) rx.onclick=function(){ S.reprog=null; pintarCal(); };
@@ -284,7 +288,9 @@
     function pintarGrid(W, med, citas, bloqs){
       var dias=diasVista(), hoy=hoyISO();
       var cols='60px repeat('+dias.length+',minmax(90px,1fr))';
-      var h='<div class="agm-grid'+(S.vista==='semana'?'':' dia')+'" style="grid-template-columns:'+cols+'">';
+      // Solo la vista 'día' (1 columna) se ajusta al ancho; 3 días y semana
+      // usan el ancho mínimo del grid y scrollean en horizontal en pantalla chica.
+      var h='<div class="agm-grid'+(S.vista==='dia'?' dia':'')+'" style="grid-template-columns:'+cols+'">';
       // encabezados
       h+='<div class="agm-guth"></div>';
       dias.forEach(function(d){ var iso=isoDe(d);
