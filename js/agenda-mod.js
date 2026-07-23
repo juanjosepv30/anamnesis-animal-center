@@ -58,6 +58,10 @@
     '.agm-nav{display:flex;align-items:center;gap:4px}',
     '.agm-navb{border:1.5px solid var(--abd);background:#fff;border-radius:8px;padding:7px 10px;font-size:.9rem;font-weight:800;color:var(--apd);cursor:pointer;font-family:inherit;line-height:1}',
     '.agm-navlbl{font-size:.82rem;font-weight:800;color:var(--atx);min-width:120px;text-align:center}',
+    '.agm-datewrap{position:relative;display:inline-block}',
+    '.agm-navlbl-pick{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}',
+    // input date transparente que cubre la etiqueta (tap = calendario nativo).
+    '.agm-datewrap input[type=date]{position:absolute;top:-4px;left:-6px;right:-6px;bottom:-4px;opacity:0;cursor:pointer;border:0;padding:0;margin:0;background:transparent}',
     '.agm-seg{display:flex;border:1.5px solid var(--abd);border-radius:9px;overflow:hidden}',
     '.agm-seg button{border:none;background:#fff;padding:7px 12px;font-size:.82rem;font-weight:700;color:var(--atm);cursor:pointer;font-family:inherit}',
     '.agm-seg button.on{background:var(--apl);color:var(--apd)}',
@@ -213,8 +217,13 @@
                      :'<select id="cMed">'+medOpts(S.med)+'</select>')+
           '<div class="agm-nav">'+
             '<button class="agm-navb" id="cPrev">‹</button>'+
-            '<span class="agm-navlbl" id="cLbl" title="Toca para saltar a otra fecha">'+esc(etiquetaRango())+'</span>'+
-            '<input type="date" id="cPick" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">'+
+            // La etiqueta de fecha y, ENCIMA, un input date transparente que la
+            // cubre: tocarla abre el calendario nativo directo (funciona en
+            // celular; showPicker() no es confiable ahí). Ver handler abajo.
+            '<span class="agm-datewrap">'+
+              '<span class="agm-navlbl agm-navlbl-pick" id="cLbl" title="Toca para saltar a otra fecha">'+esc(etiquetaRango())+'</span>'+
+              '<input type="date" id="cPick" aria-label="Ir a una fecha">'+
+            '</span>'+
             '<button class="agm-navb" id="cNext">›</button>'+
             '<button class="agm-navb" id="cHoy" style="font-size:.76rem">Hoy</button>'+
           '</div>'+
@@ -245,11 +254,13 @@
       $('cDia').onclick=function(){ S.vista='dia'; pintarCal(); };
       $('cSem').onclick=function(){ S.vista=esMovil?'3dias':'semana'; pintarCal(); };
       // Tocar la fecha abre el calendario nativo para saltar a un día lejano.
-      var pk=$('cPick'), lbl=$('cLbl');
-      if(pk&&lbl){
-        lbl.style.cursor='pointer'; lbl.style.textDecoration='underline dotted';
+      // Al elegir, ese día pasa a ser el ANCLA: en 3 días arranca ahí; en día,
+      // ese día; en semana, su semana.
+      var pk=$('cPick');
+      if(pk){
+        pk.value=isoDe(S.ancla);
+        pk.onfocus=function(){ if(!pk.value) pk.value=isoDe(S.ancla); };
         pk.onchange=function(){ if(pk.value){ S.ancla=mkFecha(pk.value); refrescarLbl(); cargarCal(); } };
-        lbl.onclick=function(){ pk.value=isoDe(S.ancla); if(pk.showPicker){ try{ pk.showPicker(); }catch(e){ pk.focus(); pk.click(); } } else { pk.focus(); pk.click(); } };
       }
       cargarCal();
     }
