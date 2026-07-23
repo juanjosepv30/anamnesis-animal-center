@@ -1060,7 +1060,10 @@ function renderSala() {
     }).join('');
   }
 
-  let html = miHtml + stripHtml + '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
+  // miHtml (mi paciente en consulta) YA NO va en la Sala: vive en la pestaña
+  // "Atendiendo". En la Sala queda la cola + el strip de "en consulta ahora"
+  // (los de OTROS médicos, como referencia).
+  let html = stripHtml + '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
 
   // Cuando un médico tiene las dos filas (Tatiana es gastro Y general),
   // hay que decirle cuál llamar primero. Ver decidirEntreFilas.
@@ -1115,37 +1118,10 @@ function renderSala() {
               '<span class="fila-cv">'+(isCol ? '▸' : '▾')+'</span>'+
             '</span></div>';
 
-    // El paciente que estoy atendiendo. Solo lo veo yo (ver el filtro de
-    // arriba), así que ya no hace falta el nombre del médico en la tarjeta.
-    llamando.forEach(function(r) {
-      // Ausente es la salida para el que no apareció: sin esto el médico
-      // queda trabado y termina marcando "Atendido" a alguien que nunca
-      // atendió, que es peor — ensucia el dato y no queda registro real.
-      // Confirmación de que SONÓ en la sala: el médico espera en el consultorio
-      // y no oye los parlantes, así que acá ve si el llamado de verdad salió.
-      var anuncio = r.anunciadoEn
-        ? '<div class="calling-son son-ok">📢 Sonó en la sala ✓ '+fmtHoraSeg(r.anunciadoEn)+'</div>'
-        : '<div class="calling-son son-wait">⏳ Esperando que suene en la sala…</div>';
-      body += '<div class="calling"><div class="calling-top">'+
-        '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
-          '<div class="calling-t">'+esc(r.turno||'')+'</div>'+
-          '<div class="calling-m">'+esc(nombreConMascotas(r))+(r.consultorio?' · '+esc(r.consultorio):'')+'</div>'+
-        '</div>'+
-        '<div class="calling-btns">'+
-          // Botón único: ya no hay "Atender" manual acá. El paciente pasa solo a
-          // consulta a los 2 min (gracia). Acá queda Ausente (no llegó), volver a
-          // llamar (si no oyó), y cerrar directo cuando el médico terminó.
-          '<div class="calling-fila1">'+
-            '<button class="btn-aus" onclick="markAusente('+r.rowIndex+')">Ausente</button>'+
-            '<button class="btn-again" onclick="llamarDeNuevo('+r.rowIndex+')">🔔 Llamar otra vez</button>'+
-          '</div>'+
-          '<div class="calling-fila2">'+
-            '<button class="btn-sutil" onclick="markAtendido('+r.rowIndex+')" title="Cerrar sin llamar al siguiente">✓ Terminé, cerrar</button>'+
-          '</div>'+
-        '</div></div>'+
-        anuncio +
-      '</div>';
-    });
+    // El paciente en gracia ('llamando') y el que estoy atendiendo YA NO se
+    // muestran acá: al marcar "Atender" la tarjeta se va COMPLETA a la pestaña
+    // "Atendiendo" (con Ausente, Llamar otra vez y el aviso de "sonó en la sala").
+    // En la Sala queda solo la cola de espera. La cuenta 🔔 del encabezado sigue.
 
     // Siguiente a llamar — semi-desplegado, clickeable para ver la anamnesis
     if (next) {
@@ -1667,14 +1643,14 @@ function buildCard(r) {
         ${!reviewed && r.consultorio ? '<span>· 🚪 '+esc(r.consultorio)+'</span>' : ''}
         ${(reviewed || enConsulta) && r.calledBy ? '<span>· 🩺 '+esc(r.calledBy)+'</span>' : ''}
         ${reviewed ? '<span>· 🕐 Llegó '+esc(fmtHoraLlegada(r.timestamp))+'</span>' : ''}
-        ${enConsulta ? '<span class="ta-t" data-inicio="'+esc(r.calledAt||r.timestamp)+'">🕐 '+fmtConsulta(r.calledAt||r.timestamp)+'</span>' : ''}
-        ${grace ? '<span class="ta-t" style="color:#b45309">⏳ Confirmando llegada — pasa a consulta en ~2 min</span>' : ''}
+        ${enConsulta ? '<span class="ta-t" data-inicio="'+esc(r.calledAt||r.timestamp)+'">🕐 '+fmtConsulta(r.calledAt||r.timestamp)+'</span>'+((minsDesde(r.calledAt||r.timestamp)>=umbralRecordatorio(r.service)) ? '<span class="ta-t" style="color:#b45309">🔔 ¿Ya terminaste? Ciérralo</span>' : '') : ''}
+        ${grace ? '<span class="ta-t" style="color:#b45309">⏳ Confirmando llegada — pasa a consulta en ~2 min</span>'+(r.anunciadoEn ? '<span class="ta-t" style="color:#3B6D11">📢 Sonó en la sala ✓</span>' : '<span class="ta-t" style="color:#9c6a12">⏳ Esperando que suene…</span>') : ''}
         ${reviewed ? tiemposAtendida(r) : ''}
       </div>
       ${r.observaciones ? '<div class="rec-obs">📌 '+esc(r.observaciones)+'</div>' : ''}
     </div>
     ${enConsulta ? '<div class="rec-acts"><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button></div>' : ''}
-    ${grace ? '<div class="rec-acts"><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button></div>' : ''}
+    ${grace ? '<div class="rec-acts"><button class="rec-aus" onclick="event.stopPropagation();llamarDeNuevo('+rowIdx+')" title="Volver a sonar en la sala">🔔 Llamar otra vez</button><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button></div>' : ''}
     <div class="rec-arrow">▼</div>
   </div>
   <div class="rec-body">
