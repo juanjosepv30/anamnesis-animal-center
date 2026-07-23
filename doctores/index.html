@@ -111,6 +111,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .rec-arrow{color:var(--ts);font-size:.65rem;flex-shrink:0;transition:transform .25s;margin-left:4px}
 .rec.open .rec-arrow{transform:rotate(180deg)}
 .rec-fin{flex-shrink:0;border:none;background:#16a34a;color:#fff;font-weight:800;font-family:inherit;font-size:.82rem;border-radius:9px;padding:9px 13px;cursor:pointer}
+.rec-acts{flex-shrink:0;display:flex;gap:6px;align-items:center}
+.rec-aus{flex-shrink:0;border:1.5px solid var(--bd);background:var(--wh);color:var(--tm);font-weight:700;font-family:inherit;font-size:.82rem;border-radius:9px;padding:8px 12px;cursor:pointer}
+.rec-aus:hover{border-color:#c0392b;color:#c0392b}
 .rec-fin:active{transform:scale(.97)}
 /* Overlay de anamnesis: se abre al tocar cualquier tarjeta, en cualquier estado. */
 .anam-overlay{display:none;position:fixed;inset:0;background:rgba(20,10,30,.55);z-index:200;padding:14px;overflow-y:auto}
@@ -1598,18 +1601,22 @@ function nombreConMascotas(r) {
   return (base ? base + ', ' : '') + ex;
 }
 
+// Paleta ÚNICA de servicios: la misma en recepción, pantalla y agenda.
+// Si cambia un color, cambiarlo en las tres (serviceColor / svcColor).
 function serviceColor(s) {
   s = (s || '').toLowerCase();
   // Control primero: "Control especializado" tiene las dos palabras y se
   // agrupa (azul) con los controles. El ruteo (serviceFila/destinatarios)
   // sí lo manda con el especialista — eso es aparte y correcto.
-  if (s.indexOf('control')  !== -1) return '#2563eb';
-  if (s.indexOf('especial') !== -1) return '#f97316';
-  if (s.indexOf('vacun')    !== -1) return '#8e3f9e';
-  if (s.indexOf('inyect')   !== -1) return '#eab308';
-  if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return '#be123c';
-  if (s.indexOf('viajer')   !== -1) return '#0891b2';
-  if (s.indexOf('general')  !== -1) return '#16a34a';
+  if (s.indexOf('control')   !== -1) return '#2563eb'; // azul
+  if (s.indexOf('cirug')     !== -1) return '#7c3aed'; // morado
+  if (s.indexOf('desparasit')!== -1) return '#0d9488'; // verde azulado
+  if (s.indexOf('especial')  !== -1) return '#f97316'; // naranja
+  if (s.indexOf('vacun')     !== -1) return '#ec4899'; // rosado
+  if (s.indexOf('inyect')    !== -1) return '#6b7280'; // gris
+  if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return '#be123c'; // rojo vino
+  if (s.indexOf('viajer')    !== -1) return '#0891b2'; // cian
+  if (s.indexOf('general')   !== -1 || s.indexOf('consulta') !== -1) return '#16a34a'; // verde
   return '#94a3b8';
 }
 
@@ -1646,7 +1653,7 @@ function buildCard(r) {
       </div>
       ${r.observaciones ? '<div class="rec-obs">📌 '+esc(r.observaciones)+'</div>' : ''}
     </div>
-    ${enConsulta ? '<button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button>' : ''}
+    ${enConsulta ? '<div class="rec-acts"><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button></div>' : ''}
     <div class="rec-arrow">▼</div>
   </div>
   <div class="rec-body">
