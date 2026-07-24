@@ -347,7 +347,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .q-click:hover{opacity:.72}
 .q-item.q-click{display:flex;align-items:center;gap:9px}
 .next-motivo{font-size:.72rem;color:var(--tm);font-style:italic;margin-top:6px;line-height:1.35}
-.mini{font-size:.6rem;font-weight:700;border-radius:99px;padding:1px 7px;white-space:nowrap}
+.mini{font-size:.66rem;font-weight:800;border-radius:99px;padding:2px 8px;white-space:nowrap}
 .mini-ag{background:#ede9fe;color:#6d28d9}
 .mini-cita{background:#ede9fe;color:#6d28d9}
 .mini-esp{background:#e0f2fe;color:#0369a1}
@@ -1235,8 +1235,8 @@ function renderSala() {
     if (next) {
       const nc = serviceColor(next.service);
       const hora = fmtHora(next.horaCita);
-      const citaB = next.agendado === 'si' ? '<span class="mini mini-cita">Cita de las '+esc(hora)+'</span>' : '';
-      const espoB = next.agendado === 'si' ? '' : '<span class="mini mini-esp">Espontáneo</span>';
+      const citaB = next.agendado === 'si' ? '<span class="mini mini-cita">📅 Cita '+esc(hora)+'</span>' : '';
+      const espoB = next.agendado === 'si' ? '' : '<span class="mini mini-esp">🚶 Sin cita</span>';
       const subC  = etiquetaRegistro(next) + citaB;   // debajo del turno: registro + cita
       // Ningún consultorio queda elegido por defecto, para que el médico no
       // llame sin querer a la sala equivocada. La excepción: al especialista
@@ -1295,7 +1295,9 @@ function renderSala() {
     rest.forEach(function(r) {
       const rc = serviceColor(r.service);
       const hora = fmtHora(r.horaCita);
-      const ag = r.agendado === 'si' ? '<span class="mini mini-cita">Cita de las '+esc(hora||'—')+'</span>' : '';
+      const ag = r.agendado === 'si'
+        ? '<span class="mini mini-cita">📅 Cita '+esc(hora||'—')+'</span>'
+        : '<span class="mini mini-esp">🚶 Sin cita</span>';
       // Congelado: hay una cita antes que él. Hay que decirlo, o el médico
       // ve a alguien esperando y no entiende por qué no puede llamarlo.
       const frio = estaCongelado(r)
