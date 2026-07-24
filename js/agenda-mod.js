@@ -443,6 +443,15 @@
           evEl.addEventListener('click', function(ev){ ev.stopPropagation(); abrirDetalle(c); });
           return;
         }
+        // En CELULAR el arrastre es frágil (mueve citas sin querer y traba el
+        // scroll). Lo desactivamos: tocar la cita abre el detalle y desde ahí
+        // "🔁 Reprogramar" mueve el turno tocando el nuevo horario — flujo de
+        // toques, fácil y sin accidentes. El arrastre para mover/estirar queda
+        // solo en computador (mouse).
+        if(esMovil){
+          evEl.addEventListener('click', function(ev){ ev.stopPropagation(); abrirDetalle(c); });
+          return;
+        }
         var dur=+c.duracion||durServicio(c.servicio);
         // ── Estirar (handle inferior): cambia la duración ──
         var rz=evEl.querySelector('.agm-rz');
