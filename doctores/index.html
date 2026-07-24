@@ -71,6 +71,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .idm-op.sel{background:#f0fdf4;border-color:#86efac}
 .idm-op-n{font-size:.9rem;font-weight:700;color:var(--tx)}
 .idm-op-e{font-size:.73rem;color:var(--tm)}
+.idm-aux{font-size:.6rem;background:#e0e7ff;color:#4338ca;border-radius:5px;padding:1px 6px;font-weight:800;vertical-align:middle;text-transform:uppercase;letter-spacing:.3px}
 .idm-todos{font-weight:600;color:var(--tm)}
 .idm-cerrar{margin:6px 18px 18px;background:var(--bg2);border:none;border-radius:12px;padding:13px;font-size:.9rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:'DM Sans',sans-serif}
 .idm-cerrar:hover{background:var(--bd)}
@@ -869,9 +870,19 @@ function misFilas() {
 function setMiMedico(v) {
   miMedico = v;
   try { localStorage.setItem('ac_medico', v); } catch (e) {}
+  aplicarTabAgenda();
   pintarMedicoChip();
   renderSala();
   updateCounts();
+}
+
+// Los auxiliares (solo Apoyo) NO agendan: se les oculta el tab "Mi agenda".
+function aplicarTabAgenda() {
+  var tab = document.getElementById('f-agenda');
+  if (!tab) return;
+  var aux = esAuxiliar(miMedico);
+  tab.style.display = aux ? 'none' : '';
+  if (aux && activeView === 'agenda') setView('sala');
 }
 
 // ── Identidad del médico (chip del header) ───────────────────
@@ -896,15 +907,23 @@ function pintarMedicoChip() {
     esc(miMedico || 'Elige tu nombre') + '</span>';
 }
 
+// Auxiliar = personal con SOLO la especialidad "Apoyo" (no es médico: no agenda,
+// y va al final de la lista de identidad).
+function soloApoyo(esps){ var e=(esps||[]).map(normEsp); return e.length>0 && e.every(function(x){ return x==='apoyo'; }); }
+function esAuxiliar(nombre){ var m=medicos.find(function(x){ return x.medico===nombre; }); return m ? soloApoyo(m.especialidades) : false; }
+
 function abrirIdentidad() {
   const cont = document.getElementById('identLista');
+  // Médicos primero; auxiliares (solo Apoyo) al final.
+  const orden = medicos.slice().sort(function(a,b){ return (soloApoyo(a.especialidades)?1:0) - (soloApoyo(b.especialidades)?1:0); });
   cont.innerHTML =
     '<div class="idm-op idm-todos'+(miMedico?'':' sel')+'" onclick="elegirIdentidad(\'\')">👁 Ver todo sin identificarme</div>' +
-    medicos.map(function(m){
+    orden.map(function(m){
       const sel = m.medico === miMedico ? ' sel' : '';
       const arg = "'" + String(m.medico).replace(/\\/g,'\\\\').replace(/'/g,"\\'") + "'";
+      const aux = soloApoyo(m.especialidades);
       return '<div class="idm-op'+sel+'" onclick="elegirIdentidad('+arg+')">'+
-        '<span class="idm-op-n">'+esc(m.medico)+'</span>'+
+        '<span class="idm-op-n">'+esc(m.medico)+(aux?' <span class="idm-aux">apoyo</span>':'')+'</span>'+
         '<span class="idm-op-e">'+esc(m.especialidades.join(', '))+'</span></div>';
     }).join('');
   document.getElementById('identModal').style.display = 'flex';
@@ -938,7 +957,7 @@ function aplicaEsteTurno(pedidoEn) { return pedidoEn > turnoTocadoEn; }
 function medicosDelCache() {
   try {
     const c = JSON.parse(localStorage.getItem('ac_medicos') || 'null');
-    if (Array.isArray(c) && c.length) medicos = c;
+    if (Array.isArray(c) && c.length) { medicos = c; aplicarTabAgenda(); }
   } catch (e) {}
 }
 
@@ -955,6 +974,7 @@ function cargarMedicos() {
       if (aplicaEsteTurno(pedidoEn)) deTurno = res.deTurno || [];
       document.getElementById('pruebaAviso').style.display = res.modoPrueba ? '' : 'none';
       pintarMedicoChip();   // el color depende del turno, que llega acá
+      aplicarTabAgenda();   // ya con la lista, ocultamos agenda a los auxiliares
     })
     .catch(function(){});
 }
@@ -2015,6 +2035,6 @@ loadRecords();              // refresca con el backend por detrás
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js, para que un refresco
      traiga el JS nuevo y no la versión cacheada por el navegador. -->
-<script src="/js/agenda-mod.js?v=20260723b"></script>
+<script src="/js/agenda-mod.js?v=20260723c"></script>
 </body>
 </html>

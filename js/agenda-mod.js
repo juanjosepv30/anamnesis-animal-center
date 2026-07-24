@@ -345,9 +345,24 @@
         h+='<div class="agm-gcol"><div class="agm-body2" data-iso="'+iso+'" style="height:'+ALTO+'px">';
         // líneas cada 30 min; las de en punto, más marcadas
         for(var mm=H_INI;mm<=H_FIN;mm+=30){ h+='<div class="agm-hl'+(mm%60===0?' hr':'')+'" style="top:'+yOf(mm)+'px"></div>'; }
-        // bloqueos (rojo) — clicables para editar
+        // Citas de ESE día (para abrirles hueco en el bloqueo). Se calcula una vez.
+        var citasDia = citas.filter(function(c){return c.fecha===iso;}).map(function(c){
+          var ci=hm2min(c.hora); return { ini:ci, fin:ci+(+c.duracion||durServicio(c.servicio)) };
+        });
+        // bloqueos (rojo) — clicables para editar. Se dibujan en SEGMENTOS: donde
+        // cae una cita, el bloqueo deja un HUECO (no queda montado sobre la cita).
         bloqs.forEach(function(b){ var rg=bloqueoRangoDia(b,iso); if(!rg)return;
-          h+='<div class="agm-blk" data-bid="'+esc(b.id)+'" title="Toca para editar" style="top:'+yOf(rg.ini)+'px;height:'+((rg.fin-rg.ini)*PXMIN-1)+'px">🚫 '+(b.motivo?esc(b.motivo):'No disponible')+'</div>';
+          // Huecos: las citas que caen dentro del rango del bloqueo, recortadas.
+          var huecos = citasDia.filter(function(c){ return c.ini<rg.fin && c.fin>rg.ini; })
+            .map(function(c){ return { ini:Math.max(c.ini,rg.ini), fin:Math.min(c.fin,rg.fin) }; })
+            .sort(function(a,b){ return a.ini-b.ini; });
+          // Segmentos del bloqueo = rango menos los huecos.
+          var segs=[], cur=rg.ini;
+          huecos.forEach(function(hc){ if(hc.ini>cur) segs.push({ini:cur,fin:hc.ini}); cur=Math.max(cur,hc.fin); });
+          if(cur<rg.fin) segs.push({ini:cur,fin:rg.fin});
+          segs.forEach(function(s,si){ if(s.fin-s.ini<5) return;   // no pintar rebanadas mínimas
+            h+='<div class="agm-blk" data-bid="'+esc(b.id)+'" title="Toca para editar" style="top:'+yOf(s.ini)+'px;height:'+((s.fin-s.ini)*PXMIN-1)+'px">'+(si===0?'🚫 '+(b.motivo?esc(b.motivo):'No disponible'):'')+'</div>';
+          });
         });
         // citas de ese día
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
