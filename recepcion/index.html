@@ -508,14 +508,17 @@ function horCopiarDe(weekIso){
   document.getElementById('horCopiarSel').value='';
   showToast('Copiado de '+_hSemLbl(weekIso)+' — revisá y Guardá');
 }
-function _guardarUno(med,sem,dias){
-  return fetch(API_URL,{method:'POST',body:JSON.stringify({action:'guardarHorario',medico:med,semana:sem,dias:dias})}).then(r=>r.json());
-}
 function _cacheSet(med,sem,dias){ if(!_horData[med])_horData[med]={}; if(dias.some(Boolean))_horData[med][sem]=dias.slice(); else if(_horData[med])delete _horData[med][sem]; }
-function horGuardarSemana(){
+function _guardarBulk(items,okMsg,cb){
   showToast('Guardando…');
-  var jobs=_horMeds.map(function(med){ var dias=_horGridDe(med); return _guardarUno(med,_semSel,dias).then(function(){ _cacheSet(med,_semSel,dias); }); });
-  Promise.all(jobs).then(function(){ showToast('✓ Semana guardada'); }).catch(function(){ showToast('Error al guardar'); });
+  fetch(API_URL,{method:'POST',body:JSON.stringify({action:'guardarHorariosBulk',items:items})}).then(r=>r.json()).then(function(res){
+    if(res&&res.ok){ items.forEach(function(it){ _cacheSet(it.medico,it.semana,it.dias); }); showToast(okMsg); if(cb)cb(); }
+    else showToast((res&&res.error)||'No se pudo guardar');
+  }).catch(function(){ showToast('Error de conexión'); });
+}
+function horGuardarSemana(){
+  var items=_horMeds.map(function(med){ return {medico:med, semana:_semSel, dias:_horGridDe(med)}; });
+  _guardarBulk(items,'✓ Semana guardada');
 }
 function horRepetirMes(){
   var base=new Date(_semSel+'T12:00:00'), mes=base.getMonth();
@@ -525,10 +528,9 @@ function horRepetirMes(){
   while(new Date(cur+'T12:00:00').getMonth()===mes){ mondays.push(cur); cur=_hAdd(cur,7); }
   if(!confirm('Se copiará el horario de ESTA semana a las '+mondays.length+' semanas de '+_MESES[mes]+'. ¿Continuar?')) return;
   var grids={}; _horMeds.forEach(function(med){ grids[med]=_horGridDe(med); });
-  showToast('Repitiendo en el mes…');
-  var jobs=[];
-  mondays.forEach(function(mon){ _horMeds.forEach(function(med){ jobs.push(_guardarUno(med,mon,grids[med]).then(function(){ _cacheSet(med,mon,grids[med]); })); }); });
-  Promise.all(jobs).then(function(){ showToast('✓ Repetido en '+mondays.length+' semanas'); pintarHorarios(); }).catch(function(){ showToast('Error al repetir'); });
+  var items=[];
+  mondays.forEach(function(mon){ _horMeds.forEach(function(med){ items.push({medico:med,semana:mon,dias:grids[med]}); }); });
+  _guardarBulk(items,'✓ Repetido en '+mondays.length+' semanas', pintarHorarios);
 }
 
 // ── Lista de interesados (waitlist para huecos de cancelaciones) ──────────
@@ -1742,6 +1744,6 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
-<script src="/js/agenda-mod.js?v=20260724o"></script>
+<script src="/js/agenda-mod.js?v=20260724p"></script>
 </body>
 </html>
