@@ -192,6 +192,11 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .rec-toptab{flex:1;border:1.5px solid var(--bd);background:var(--wh);border-radius:12px;padding:11px;font-size:.9rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:inherit}
 .rec-toptab.on{background:var(--pl);color:var(--pd);border-color:var(--p)}
 /* Horarios de atención */
+.hor-weekbar{display:flex;align-items:center;gap:8px;padding:0 22px 8px}
+.hor-nav{border:1.5px solid var(--bd);background:var(--wh);border-radius:8px;padding:6px 12px;font-size:1rem;font-weight:800;color:var(--pd);cursor:pointer;font-family:inherit;line-height:1}
+.hor-sem-lbl{font-weight:800;color:var(--tx);font-size:.9rem;min-width:170px;text-align:center}
+.hor-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 22px 12px}
+.hor-tools select{border:1.5px solid var(--bd);border-radius:9px;padding:8px 10px;font-size:.78rem;font-family:inherit;background:var(--wh);color:var(--tx);outline:none}
 .hor-card{border:1.5px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:var(--wh)}
 .hor-hd{font-size:.95rem;margin-bottom:10px}
 .hor-hd b{color:var(--tx)}
@@ -390,7 +395,18 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <div class="modal-bg" id="horariosModal" style="display:none" onclick="if(event.target===this)cerrarHorarios()">
   <div class="modal modal-ancho">
     <div class="modal-t">🗓️ Horarios de atención</div>
-    <div class="modal-sub">Por médico y día elige el turno: <b>Mañana</b> 6–14, <b>Tarde</b> 14–22, <b>Noche</b> 22–6, <b>12h</b> 8–20, <b>Todo el día</b> 6–22 o <b>No atiende</b>. Fuera de su turno no se puede agendar. Un médico sin horario cargado no tiene restricción. La semana va de lunes a domingo.</div>
+    <div class="modal-sub">Elegí la <b>semana</b> y cargá el turno de cada médico por día: <b>Mañana</b> 6–14, <b>Tarde</b> 14–22, <b>Noche</b> 22–6, <b>12h</b> 8–20, <b>Todo el día</b> 6–22 o <b>No atiende</b>. Fuera de su turno no se puede agendar. Sin horario cargado esa semana = sin restricción.</div>
+    <div class="hor-weekbar">
+      <button class="hor-nav" onclick="horSemana(-1)">‹</button>
+      <span id="horSemLbl" class="hor-sem-lbl">—</span>
+      <button class="hor-nav" onclick="horSemana(1)">›</button>
+      <button class="btn-turno-cfg" onclick="horHoy()">Esta semana</button>
+    </div>
+    <div class="hor-tools">
+      <select id="horCopiarSel" onchange="horCopiarDe(this.value)"></select>
+      <button class="btn-turno-cfg" onclick="horRepetirMes()">🔁 Repetir en el mes</button>
+      <button class="wr-btn wr-btn-listo" style="margin-left:auto" onclick="horGuardarSemana()">💾 Guardar semana</button>
+    </div>
     <div id="horariosList"><div class="spinner"></div></div>
     <div class="modal-acts"><button class="modal-cancel" onclick="cerrarHorarios()">Cerrar</button></div>
   </div>
@@ -420,11 +436,11 @@ function cerrarHorarios(){ document.getElementById('horariosModal').style.displa
 function abrirInteresados(){ document.getElementById('interesModal').style.display='flex'; cargarInteresados(); }
 function cerrarInteresados(){ document.getElementById('interesModal').style.display='none'; }
 
-// ── Horarios de atención (turnos semanales por médico) ────────────────────
-var _horariosData = {};   // { medico: ['','06:00-14:00',...] } (rangos, índice getDay 0..6)
-// Orden de días LUN→DOM (el índice `d` es el getDay real, 0=Dom..6=Sáb).
+// ── Horarios de atención (por SEMANA calendario) ──────────────────────────
+var _horData = {};        // { medico: { '2026-07-27': [rangos getDay 0..6] } }
+var _horMeds = [];        // médicos con turno
+var _semSel = null;       // lunes ISO de la semana seleccionada
 var _diasOrden = [{d:1,l:'Lun'},{d:2,l:'Mar'},{d:3,l:'Mié'},{d:4,l:'Jue'},{d:5,l:'Vie'},{d:6,l:'Sáb'},{d:0,l:'Dom'}];
-// Presets de franja (valor = rango que se guarda).
 var _presetsHor = [
   {v:'',           t:'No atiende'},
   {v:'06:00-14:00',t:'Mañana 6–14'},
@@ -433,52 +449,86 @@ var _presetsHor = [
   {v:'08:00-20:00',t:'12h 8–20'},
   {v:'06:00-22:00',t:'Todo el día'}
 ];
+var _MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function _hLunes(d){ d=new Date(d); var wd=d.getDay(); d.setDate(d.getDate()+(wd===0?-6:1-wd)); d.setHours(12,0,0,0); return d; }
+function _hIso(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function _hAdd(iso,dias){ var d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+dias); return _hIso(d); }
+function _hDM(iso){ var d=new Date(iso+'T12:00:00'); return d.getDate()+'/'+(d.getMonth()+1); }
+function _hSemLbl(iso){ return _hDM(iso)+' al '+_hDM(_hAdd(iso,6)); }
+
 function cargarHorarios(){
-  var cont = document.getElementById('horariosList');
-  cont.innerHTML = '<div class="spinner"></div>';
-  // Necesitamos el directorio de médicos y los horarios guardados.
+  var cont=document.getElementById('horariosList'); cont.innerHTML='<div class="spinner"></div>';
+  if(!_semSel) _semSel=_hIso(_hLunes(new Date()));
   Promise.all([
-    fetch(API_URL + '?action=medicos').then(r=>r.json()),
-    fetch(API_URL + '?action=horarios&cb=' + Date.now()).then(r=>r.json())
+    fetch(API_URL+'?action=medicos').then(r=>r.json()),
+    fetch(API_URL+'?action=horarios&cb='+Date.now()).then(r=>r.json())
   ]).then(function(res){
-    var meds = (res[0] && res[0].medicos) || [];
-    _horariosData = (res[1] && res[1].horarios) || {};
-    // Los turnos aplican SOLO a estos médicos (los que rotan por franja):
-    // Jhoiner, Camilo, Alejandra, Freddy, Catherine/Caterin y Tatiana.
-    var CON_TURNO = /jhoiner|camilo|alejandr|freddy|cath|cater|tatiana/i;
-    meds = meds.filter(function(m){ return CON_TURNO.test(m.medico||''); });
-    if (!meds.length) { cont.innerHTML = '<div class="card-sub">No hay médicos.</div>'; return; }
-    cont.innerHTML = meds.map(pintarHorarioMedico).join('');
-  }).catch(function(){ cont.innerHTML = '<div class="card-sub">Error al cargar.</div>'; });
+    var CON_TURNO=/jhoiner|camilo|alejandr|freddy|cath|cater|tatiana/i;
+    _horMeds=((res[0]&&res[0].medicos)||[]).filter(function(m){return CON_TURNO.test(m.medico||'');}).map(function(m){return m.medico;});
+    _horData=(res[1]&&res[1].horarios)||{};
+    pintarHorarios();
+  }).catch(function(){ cont.innerHTML='<div class="card-sub">Error al cargar.</div>'; });
 }
-function pintarHorarioMedico(m){
-  var med = m.medico;
-  var dias = _horariosData[med] || ['','','','','','',''];
-  var sinHorario = !_horariosData[med];
-  var filas = _diasOrden.map(function(dd){
-    var v = dias[dd.d] || '';
-    var ops = _presetsHor.map(function(p){ return '<option value="'+p.v+'"'+(v===p.v?' selected':'')+'>'+p.t+'</option>'; }).join('');
-    return '<div class="hor-dia">'+
-      '<span class="hor-dia-lbl">'+dd.l+'</span>'+
-      '<select data-med="'+esc(med)+'" data-dia="'+dd.d+'" class="hor-sel">'+ops+'</select></div>';
+function pintarHorarios(){
+  document.getElementById('horSemLbl').textContent='Semana del '+_hSemLbl(_semSel);
+  var sel=document.getElementById('horCopiarSel');
+  var opts='<option value="">📋 Copiar de otra semana…</option>';
+  for(var k=-4;k<=4;k++){ if(k===0)continue; var wi=_hAdd(_semSel,k*7); opts+='<option value="'+wi+'">Copiar de: '+_hSemLbl(wi)+'</option>'; }
+  sel.innerHTML=opts; sel.value='';
+  var cont=document.getElementById('horariosList');
+  if(!_horMeds.length){ cont.innerHTML='<div class="card-sub">No hay médicos.</div>'; return; }
+  cont.innerHTML=_horMeds.map(pintarHorarioMedico).join('');
+}
+function pintarHorarioMedico(med){
+  var dias=(_horData[med]&&_horData[med][_semSel])||['','','','','','',''];
+  var sin=!(_horData[med]&&_horData[med][_semSel]);
+  var filas=_diasOrden.map(function(dd){
+    var v=dias[dd.d]||'';
+    var ops=_presetsHor.map(function(p){return '<option value="'+p.v+'"'+(v===p.v?' selected':'')+'>'+p.t+'</option>';}).join('');
+    return '<div class="hor-dia"><span class="hor-dia-lbl">'+dd.l+'</span><select data-med="'+esc(med)+'" data-dia="'+dd.d+'" class="hor-sel">'+ops+'</select></div>';
   }).join('');
-  return '<div class="hor-card" id="hor-'+btoa(unescape(encodeURIComponent(med))).replace(/=/g,'')+'">'+
-    '<div class="hor-hd"><b>'+esc(med)+'</b>'+(sinHorario?' <span class="mini-hint">sin horario · sin restricción</span>':'')+'</div>'+
-    '<div class="hor-grid">'+filas+'</div>'+
-    '<button class="wr-btn wr-btn-listo" onclick="guardarHorarioMed(\''+esc(med).replace(/'/g,"\\'")+'\')">Guardar horario</button>'+
-  '</div>';
+  return '<div class="hor-card"><div class="hor-hd"><b>'+esc(med)+'</b>'+(sin?' <span class="mini-hint">sin turno esta semana</span>':'')+'</div><div class="hor-grid">'+filas+'</div></div>';
 }
-function guardarHorarioMed(med){
-  var sels = document.querySelectorAll('.hor-sel[data-med="'+med.replace(/"/g,'\\"')+'"]');
-  var dias = ['','','','','','',''];
-  sels.forEach(function(s){ dias[+s.getAttribute('data-dia')] = s.value; });
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'guardarHorario', medico:med, dias:dias }) })
-    .then(r=>r.json()).then(function(res){
-      if (res && res.ok) {
-        showToast(res.removed ? ('Sin restricción de horario · ' + med) : ('Horario guardado · ' + med));
-        cargarHorarios();
-      } else { showToast((res && res.error) || 'No se pudo guardar'); }
-    }).catch(function(){ showToast('Error de conexión'); });
+// Grid actual del médico → array getDay 0..6.
+function _horGridDe(med){
+  var sels=document.querySelectorAll('.hor-sel[data-med="'+med.replace(/"/g,'\\"')+'"]');
+  var dias=['','','','','','',''];
+  sels.forEach(function(s){ dias[+s.getAttribute('data-dia')]=s.value; });
+  return dias;
+}
+function horSemana(delta){ _semSel=_hAdd(_semSel,delta*7); pintarHorarios(); }
+function horHoy(){ _semSel=_hIso(_hLunes(new Date())); pintarHorarios(); }
+function horCopiarDe(weekIso){
+  if(!weekIso) return;
+  _horMeds.forEach(function(med){
+    var src=(_horData[med]&&_horData[med][weekIso])||['','','','','','',''];
+    var sels=document.querySelectorAll('.hor-sel[data-med="'+med.replace(/"/g,'\\"')+'"]');
+    sels.forEach(function(s){ s.value=src[+s.getAttribute('data-dia')]||''; });
+  });
+  document.getElementById('horCopiarSel').value='';
+  showToast('Copiado de '+_hSemLbl(weekIso)+' — revisá y Guardá');
+}
+function _guardarUno(med,sem,dias){
+  return fetch(API_URL,{method:'POST',body:JSON.stringify({action:'guardarHorario',medico:med,semana:sem,dias:dias})}).then(r=>r.json());
+}
+function _cacheSet(med,sem,dias){ if(!_horData[med])_horData[med]={}; if(dias.some(Boolean))_horData[med][sem]=dias.slice(); else if(_horData[med])delete _horData[med][sem]; }
+function horGuardarSemana(){
+  showToast('Guardando…');
+  var jobs=_horMeds.map(function(med){ var dias=_horGridDe(med); return _guardarUno(med,_semSel,dias).then(function(){ _cacheSet(med,_semSel,dias); }); });
+  Promise.all(jobs).then(function(){ showToast('✓ Semana guardada'); }).catch(function(){ showToast('Error al guardar'); });
+}
+function horRepetirMes(){
+  var base=new Date(_semSel+'T12:00:00'), mes=base.getMonth();
+  var fIso=_hIso(_hLunes(new Date(base.getFullYear(),mes,1,12)));
+  if(new Date(fIso+'T12:00:00').getMonth()!==mes) fIso=_hAdd(fIso,7);
+  var mondays=[], cur=fIso;
+  while(new Date(cur+'T12:00:00').getMonth()===mes){ mondays.push(cur); cur=_hAdd(cur,7); }
+  if(!confirm('Se copiará el horario de ESTA semana a las '+mondays.length+' semanas de '+_MESES[mes]+'. ¿Continuar?')) return;
+  var grids={}; _horMeds.forEach(function(med){ grids[med]=_horGridDe(med); });
+  showToast('Repitiendo en el mes…');
+  var jobs=[];
+  mondays.forEach(function(mon){ _horMeds.forEach(function(med){ jobs.push(_guardarUno(med,mon,grids[med]).then(function(){ _cacheSet(med,mon,grids[med]); })); }); });
+  Promise.all(jobs).then(function(){ showToast('✓ Repetido en '+mondays.length+' semanas'); pintarHorarios(); }).catch(function(){ showToast('Error al repetir'); });
 }
 
 // ── Lista de interesados (waitlist para huecos de cancelaciones) ──────────
@@ -1692,6 +1742,6 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
-<script src="/js/agenda-mod.js?v=20260724n"></script>
+<script src="/js/agenda-mod.js?v=20260724o"></script>
 </body>
 </html>

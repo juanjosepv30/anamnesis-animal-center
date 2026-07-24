@@ -158,6 +158,8 @@
   // Segmentos FUERA de turno dentro de la ventana visible [H_INI,H_FIN], dado el
   // rango 'HH:MM-HH:MM' del médico ese día. null=sin horario (nada fuera);
   // ''=no atiende (todo fuera); rango con fin<=ini = nocturno (cruza medianoche).
+  // Lunes ISO ('yyyy-mm-dd') de la semana de una fecha ISO.
+  function _lunesIso(iso){ var d=new Date(iso+'T12:00:00'); var wd=d.getDay(); d.setDate(d.getDate()+(wd===0?-6:1-wd)); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
   function offSegsTurno(rng){
     if(rng==null||rng===undefined) return [];
     if(!rng) return [[H_INI,H_FIN]];
@@ -418,12 +420,15 @@
         // Fuera de turno: sombreado gris donde el médico NO atiende ese día según
         // su horario semanal (mañana/tarde/ambos/libre). Es informativo
         // (pointer-events:none): igual se puede agendar tocando y confirmando.
-        var _dias7=(S.horarios||{})[med];
-        if(_dias7){
-          var _rng=_dias7[new Date(iso+'T12:00:00').getDay()];
-          offSegsTurno(_rng).forEach(function(o){ var oi=Math.max(o[0],H_INI), of=Math.min(o[1],H_FIN); if(of-oi<5)return;
-            h+='<div class="agm-off" style="top:'+yOf(oi)+'px;height:'+((of-oi)*PXMIN)+'px">Fuera de turno</div>';
-          });
+        var _medSem=(S.horarios||{})[med];
+        if(_medSem){
+          var _dias7=_medSem[_lunesIso(iso)];   // horario de ESA semana (o nada)
+          if(_dias7){
+            var _rng=_dias7[new Date(iso+'T12:00:00').getDay()];
+            offSegsTurno(_rng).forEach(function(o){ var oi=Math.max(o[0],H_INI), of=Math.min(o[1],H_FIN); if(of-oi<5)return;
+              h+='<div class="agm-off" style="top:'+yOf(oi)+'px;height:'+((of-oi)*PXMIN)+'px">Fuera de turno</div>';
+            });
+          }
         }
         // citas de ese día
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
