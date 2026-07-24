@@ -346,17 +346,15 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div id="interesVista" style="display:none">
       <div class="card">
         <div class="card-t">Agregar interesado</div>
-        <div class="card-sub">Personas que llamaron por un horario y no había cupo. Cuando se abra un hueco, los contactás desde acá.</div>
+        <div class="card-sub">Personas que llamaron por un horario y no había cupo. Buscá su historia en Vetesoft por cédula (o cargalo a mano); cuando se abra un hueco lo contactás desde acá.</div>
         <div class="search-row">
-          <input type="text" id="iNombre" placeholder="Nombre">
-          <input type="number" id="iTel" placeholder="Teléfono (WhatsApp)">
-          <input type="text" id="iServicio" placeholder="Servicio de interés (opcional)">
-          <input type="text" id="iMedico" placeholder="Médico (opcional)">
+          <input type="number" id="iCedula" placeholder="Cédula" onkeydown="if(event.key==='Enter')buscarInteres()">
+          <input type="text" id="iPet" placeholder="Nombre de la mascota (opcional)" onkeydown="if(event.key==='Enter')buscarInteres()">
+          <input type="text" id="iOwner" placeholder="Nombre del dueño (opcional)" onkeydown="if(event.key==='Enter')buscarInteres()">
+          <button onclick="buscarInteres()">🔍 Buscar</button>
         </div>
-        <div class="search-row">
-          <input type="text" id="iNotas" placeholder="Notas: qué horario buscaba, etc. (opcional)" style="flex:1">
-          <button onclick="agregarInteres()">➕ Agregar</button>
-        </div>
+        <div id="iResults"></div>
+        <div id="iForm"></div>
       </div>
       <div class="card">
         <div class="card-t">Lista de interesados</div>
@@ -388,23 +386,92 @@ function verVista(v){
 }
 
 // ── Lista de interesados (waitlist para huecos de cancelaciones) ──────────
+// Servicios que tiene sentido dejar en lista de espera: los que se AGENDAN.
+// Vacunación, inyectología y desparasitación se atienden por orden de llegada
+// el mismo día, no se agendan, así que no van acá.
+function serviciosInteres(){
+  return SERVICIOS.filter(function(s){ return !/vacun|inyect|desparasit/i.test(s.v); });
+}
+
+// Mismo buscador que registrar un turno: por cédula/nombre contra Vetesoft.
+function buscarInteres(){
+  var ced   = document.getElementById('iCedula').value.trim();
+  var pet   = document.getElementById('iPet').value.trim();
+  var owner = document.getElementById('iOwner').value.trim();
+  if (!ced && !pet && !owner) { showToast('Ingresá al menos un dato'); return; }
+  document.getElementById('iForm').innerHTML = '';
+  document.getElementById('iResults').innerHTML = '<div class="spinner"></div>';
+  var url = API_URL + '?action=search&petName=' + encodeURIComponent(pet) +
+            '&ownerName=' + encodeURIComponent(owner) + '&cedula=' + encodeURIComponent(ced);
+  fetch(url).then(r=>r.json()).then(function(res){
+    var btnManual = '<button class="btn-nuevo" onclick="interesManual()">+ No tiene historia clínica — cargar a mano</button>';
+    if (!res || !res.ok || !res.results || !res.results.length) {
+      document.getElementById('iResults').innerHTML = '<div class="res-note">No se encontró en Vetesoft.</div>' + btnManual;
+      return;
+    }
+    var html = '';
+    res.results.forEach(function(r, i){
+      window['_ir'+i] = r;
+      var hc = r.registro ? '<span class="res-hc">HC '+esc(r.registro)+'</span>' : '';
+      html += '<div class="res-item" onclick="pickInteres(_ir'+i+')"><div class="res-name">'+esc(r.petName||'')+hc+'</div>'+
+              '<div class="res-meta">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+' | 👤 '+esc(r.owner||'')+(r.documento?' · CC '+esc(r.documento):'')+'</div></div>';
+    });
+    html += '<div class="res-ninguno">¿Ninguno es? ' + btnManual + '</div>';
+    document.getElementById('iResults').innerHTML = html;
+  }).catch(function(){
+    document.getElementById('iResults').innerHTML = '<div class="res-note">Error de conexión con Vetesoft.</div>';
+  });
+}
+
+function pickInteres(r){
+  abrirFormInteres({ nombre: r.owner || '', tel: telSugerido(r.phone), hc: r.registro || '', pet: r.petName || '' });
+}
+function interesManual(){
+  abrirFormInteres({ nombre: document.getElementById('iOwner').value.trim(), tel:'', hc:'', pet: document.getElementById('iPet').value.trim() });
+}
+
+// Formulario final del interesado (encontrado en Vetesoft o cargado a mano).
+function abrirFormInteres(d){
+  document.getElementById('iResults').innerHTML = '';
+  var opciones = '<option value="">— Servicio de interés (opcional) —</option>' +
+    serviciosInteres().map(function(s){ return '<option value="'+esc(s.v)+'">'+esc(s.label||s.v)+'</option>'; }).join('');
+  var head = d.hc
+    ? '<div class="reg-sel">✅ '+esc(d.pet||'')+' — '+esc(d.nombre||'')+' · HC '+esc(d.hc)+'</div>'
+    : '';
+  document.getElementById('iForm').innerHTML =
+    '<div class="reg-form">'+ head +
+      '<div class="reg-grid">'+
+        '<div><label>Nombre del dueño</label><input id="iNombre" type="text" value="'+esc(d.nombre||'')+'"></div>'+
+        '<div><label>WhatsApp</label><input id="iTel" type="tel" inputmode="numeric" maxlength="10" placeholder="3001234567" value="'+esc(d.tel||'')+'"></div>'+
+        '<div><label>Servicio de interés</label><select id="iServicio">'+opciones+'</select></div>'+
+        '<div><label>Médico <span class="lbl-tip">(opcional)</span></label><input id="iMedico" type="text" placeholder="Si pidió uno en particular"></div>'+
+        '<div style="grid-column:1/-1"><label>Notas <span class="lbl-tip">(qué horario buscaba, etc.)</span></label>'+
+          '<input id="iNotas" type="text" placeholder="Ej: quería el jueves en la tarde"></div>'+
+      '</div>'+
+      '<button class="wr-btn wr-btn-listo" style="margin-top:10px" onclick="agregarInteres()">➕ Agregar a la lista</button>'+
+    '</div>';
+  var el = document.getElementById('iNombre'); if (el && !d.nombre) el.focus();
+}
+
 function agregarInteres(){
-  var nombre = document.getElementById('iNombre').value.trim();
-  var tel    = document.getElementById('iTel').value.trim();
-  if (!nombre && !tel) { toast('Poné al menos un nombre o un teléfono'); return; }
+  var nombre = (document.getElementById('iNombre')||{}).value ? document.getElementById('iNombre').value.trim() : '';
+  var tel    = (document.getElementById('iTel')||{}).value ? document.getElementById('iTel').value.trim() : '';
+  if (!nombre && !tel) { showToast('Poné al menos un nombre o un teléfono'); return; }
   var data = {
     nombre: nombre, tel: tel,
-    servicio: document.getElementById('iServicio').value.trim(),
-    medico:   document.getElementById('iMedico').value.trim(),
-    notas:    document.getElementById('iNotas').value.trim()
+    servicio: (document.getElementById('iServicio')||{}).value || '',
+    medico:   (document.getElementById('iMedico')||{}).value || '',
+    notas:    (document.getElementById('iNotas')||{}).value || ''
   };
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'agregarInteresado', data:data }) })
     .then(r=>r.json()).then(function(res){
-      if (!res || res.ok===false) { toast('No se pudo agregar'); return; }
-      ['iNombre','iTel','iServicio','iMedico','iNotas'].forEach(function(id){ document.getElementById(id).value=''; });
-      toast('Interesado agregado');
+      if (!res || res.ok===false) { showToast('No se pudo agregar'); return; }
+      document.getElementById('iForm').innerHTML = '';
+      document.getElementById('iResults').innerHTML = '';
+      ['iCedula','iPet','iOwner'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+      showToast('Interesado agregado');
       cargarInteresados();
-    }).catch(function(){ toast('Error de conexión'); });
+    }).catch(function(){ showToast('Error de conexión'); });
 }
 
 function cargarInteresados(){
