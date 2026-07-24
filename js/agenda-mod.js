@@ -376,7 +376,7 @@
           // Las citas ya llegadas NO se arrastran ni estiran (editarCita las bloquea).
           var movible=!c.llego;
           h+='<div class="agm-ev'+(c.llego?' lleg':'')+(movible?' agm-drag':'')+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+col+'22;border-left-color:'+col+';color:#1a0a2e">'+
-             '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(c.llego?' ✓':'')+(c.pagado?' 💵':'')+'</b>'+
+             '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(c.llego?' ✓':'')+(c.pagado?' 💵':'')+(c.comprobante?' 📎':'')+'</b>'+
              (alt>28?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+
              (movible?'<div class="agm-rz" title="Estirar para cambiar la duración"></div>':'')+'</div>';
         });
@@ -567,6 +567,11 @@
         '<div class="agm-row"><div><label>Servicio</label><select id="fSvc">'+SERVICIOS.map(function(s){return '<option'+(/consulta general/i.test(s)?' selected':'')+'>'+esc(s)+'</option>';}).join('')+'</select></div>'+
           '<div id="fDurWrap"><label>Duración</label><select id="fDur"></select></div></div>'+
         '<div style="margin-top:12px"><label>Notas <span style="font-weight:400">(opcional)</span></label><textarea id="fNot" rows="2" placeholder="Motivo, indicaciones…"></textarea></div>'+
+        // Solo al forzar sobre un bloqueo: comprobante (foto de aprobación del Dr.).
+        (S.crear.forzar
+          ? '<div style="margin-top:12px"><label>📎 Comprobante <span style="font-weight:400">(foto de la aprobación del Dr.)</span></label>'+
+            '<input type="file" id="fComp" accept="image/*" capture="environment"><div class="agm-hint" id="fCompHint" style="text-align:left;padding:4px 0"></div></div>'
+          : '')+
         '<div class="agm-mact"><button class="agm-btn agm-btn-g" id="fCancel" style="flex:0 0 auto">Cancelar</button>'+
         '<button class="agm-btn agm-block" id="fGuardar">Agendar →</button></div>'+
         '<div class="agm-err" id="fErr"></div>';
@@ -590,10 +595,31 @@
       else { data.petName=($ov('fPet')||{}).value||''; data.owner=($ov('fOwn')||{}).value||''; data.cedula=($ov('fCed')||{}).value||''; }
       if(!data.petName&&!data.owner){ err.textContent='Falta el paciente.'; return; }
       $ov('fGuardar').textContent='Guardando…'; $ov('fGuardar').disabled=true;
-      fetch(api,{method:'POST',body:JSON.stringify({action:'crearCita',data:data})}).then(function(r){return r.json();}).then(function(res){
-        if(res&&res.ok){ cerrarOv(); cargarCal(); }
-        else { var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent=(res&&res.error)||'No se pudo agendar.'; }
-      }).catch(function(){ var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent='Error de conexión.'; });
+      // Si hay comprobante (foto), lo comprimimos y lo mandamos con la cita.
+      var fc=$ov('fComp'), file=fc&&fc.files&&fc.files[0];
+      function enviar(){
+        fetch(api,{method:'POST',body:JSON.stringify({action:'crearCita',data:data})}).then(function(r){return r.json();}).then(function(res){
+          if(res&&res.ok){ cerrarOv(); cargarCal(); }
+          else { var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent=(res&&res.error)||'No se pudo agendar.'; }
+        }).catch(function(){ var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent='Error de conexión.'; });
+      }
+      if(S.crear.forzar && file){ comprimirImagen(file, function(du){ data.comprobante=du; enviar(); }); }
+      else enviar();
+    }
+    // Achica y comprime la imagen en el CELULAR antes de subir (máx 1200px, JPEG
+    // 0.7): la foto queda liviana y la plataforma no se pone pesada.
+    function comprimirImagen(file, cb){
+      try{
+        var rd=new FileReader();
+        rd.onload=function(){ var img=new Image();
+          img.onload=function(){ var max=1200, w=img.width, h=img.height;
+            if(w>max||h>max){ if(w>h){ h=Math.round(h*max/w); w=max; } else { w=Math.round(w*max/h); h=max; } }
+            var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+            cv.getContext('2d').drawImage(img,0,0,w,h);
+            try{ cb(cv.toDataURL('image/jpeg',0.7)); }catch(e){ cb(''); } };
+          img.onerror=function(){ cb(''); }; img.src=rd.result; };
+        rd.onerror=function(){ cb(''); }; rd.readAsDataURL(file);
+      }catch(e){ cb(''); }
     }
 
     // ══════════ MODAL: detalle de cita (Llegó / Cancelar) ══════════
@@ -607,6 +633,7 @@
           (c.owner?'👤 '+esc(c.owner)+'<br>':'')+
           (c.vetesoftHc?'🗂️ HC '+esc(c.vetesoftHc)+'<br>':'')+
           (c.phone?'📞 '+esc(c.phone)+'<br>':'')+
+          (c.comprobante?'<a href="'+esc(c.comprobante)+'" target="_blank" rel="noopener" style="color:#6d2f7a;font-weight:700">📎 Ver comprobante</a><br>':'')+
           (c.llego?'<b style="color:#3B6D11">✓ Ya llegó — turno '+esc(c.turno||'')+'</b>':'')+
         '</div>'+
         // Nota + marca de pago: editables acá mismo, sin reprogramar.
