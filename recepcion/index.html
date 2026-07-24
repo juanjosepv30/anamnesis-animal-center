@@ -438,7 +438,7 @@ function pintarHorarioMedico(m){
     return '<div class="hor-dia">'+
       '<span class="hor-dia-lbl">'+lbl+'</span>'+
       '<select data-med="'+esc(med)+'" data-dia="'+d+'" class="hor-sel">'+
-        opt('','Libre')+opt('M','Mañana')+opt('T','Tarde')+opt('A','Todo el día')+
+        opt('','No atiende')+opt('M','Mañana')+opt('T','Tarde')+opt('A','Todo el día')+
       '</select></div>';
   }).join('');
   return '<div class="hor-card" id="hor-'+btoa(unescape(encodeURIComponent(med))).replace(/=/g,'')+'">'+
@@ -453,8 +453,10 @@ function guardarHorarioMed(med){
   sels.forEach(function(s){ dias[+s.getAttribute('data-dia')] = s.value; });
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'guardarHorario', medico:med, dias:dias }) })
     .then(r=>r.json()).then(function(res){
-      if (res && res.ok) { _horariosData[med] = dias; showToast('Horario guardado · ' + med); cargarHorarios(); }
-      else { showToast((res && res.error) || 'No se pudo guardar'); }
+      if (res && res.ok) {
+        showToast(res.removed ? ('Sin restricción de horario · ' + med) : ('Horario guardado · ' + med));
+        cargarHorarios();
+      } else { showToast((res && res.error) || 'No se pudo guardar'); }
     }).catch(function(){ showToast('Error de conexión'); });
 }
 
@@ -1669,6 +1671,6 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
-<script src="/js/agenda-mod.js?v=20260724l"></script>
+<script src="/js/agenda-mod.js?v=20260724m"></script>
 </body>
 </html>
