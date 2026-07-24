@@ -375,7 +375,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div id="horariosVista" style="display:none">
       <div class="card">
         <div class="card-t">Horarios de atención</div>
-        <div class="card-sub">Por médico y día: <b>Mañana</b> (6:00–14:00), <b>Tarde</b> (14:00–22:00), <b>Todo el día</b> o <b>Libre</b>. Fuera de su turno no se puede agendar. Un médico sin horario cargado no tiene restricción.</div>
+        <div class="card-sub">Por médico y día elegí el turno: <b>Mañana</b> 6–14, <b>Tarde</b> 14–22, <b>Noche</b> 22–6, <b>12h</b> 8–20, <b>Todo el día</b> 6–22 o <b>No atiende</b>. Fuera de su turno no se puede agendar. Un médico sin horario cargado no tiene restricción. La semana va de lunes a domingo.</div>
         <div id="horariosList"><div class="spinner"></div></div>
       </div>
     </div>
@@ -400,15 +400,25 @@ function verVista(v){
   document.getElementById('horariosVista').style.display = v==='horarios' ? '' : 'none';
   if (v==='agenda' && !_agendaMontada) {
     _agendaMontada = true;
-    AgendaMod.mount(document.getElementById('agendaVista'), { medicoFijo:'', api:API_URL });
+    AgendaMod.mount(document.getElementById('agendaVista'), { medicoFijo:'', api:API_URL, vistaFija:'semana' });
   }
   if (v==='interes') cargarInteresados();
   if (v==='horarios') cargarHorarios();
 }
 
 // ── Horarios de atención (turnos semanales por médico) ────────────────────
-var _horariosData = {};   // { medico: ['','M','M',...] }
-var _diasLbl = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+var _horariosData = {};   // { medico: ['','06:00-14:00',...] } (rangos, índice getDay 0..6)
+// Orden de días LUN→DOM (el índice `d` es el getDay real, 0=Dom..6=Sáb).
+var _diasOrden = [{d:1,l:'Lun'},{d:2,l:'Mar'},{d:3,l:'Mié'},{d:4,l:'Jue'},{d:5,l:'Vie'},{d:6,l:'Sáb'},{d:0,l:'Dom'}];
+// Presets de franja (valor = rango que se guarda).
+var _presetsHor = [
+  {v:'',           t:'No atiende'},
+  {v:'06:00-14:00',t:'Mañana 6–14'},
+  {v:'14:00-22:00',t:'Tarde 14–22'},
+  {v:'22:00-06:00',t:'Noche 22–6'},
+  {v:'08:00-20:00',t:'12h 8–20'},
+  {v:'06:00-22:00',t:'Todo el día'}
+];
 function cargarHorarios(){
   var cont = document.getElementById('horariosList');
   cont.innerHTML = '<div class="spinner"></div>';
@@ -419,11 +429,10 @@ function cargarHorarios(){
   ]).then(function(res){
     var meds = (res[0] && res[0].medicos) || [];
     _horariosData = (res[1] && res[1].horarios) || {};
-    // Fuera los auxiliares puros (solo Apoyo): no agendan, no tienen horario.
-    meds = meds.filter(function(m){
-      var e = (m.especialidades||[]).map(function(x){return String(x).toLowerCase();});
-      return !(e.length>0 && e.every(function(x){return x==='apoyo';}));
-    });
+    // Los turnos aplican SOLO a estos médicos (los que rotan por franja):
+    // Jhoiner, Camilo, Alejandra, Freddy, Catherine/Caterin y Tatiana.
+    var CON_TURNO = /jhoiner|camilo|alejandr|freddy|cath|cater|tatiana/i;
+    meds = meds.filter(function(m){ return CON_TURNO.test(m.medico||''); });
     if (!meds.length) { cont.innerHTML = '<div class="card-sub">No hay médicos.</div>'; return; }
     cont.innerHTML = meds.map(pintarHorarioMedico).join('');
   }).catch(function(){ cont.innerHTML = '<div class="card-sub">Error al cargar.</div>'; });
@@ -432,14 +441,12 @@ function pintarHorarioMedico(m){
   var med = m.medico;
   var dias = _horariosData[med] || ['','','','','','',''];
   var sinHorario = !_horariosData[med];
-  var filas = _diasLbl.map(function(lbl, d){
-    var v = dias[d] || '';
-    function opt(val,txt){ return '<option value="'+val+'"'+(v===val?' selected':'')+'>'+txt+'</option>'; }
+  var filas = _diasOrden.map(function(dd){
+    var v = dias[dd.d] || '';
+    var ops = _presetsHor.map(function(p){ return '<option value="'+p.v+'"'+(v===p.v?' selected':'')+'>'+p.t+'</option>'; }).join('');
     return '<div class="hor-dia">'+
-      '<span class="hor-dia-lbl">'+lbl+'</span>'+
-      '<select data-med="'+esc(med)+'" data-dia="'+d+'" class="hor-sel">'+
-        opt('','No atiende')+opt('M','Mañana')+opt('T','Tarde')+opt('A','Todo el día')+
-      '</select></div>';
+      '<span class="hor-dia-lbl">'+dd.l+'</span>'+
+      '<select data-med="'+esc(med)+'" data-dia="'+dd.d+'" class="hor-sel">'+ops+'</select></div>';
   }).join('');
   return '<div class="hor-card" id="hor-'+btoa(unescape(encodeURIComponent(med))).replace(/=/g,'')+'">'+
     '<div class="hor-hd"><b>'+esc(med)+'</b>'+(sinHorario?' <span class="mini-hint">sin horario · sin restricción</span>':'')+'</div>'+
@@ -1671,6 +1678,6 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
-<script src="/js/agenda-mod.js?v=20260724m"></script>
+<script src="/js/agenda-mod.js?v=20260724n"></script>
 </body>
 </html>

@@ -32,6 +32,13 @@ textarea:focus{border-color:var(--p);background:var(--wh)}
 .msg{font-size:1rem;line-height:1.5;color:var(--tx)}
 .msg .em{font-size:3rem;margin-bottom:10px}
 .err{color:#c0392b;font-size:.85rem;margin-top:10px;min-height:18px}
+/* El comentario es lo principal: etiqueta grande y textarea arriba. Las
+   estrellas quedan después, más chicas (una valoración vale menos que un
+   comentario). */
+.com-lbl{font-size:1.08rem;font-weight:800;color:var(--tx);display:block;margin-bottom:8px;text-align:left}
+.rate-lbl{font-size:.9rem;font-weight:700;color:var(--tm);margin:18px 0 6px}
+.stars-sm{gap:4px}
+.stars-sm .star{font-size:1.9rem}
 </style>
 </head>
 <body>
@@ -39,7 +46,10 @@ textarea:focus{border-color:var(--p);background:var(--wh)}
   <img src="/img/icono-app-morado.png" alt="Animal Center" class="logo" onerror="this.style.display='none'">
   <h1>¿Cómo te fue?</h1>
   <div class="sub">Tu opinión nos ayuda a cuidar mejor a las mascotas de Animal Center. ¡Solo te toma un momento!</div>
-  <div class="stars" id="stars">
+  <label for="com" class="com-lbl">Contanos cómo te fue</label>
+  <textarea id="com" placeholder="Cómo te atendieron, cómo sigue tu mascota, lo que quieras contarnos…" oninput="chequear()"></textarea>
+  <div class="rate-lbl">¿Y una valoración? <span style="font-weight:400">(opcional)</span></div>
+  <div class="stars stars-sm" id="stars">
     <span class="star" data-v="1">★</span>
     <span class="star" data-v="2">★</span>
     <span class="star" data-v="3">★</span>
@@ -47,8 +57,6 @@ textarea:focus{border-color:var(--p);background:var(--wh)}
     <span class="star" data-v="5">★</span>
   </div>
   <div class="star-lbl" id="starLbl"></div>
-  <label for="com">¿Algo que quieras contarnos? <span style="font-weight:400">(opcional)</span></label>
-  <textarea id="com" placeholder="Cómo te atendieron, cómo sigue tu mascota, lo que quieras…"></textarea>
   <button class="send" id="send" onclick="enviar()" disabled>Enviar mi opinión</button>
   <div class="err" id="err"></div>
 </div>
@@ -71,11 +79,18 @@ function pintar(){
     s.classList.toggle('on', parseInt(s.getAttribute('data-v'),10) <= sel);
   });
   document.getElementById('starLbl').textContent = LBL[sel] || '';
-  document.getElementById('send').disabled = sel < 1;
+  chequear();
+}
+// El comentario es lo principal: con un comentario alcanza para enviar (las
+// estrellas son opcionales). También se puede enviar solo con estrellas.
+function chequear(){
+  var com = (document.getElementById('com').value || '').trim();
+  document.getElementById('send').disabled = (sel < 1 && !com);
 }
 
 function enviar(){
-  if (sel < 1) return;
+  var com = document.getElementById('com').value.trim();
+  if (sel < 1 && !com) return;
   var btn = document.getElementById('send');
   btn.disabled = true; btn.textContent = 'Enviando…';
   document.getElementById('err').textContent = '';

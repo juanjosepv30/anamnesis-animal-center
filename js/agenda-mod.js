@@ -155,6 +155,22 @@
   function lunesDe(d){ var wd=d.getDay(); var off=(wd===0)?-6:(1-wd); return addDias(d,off); }   // lunes de esa semana
   function hm2min(hm){ var p=String(hm||'').split(':'); return (+p[0]||0)*60+(+p[1]||0); }
   function min2hm(m){ var h=Math.floor(m/60),mm=m%60; return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm; }
+  // Segmentos FUERA de turno dentro de la ventana visible [H_INI,H_FIN], dado el
+  // rango 'HH:MM-HH:MM' del médico ese día. null=sin horario (nada fuera);
+  // ''=no atiende (todo fuera); rango con fin<=ini = nocturno (cruza medianoche).
+  function offSegsTurno(rng){
+    if(rng==null||rng===undefined) return [];
+    if(!rng) return [[H_INI,H_FIN]];
+    var p=String(rng).split('-'); if(p.length!==2) return [];
+    var ini=hm2min(p[0]), fin=hm2min(p[1]);
+    var on = (fin>ini) ? [[ini,fin]] : [[ini,1440],[0,fin]];
+    var onV = on.map(function(o){return [Math.max(o[0],H_INI),Math.min(o[1],H_FIN)];})
+                .filter(function(o){return o[1]>o[0];}).sort(function(a,b){return a[0]-b[0];});
+    var offs=[], cur=H_INI;
+    onV.forEach(function(o){ if(o[0]>cur) offs.push([cur,o[0]]); cur=Math.max(cur,o[1]); });
+    if(cur<H_FIN) offs.push([cur,H_FIN]);
+    return offs;
+  }
   function durServicio(svc){ var s=String(svc||'').toLowerCase(); if(s.indexOf('control')!==-1)return 30; if(s.indexOf('consulta')!==-1)return 60; if(s.indexOf('cirug')!==-1)return 60; return 30; }
   // Color del servicio = MISMOS colores de los turnos (ver serviceColor en
   // pantalla/index.html), para que la clínica maneje una sola paleta. Cirugía y
@@ -208,7 +224,10 @@
     var api = opts.api || window.API_URL;
     var medicoFijo = opts.medicoFijo || '';
     var esMovil = window.matchMedia && window.matchMedia('(max-width:640px)').matches;
-    var S = { medicos:[], sub:'cal', vista: esMovil?'3dias':'semana', ancla:new Date(), med:medicoFijo, selCliente:null, crear:null };
+    // vistaFija: si se pasa (recepción usa 'semana'), se fuerza esa vista y se
+    // oculta el toggle Día/Semana; además Bloqueos sube al renglón de la fecha.
+    var vistaFija = opts.vistaFija || '';
+    var S = { medicos:[], sub:'cal', vista: vistaFija || (esMovil?'3dias':'semana'), ancla:new Date(), med:medicoFijo, selCliente:null, crear:null };
 
     // Sin tabs: el calendario ES la vista. "Bloqueos" queda como un botón chico
     // arriba (se usa poco), y desde ahí se vuelve. Así no repetimos "Agenda".
@@ -246,8 +265,8 @@
       // ADELANTE — los días que ya pasaron no importan. Muestra 6 días (se ven
       // ~3 a la vez y se recorren con scroll horizontal); las flechas avanzan 3.
       if(S.vista==='3dias'){ var out=[]; for(var i=0;i<6;i++) out.push(addDias(base,i)); return out; }
-      // 'semana' (escritorio): Lun–Sáb de la semana del ancla.
-      var lun=lunesDe(S.ancla), outw=[]; for(var j=0;j<6;j++) outw.push(addDias(lun,j)); return outw;
+      // 'semana' (escritorio): Lun→Dom de la semana del ancla (domingo al final).
+      var lun=lunesDe(S.ancla), outw=[]; for(var j=0;j<7;j++) outw.push(addDias(lun,j)); return outw;
     }
     function rangoVista(){ var d=diasVista(); return { desde:isoDe(d[0]), hasta:isoDe(d[d.length-1]) }; }
     function pasoVista(){ return S.vista==='dia'?1 : (S.vista==='3dias'?3:7); }
@@ -274,8 +293,12 @@
             '</span>'+
             '<button class="agm-navb" id="cNext">›</button>'+
             '<button class="agm-navb" id="cHoy" style="font-size:.76rem">Hoy</button>'+
+            // Con vista fija (recepción) Bloqueos va acá, en el renglón de la fecha.
+            (vistaFija ? '<button class="agm-lnk" id="cBloq" style="margin-left:8px">🚫 Bloqueos</button>' : '')+
           '</div>'+
         '</div>'+
+        // Toggle Día/Semana + Bloqueos: solo cuando NO hay vista fija (doctores).
+        (vistaFija ? '' :
         '<div class="agm-toolbtns">'+
           '<div class="agm-seg">'+
             '<button id="cDia" class="'+(S.vista==='dia'?'on':'')+'">Día</button>'+
@@ -284,7 +307,7 @@
               : '<button id="cSem" class="'+(S.vista==='semana'?'on':'')+'">Semana</button>')+
           '</div>'+
           '<button class="agm-lnk" id="cBloq">🚫 Bloqueos</button>'+
-        '</div>'+
+        '</div>')+
         '<div class="agm-leg">'+
           '<span><i class="agm-dot" style="background:#16a34a22;border:1px solid #16a34a"></i>Consulta</span>'+
           '<span><i class="agm-dot" style="background:#2563eb22;border:1px solid #2563eb"></i>Control</span>'+
@@ -302,8 +325,8 @@
       $('cPrev').onclick=function(){ S.ancla=addDias(S.ancla, -pasoVista()); refrescarLbl(); cargarCal(); };
       $('cNext').onclick=function(){ S.ancla=addDias(S.ancla,  pasoVista()); refrescarLbl(); cargarCal(); };
       $('cHoy').onclick=function(){ S.ancla=new Date(); refrescarLbl(); cargarCal(); };
-      $('cDia').onclick=function(){ S.vista='dia'; pintarCal(); };
-      $('cSem').onclick=function(){ S.vista=esMovil?'3dias':'semana'; pintarCal(); };
+      var _cd=$('cDia'); if(_cd) _cd.onclick=function(){ S.vista='dia'; pintarCal(); };
+      var _cs=$('cSem'); if(_cs) _cs.onclick=function(){ S.vista=esMovil?'3dias':'semana'; pintarCal(); };
       // Tocar la fecha abre el calendario nativo para saltar a un día lejano.
       // Al elegir, ese día pasa a ser el ANCLA: en 3 días arranca ahí; en día,
       // ese día; en semana, su semana.
@@ -397,9 +420,8 @@
         // (pointer-events:none): igual se puede agendar tocando y confirmando.
         var _dias7=(S.horarios||{})[med];
         if(_dias7){
-          var _code=_dias7[new Date(iso+'T12:00:00').getDay()]||'';
-          var _offs = _code==='M' ? [[14*60,H_FIN]] : _code==='T' ? [[H_INI,14*60]] : _code==='A' ? [] : [[H_INI,H_FIN]];
-          _offs.forEach(function(o){ var oi=Math.max(o[0],H_INI), of=Math.min(o[1],H_FIN); if(of-oi<5)return;
+          var _rng=_dias7[new Date(iso+'T12:00:00').getDay()];
+          offSegsTurno(_rng).forEach(function(o){ var oi=Math.max(o[0],H_INI), of=Math.min(o[1],H_FIN); if(of-oi<5)return;
             h+='<div class="agm-off" style="top:'+yOf(oi)+'px;height:'+((of-oi)*PXMIN)+'px">Fuera de turno</div>';
           });
         }
@@ -539,12 +561,15 @@
         bk.addEventListener('click', function(ev){ ev.stopPropagation();
           var id=bk.getAttribute('data-bid'); var b=bloqs.filter(function(x){return String(x.id)===id;})[0];
           if(!b) return;
-          // Capturamos el DÍA (columna) y la HORA (posición del click) reales,
-          // para que "Agendar igual" use ESE horario y no el inicio del bloqueo.
+          // Los bloqueos NO se editan desde el calendario (eso se hace en el panel
+          // "Bloqueos"). Tocar un bloqueo acá es para AGENDAR una cita en ese
+          // horario: se avisa que está bloqueado y, si confirman, arranca el alta
+          // ya con `forzar` (para saltar el guard del bloqueo).
           var col=bk.closest('.agm-body2[data-iso]');
           var iso=col?col.getAttribute('data-iso'):b.desdeF;
           var hm=col?min2hm(slotY(col,ev.clientY)):(b.desdeH||'08:00');
-          abrirBloqueoModal(b, med, iso, hm);
+          if(!confirm('Recordá que este horario tiene un BLOQUEO'+(b.motivo?' ('+esc(b.motivo)+')':'')+'.\n¿Seguro que querés agendar una cita a las '+hm+'?')) return;
+          abrirCrear(iso, hm, med, true);
         });
       });
     }
