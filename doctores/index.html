@@ -2051,8 +2051,21 @@ setInterval(function(){
   if (activeView === 'sala') renderSala();
 }, 60000);
 
-setInterval(function(){ if (!pausado) chequearCambios(); }, 5000);
+setInterval(function(){ if (!pausado) chequearCambios(); }, 3000);
 setInterval(function(){ if (!pausado && !document.querySelector('.rec.open')) loadRecords(true); }, 120000); // red de seguridad
+
+// Refresco INSTANTÁNEO al volver al frente: el médico recibe el WhatsApp y abre
+// la app; el navegador tenía el sondeo ralentizado en segundo plano, así que sin
+// esto el que acaba de llegar no aparecía hasta el próximo tick. Al volver a ver
+// la página (o al recuperar el foco) forzamos una recarga fresca ya.
+function refrescarAhora(){
+  if (document.querySelector('.rec.open')) return;   // no interrumpir una ficha abierta
+  ultimaVersion = null;                              // fuerza detectar cualquier cambio
+  loadRecords(true); chequearCambios();
+}
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) refrescarAhora(); });
+window.addEventListener('focus', refrescarAhora);
+window.addEventListener('pageshow', refrescarAhora);   // volver desde el historial/PWA
 // El cronómetro de "En consulta" avanza solo, cada 30s, sin re-renderizar todo.
 setInterval(function(){ if (!pausado) tickConsultas(); }, 30000);
 
@@ -2098,6 +2111,6 @@ loadRecords();              // refresca con el backend por detrás
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js, para que un refresco
      traiga el JS nuevo y no la versión cacheada por el navegador. -->
-<script src="/js/agenda-mod.js?v=20260724i"></script>
+<script src="/js/agenda-mod.js?v=20260724j"></script>
 </body>
 </html>

@@ -623,11 +623,10 @@
       $ov('fSvc').onchange=syncDur; syncDur();
       $ov('fGuardar').onclick=function(){ guardarCita(manual); };
     }
-    // La duración se autollena por servicio; la consulta se puede bajar a 30 para meter un paciente.
+    // Duración: TODOS los servicios ofrecen 30 / 60 / 90 min. Arranca en el
+    // default del servicio, pero recepción elige el que necesite.
     function syncDur(){
-      var svc=$ov('fSvc').value, def=durServicio(svc), sel=$ov('fDur');
-      var ops = /consulta/i.test(svc) ? [60,30] : [def];
-      sel.innerHTML=ops.map(function(m){return '<option value="'+m+'">'+m+' min</option>';}).join('');
+      $ov('fDur').innerHTML=durOpts(durServicio($ov('fSvc').value));
     }
     function guardarCita(manual){
       var err=$ov('fErr'); err.textContent='';
