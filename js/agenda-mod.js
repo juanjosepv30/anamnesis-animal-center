@@ -781,7 +781,7 @@
           '<button class="agm-btn agm-btn-g" id="dCancel" style="color:#c0392b;border-color:#f1c0c0">Cancelar cita</button>'+
           (c.llego?'':'<button class="agm-btn agm-btn-g" id="dReprog">🔁 Reprogramar</button>')+
         '</div>'+
-        (c.llego?'':'<button class="agm-btn agm-block agm-llego" id="dLlego">✓ Llegó</button>')+
+        (c.llego?'':'<button class="agm-btn agm-block agm-llego" id="dLlego" style="background:#3B6D11">✓ Llegó</button>')+
         '<div class="agm-err" id="dErr"></div>'
       );
       $ov('dX').onclick=cerrarOv;
