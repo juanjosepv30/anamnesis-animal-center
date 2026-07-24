@@ -1673,13 +1673,40 @@ function umbralRecordatorio(service) {
 // Refresca el texto de todos los cronómetros en pantalla, sin re-renderizar
 // todo. Corre en su propio intervalo para que el número avance aunque no
 // entren datos nuevos del backend.
+// Minutos de gracia tras "Atender" antes de que el turno cuente como consulta
+// (y arranque el cronómetro). Debe coincidir con la gracia del backend.
+const GRACIA_MIN = 2;
+const _promovidos = {};   // filas ya promovidas de gracia → atendiendo (no repetir POST)
+
 function tickConsultas() {
   const els = document.querySelectorAll('[data-inicio]');
   for (let i = 0; i < els.length; i++) {
     const t = fmtConsulta(els[i].getAttribute('data-inicio'));
     if (t) els[i].textContent = t;
   }
+  if (promoverGracias()) { renderSala(); updateCounts(); }  // los que cumplieron la gracia
   renderConsultaBar();   // re-arma la barra: capta cuando cruza a "¿ya terminaste?"
+}
+
+// A los GRACIA_MIN minutos, un turno mío en gracia ('llamando') pasa solo a
+// 'atendiendo': arranca el cronómetro, aparece Finalizar y se libera el freno
+// para llamar al siguiente. Se hace UNA vez por fila (guardado en _promovidos).
+function promoverGracias() {
+  if (!miMedico) return false;
+  const today = new Date();
+  var cambio = false;
+  allRecords.forEach(function(r){
+    if (r.estadoTurno === 'llamando' && r.calledBy === miMedico &&
+        isSameDay(r.timestamp, today) &&
+        minsDesde(r.calledAt||r.timestamp) >= GRACIA_MIN && !_promovidos[r.rowIndex]) {
+      _promovidos[r.rowIndex] = true;
+      r.estadoTurno = 'atendiendo';   // local ya, para que la UI no espere al POST
+      cambio = true;
+      fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atender', rowIndex: r.rowIndex, medico: miMedico }) })
+        .catch(function(){ _promovidos[r.rowIndex] = false; });  // si falla, reintenta al próximo tick
+    }
+  });
+  return cambio;
 }
 
 // Barra PERSISTENTE de "mi paciente en consulta": aparece en TODAS las pestañas
@@ -1691,7 +1718,9 @@ function renderConsultaBar() {
   if (!bar) return;
   if (!miMedico) { bar.innerHTML = ''; return; }
   const today = new Date();
-  const mios = allRecords.filter(r => r.estadoTurno === 'atendiendo' &&
+  const mios = allRecords.filter(r =>
+    (r.estadoTurno === 'atendiendo' ||
+     (r.estadoTurno === 'llamando' && minsDesde(r.calledAt||r.timestamp) >= GRACIA_MIN)) &&
     r.calledBy === miMedico && isSameDay(r.timestamp, today));
   if (!mios.length) { bar.innerHTML = ''; return; }
   mios.sort((a,b) => new Date(a.calledAt||a.timestamp) - new Date(b.calledAt||b.timestamp));
@@ -1740,10 +1769,14 @@ function serviceColor(s) {
 
 function buildCard(r) {
   const reviewed = r.estadoTurno === 'atendido';
-  const enConsulta = r.estadoTurno === 'atendiendo';
   // Gracia: recién llamado con el botón único. Aún no cuenta como atención;
-  // el médico puede marcarlo Ausente. A los 2 min pasa solo a 'atendiendo'.
-  const grace = r.estadoTurno === 'llamando';
+  // el médico puede marcarlo Ausente. A los 2 min pasa solo a 'atendiendo'
+  // (lo promueve tickConsultas). Si el dato sigue en 'llamando' pero ya pasó
+  // la gracia, lo tratamos como consulta igual — así nunca queda trabado sin
+  // el botón Finalizar aunque el POST de promoción se haya perdido.
+  const graceRaw = r.estadoTurno === 'llamando';
+  const grace = graceRaw && minsDesde(r.calledAt||r.timestamp) < GRACIA_MIN;
+  const enConsulta = r.estadoTurno === 'atendiendo' || (graceRaw && !grace);
   const em = r.species === 'Felino' ? '🐈' : '🐕';
   const rowIdx = r.rowIndex;
   const svc = r.service || '';

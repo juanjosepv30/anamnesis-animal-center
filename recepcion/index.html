@@ -309,6 +309,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div class="rec-toptabs">
       <button class="rec-toptab on" id="rt-sala" onclick="verVista('sala')">🏠 Recepción</button>
       <button class="rec-toptab" id="rt-agenda" onclick="verVista('agenda')">📅 Agenda</button>
+      <button class="rec-toptab" id="rt-interes" onclick="verVista('interes')">📋 Interesados</button>
     </div>
     <div id="recVista">
     <div class="card">
@@ -342,6 +343,26 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     </div>
     </div><!-- /recVista -->
     <div id="agendaVista" style="display:none"></div>
+    <div id="interesVista" style="display:none">
+      <div class="card">
+        <div class="card-t">Agregar interesado</div>
+        <div class="card-sub">Personas que llamaron por un horario y no había cupo. Cuando se abra un hueco, los contactás desde acá.</div>
+        <div class="search-row">
+          <input type="text" id="iNombre" placeholder="Nombre">
+          <input type="number" id="iTel" placeholder="Teléfono (WhatsApp)">
+          <input type="text" id="iServicio" placeholder="Servicio de interés (opcional)">
+          <input type="text" id="iMedico" placeholder="Médico (opcional)">
+        </div>
+        <div class="search-row">
+          <input type="text" id="iNotas" placeholder="Notas: qué horario buscaba, etc. (opcional)" style="flex:1">
+          <button onclick="agregarInteres()">➕ Agregar</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-t">Lista de interesados</div>
+        <div id="interesList"><div class="spinner"></div></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -355,12 +376,84 @@ var _agendaMontada = false;
 function verVista(v){
   document.getElementById('rt-sala').classList.toggle('on', v==='sala');
   document.getElementById('rt-agenda').classList.toggle('on', v==='agenda');
-  document.getElementById('recVista').style.display   = v==='agenda' ? 'none' : '';
+  document.getElementById('rt-interes').classList.toggle('on', v==='interes');
+  document.getElementById('recVista').style.display    = v==='sala' ? '' : 'none';
   document.getElementById('agendaVista').style.display = v==='agenda' ? '' : 'none';
+  document.getElementById('interesVista').style.display = v==='interes' ? '' : 'none';
   if (v==='agenda' && !_agendaMontada) {
     _agendaMontada = true;
     AgendaMod.mount(document.getElementById('agendaVista'), { medicoFijo:'', api:API_URL });
   }
+  if (v==='interes') cargarInteresados();
+}
+
+// ── Lista de interesados (waitlist para huecos de cancelaciones) ──────────
+function agregarInteres(){
+  var nombre = document.getElementById('iNombre').value.trim();
+  var tel    = document.getElementById('iTel').value.trim();
+  if (!nombre && !tel) { toast('Poné al menos un nombre o un teléfono'); return; }
+  var data = {
+    nombre: nombre, tel: tel,
+    servicio: document.getElementById('iServicio').value.trim(),
+    medico:   document.getElementById('iMedico').value.trim(),
+    notas:    document.getElementById('iNotas').value.trim()
+  };
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'agregarInteresado', data:data }) })
+    .then(r=>r.json()).then(function(res){
+      if (!res || res.ok===false) { toast('No se pudo agregar'); return; }
+      ['iNombre','iTel','iServicio','iMedico','iNotas'].forEach(function(id){ document.getElementById(id).value=''; });
+      toast('Interesado agregado');
+      cargarInteresados();
+    }).catch(function(){ toast('Error de conexión'); });
+}
+
+function cargarInteresados(){
+  var cont = document.getElementById('interesList');
+  cont.innerHTML = '<div class="spinner"></div>';
+  fetch(API_URL + '?action=interesados&cb=' + Date.now())
+    .then(r=>r.json()).then(function(lista){
+      if (!Array.isArray(lista) || !lista.length) {
+        cont.innerHTML = '<div class="card-sub" style="padding:12px 4px">No hay interesados en espera.</div>';
+        return;
+      }
+      cont.innerHTML = lista.map(pintarInteresado).join('');
+    }).catch(function(){ cont.innerHTML = '<div class="card-sub">Error al cargar.</div>'; });
+}
+
+function pintarInteresado(it){
+  var tel = String(it.tel||'').replace(/\D/g,'');
+  var wa = tel ? '<a class="wr-btn" style="border-color:#25d366;color:#128c3e" target="_blank" href="https://wa.me/57'+tel+'">💬 WhatsApp</a>' : '';
+  var badge = it.estado==='contactado'
+    ? '<span class="badge badge-esp">Contactado</span>' : '';
+  var extra = [];
+  if (it.servicio) extra.push('🩺 '+esc(it.servicio));
+  if (it.medico)   extra.push('👩‍⚕️ '+esc(it.medico));
+  var sub = extra.length ? '<div class="wr-cita">'+extra.join(' · ')+'</div>' : '';
+  var notas = it.notas ? '<div class="wr-cita">📝 '+esc(it.notas)+'</div>' : '';
+  var acts =
+    wa+
+    '<button class="wr-btn" onclick="marcarInteres(\''+it.id+'\',\'contactado\')">✓ Contactado</button>'+
+    '<button class="wr-btn wr-btn-listo" onclick="marcarInteres(\''+it.id+'\',\'agendo\')">📅 Agendó</button>'+
+    '<button class="wr-btn" style="border-color:#fca5a5;color:#b91c1c" onclick="marcarInteres(\''+it.id+'\',\'descartado\')">✕ Descartar</button>';
+  return ''+
+    '<div class="wr-item" style="border-left-color:#0d9488">'+
+      '<div class="wr-info">'+
+        '<div class="wr-badge">'+badge+'</div>'+
+        '<div class="wr-name">'+esc(it.nombre||'(sin nombre)')+'</div>'+
+        (tel?'<div class="wr-cita">📞 '+esc(it.tel)+'</div>':'')+sub+notas+
+        '<div class="wr-acts">'+acts+'</div>'+
+      '</div>'+
+    '</div>';
+}
+
+function marcarInteres(id, estado){
+  if ((estado==='agendo'||estado==='descartado') &&
+      !confirm(estado==='agendo'?'¿Marcar como agendó? Sale de la lista.':'¿Descartar? Sale de la lista.')) return;
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'actualizarInteresado', id:id, estado:estado }) })
+    .then(r=>r.json()).then(function(res){
+      if (!res || res.ok===false) { toast('No se pudo actualizar'); return; }
+      cargarInteresados();
+    }).catch(function(){ toast('Error de conexión'); });
 }
 let selected = null;
 // #1 — Editar turno: cuando recepción corrige el paciente de un turno ya
