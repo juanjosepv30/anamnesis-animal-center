@@ -411,8 +411,9 @@ function cargarInteresados(){
   var cont = document.getElementById('interesList');
   cont.innerHTML = '<div class="spinner"></div>';
   fetch(API_URL + '?action=interesados&cb=' + Date.now())
-    .then(r=>r.json()).then(function(lista){
-      if (!Array.isArray(lista) || !lista.length) {
+    .then(r=>r.json()).then(function(res){
+      var lista = (res && res.interesados) || [];
+      if (!lista.length) {
         cont.innerHTML = '<div class="card-sub" style="padding:12px 4px">No hay interesados en espera.</div>';
         return;
       }
@@ -421,7 +422,8 @@ function cargarInteresados(){
 }
 
 function pintarInteresado(it){
-  var tel = String(it.tel||'').replace(/\D/g,'');
+  var telRaw = it.telefono || it.tel || '';
+  var tel = String(telRaw).replace(/\D/g,'');
   var wa = tel ? '<a class="wr-btn" style="border-color:#25d366;color:#128c3e" target="_blank" href="https://wa.me/57'+tel+'">💬 WhatsApp</a>' : '';
   var badge = it.estado==='contactado'
     ? '<span class="badge badge-esp">Contactado</span>' : '';
@@ -440,7 +442,7 @@ function pintarInteresado(it){
       '<div class="wr-info">'+
         '<div class="wr-badge">'+badge+'</div>'+
         '<div class="wr-name">'+esc(it.nombre||'(sin nombre)')+'</div>'+
-        (tel?'<div class="wr-cita">📞 '+esc(it.tel)+'</div>':'')+sub+notas+
+        (tel?'<div class="wr-cita">📞 '+esc(telRaw)+'</div>':'')+sub+notas+
         '<div class="wr-acts">'+acts+'</div>'+
       '</div>'+
     '</div>';
@@ -854,12 +856,12 @@ function serviceColor(s){
   // control se agrupa (azul) con los demás controles, no con la naranja.
   if(s.indexOf('control')!==-1)   return'#2563eb'; // azul
   if(s.indexOf('cirug')!==-1)     return'#7c3aed'; // morado
-  if(s.indexOf('desparasit')!==-1)return'#0d9488'; // verde azulado
+  if(s.indexOf('desparasit')!==-1)return'#6b7280'; // gris (como inyectología)
   if(s.indexOf('especial')!==-1)  return'#f97316'; // naranja
   if(s.indexOf('vacun')!==-1)     return'#ec4899'; // rosado
   if(s.indexOf('inyect')!==-1)    return'#6b7280'; // gris
   if(s.indexOf('cardiograma')!==-1)return'#e11d48'; // rosa fuerte (cardio)
-  if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1)return'#be123c'; // rojo vino
+  if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1)return'#eab308'; // amarillo
   if(s.indexOf('viajer')!==-1)    return'#0891b2'; // cian
   if(s.indexOf('general')!==-1||s.indexOf('consulta')!==-1)return'#16a34a'; // verde
   return'#94a3b8';
@@ -1528,6 +1530,6 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
-<script src="/js/agenda-mod.js?v=20260723e"></script>
+<script src="/js/agenda-mod.js?v=20260724a"></script>
 </body>
 </html>
