@@ -199,7 +199,7 @@
     if(cur<H_FIN) offs.push([cur,H_FIN]);
     return offs;
   }
-  function durServicio(svc){ var s=String(svc||'').toLowerCase(); if(s.indexOf('control')!==-1)return 30; if(s.indexOf('consulta')!==-1)return 60; if(s.indexOf('cirug')!==-1)return 60; return 30; }
+  function durServicio(svc){ var s=String(svc||'').toLowerCase(); if(s.indexOf('control')!==-1)return 30; if(s.indexOf('consulta')!==-1)return 60; if(s.indexOf('cirug')!==-1)return 60; if(s.indexOf('terapia')!==-1||s.indexOf('fisica')!==-1)return 60; return 30; }
   // Color del servicio = MISMOS colores de los turnos (ver serviceColor en
   // pantalla/index.html), para que la clínica maneje una sola paleta. Cirugía y
   // desparasitación no existen como turno, así que les damos un tono propio.
