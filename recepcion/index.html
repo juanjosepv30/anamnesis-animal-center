@@ -566,8 +566,7 @@ var SERVICIOS = [
   { v:'Desparasitación',        doctor:'ninguno', agenda:false, desc:'Desparasitación · médico general' },
   { v:'Viajero',                doctor:'auto', fijo:'Dr. Freddy Vera',   agenda:false, label:'Viajero / certificado', desc:'Certificado de viaje · Dr. Freddy' },
   { v:'Rayos X y Ecografía',    doctor:'eligeDoc', fijo:'Dra. Angie Valero', agenda:false, desc:'Imágenes · normalmente Dra. Angie' },
-  { v:'Ecocardiograma',         doctor:'eligeDoc', fijo:'Dr. Wilmer Páez', agenda:true, desc:'Cardiología · normalmente Dr. Wilmer' },
-  { v:'Electrocardiograma',     doctor:'eligeDoc', fijo:'Dr. Wilmer Páez', agenda:true, desc:'Cardiología · normalmente Dr. Wilmer' }
+  { v:'Ecocardiograma / Electrocardiograma', doctor:'eligeDoc', fijo:'Dr. Wilmer Páez', agenda:true, label:'Eco / Electrocardiograma', desc:'Cardiología · normalmente Dr. Wilmer' }
 ];
 
 function servicioCfg(v) {
@@ -1530,6 +1529,6 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
-<script src="/js/agenda-mod.js?v=20260724a"></script>
+<script src="/js/agenda-mod.js?v=20260724b"></script>
 </body>
 </html>

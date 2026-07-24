@@ -9,7 +9,7 @@
 // agendar ahí mismo. Colores: cirugía morado, consulta/control rosado, verde
 // cuando el paciente ya llegó, rojo cuando el médico no está disponible.
 (function(){
-  var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Vacunación','Inyectología','Desparasitación','Rayos X y Ecografía','Ecocardiograma','Electrocardiograma','Viajero'];
+  var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Vacunación','Inyectología','Desparasitación','Rayos X y Ecografía','Ecocardiograma / Electrocardiograma','Viajero'];
   var DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   var H_INI=6*60, H_FIN=22*60, PXMIN=0.9;          // 06:00–22:00; casillas cómodas
   var Y0=10;                                        // margen arriba (para que 06:00 no pise el header)
