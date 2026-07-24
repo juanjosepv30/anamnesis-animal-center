@@ -87,6 +87,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .fbtn{border:1.5px solid var(--bd);border-radius:99px;padding:6px 14px;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--tm);font-family:'DM Sans',sans-serif;transition:all .2s}
 .fbtn.active{border-color:var(--p);background:var(--pl);color:var(--p)}
 
+/* iOS Safari hace ZOOM al enfocar un campo con fuente <16px y NO vuelve solo:
+   por eso "tocaba hacer zoom out". Con 16px en los campos en celular, no zoomea. */
+@media(max-width:640px){
+  input, select, textarea { font-size:16px }
+}
+
 /* ── Main content ── */
 .cnt{max-width:900px;margin:0 auto;padding:20px 24px}
 /* Barra persistente de "mi paciente en consulta" (en todas las pestañas). */
