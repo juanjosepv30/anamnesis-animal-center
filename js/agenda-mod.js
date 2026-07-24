@@ -199,7 +199,12 @@
 
     function cargarMedicos(cb){
       fetch(api+'?action=medicos').then(function(r){return r.json();}).then(function(res){
-        S.medicos = (res&&res.ok) ? (res.medicos||[]).map(function(m){return m.medico;}) : [];
+        // Fuera los auxiliares puros (solo especialidad "Apoyo"): no tienen agenda,
+        // así que no van en el selector de médicos de la agenda.
+        S.medicos = (res&&res.ok) ? (res.medicos||[]).filter(function(m){
+          var e=(m.especialidades||[]).map(function(x){return String(x).toLowerCase();});
+          return !(e.length>0 && e.every(function(x){return x==='apoyo';}));
+        }).map(function(m){return m.medico;}) : [];
         var vis={}; S.medicos=S.medicos.filter(function(n){ if(vis[n])return false; vis[n]=true; return true; }).sort();
         if(!S.med && !medicoFijo && S.medicos.length) S.med=S.medicos[0];
         if(cb) cb();
