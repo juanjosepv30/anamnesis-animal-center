@@ -39,6 +39,13 @@
     '.agm-mact2{display:flex;gap:8px;margin-top:12px}',
     '.agm-mact2 .agm-btn{flex:1}',
     '.agm-llego{width:100%;margin-top:8px;padding:15px;font-size:1.05rem;background:#3B6D11}',
+    // Picker de servicios con color (igual que recepción): tarjetas con barra de
+    // color; la elegida se pinta entera de su color.
+    '.agm-svcpick{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:4px}',
+    '.agm-svc{text-align:left;border:2px solid var(--abd);border-left:7px solid var(--sc);border-radius:10px;padding:9px 11px;background:#fff;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:800;color:var(--atx);line-height:1.15;transition:box-shadow .12s,border-color .12s}',
+    '.agm-svc:hover{border-color:var(--sc);box-shadow:0 3px 10px rgba(58,33,64,.12)}',
+    '.agm-svc.on{border-color:var(--sc);background:var(--sc);color:#fff}',
+    '@media(min-width:560px){.agm-svcpick{grid-template-columns:repeat(3,1fr)}}',
     // No dejar seleccionar/copiar los textos de la UI (botones, tarjetas). El
     // "selector del mouse" que se activaba al arrastrar molestaba. En los campos
     // de texto SÍ se puede seleccionar, obvio.
@@ -676,9 +683,13 @@
           '<div style="margin-top:10px"><label>WhatsApp <span style="font-weight:400">(recordatorios)</span></label><input id="fTel" inputmode="numeric" value="'+esc(S.selCliente.phone||'')+'" placeholder="3001234567"></div>';
       $ov('mForm').innerHTML=
         cab+
-        '<div class="agm-mlbl">Datos de la cita</div>'+
-        '<div class="agm-row"><div><label>Servicio</label><select id="fSvc">'+SERVICIOS.map(function(s){return '<option'+(/consulta general/i.test(s)?' selected':'')+'>'+esc(s)+'</option>';}).join('')+'</select></div>'+
-          '<div id="fDurWrap"><label>Duración</label><select id="fDur"></select></div></div>'+
+        '<div class="agm-mlbl">Servicio — toca el color</div>'+
+        '<div class="agm-svcpick" id="fSvcPick">'+
+          SERVICIOS.map(function(s){ var sel=/consulta general/i.test(s);
+            return '<button type="button" class="agm-svc'+(sel?' on':'')+'" data-v="'+esc(s)+'" style="--sc:'+svcColor(s)+'">'+esc(s)+'</button>'; }).join('')+
+        '</div>'+
+        '<input type="hidden" id="fSvc" value="Consulta general">'+
+        '<div id="fDurWrap" style="margin-top:12px"><label>Duración</label><select id="fDur"></select></div>'+
         '<div style="margin-top:12px"><label>Notas <span style="font-weight:400">(opcional)</span></label><textarea id="fNot" rows="2" placeholder="Motivo, indicaciones…"></textarea></div>'+
         // Solo al forzar sobre un bloqueo: comprobante (foto de aprobación del Dr.).
         (S.crear.forzar
@@ -690,7 +701,13 @@
         '<div class="agm-err" id="fErr"></div>';
       var rs=$ov('fReset'); if(rs) rs.onclick=function(){ S.selCliente=null; abrirCrear(S.crear.fecha,S.crear.hora,S.crear.medico,S.crear.forzar); };
       $ov('fCancel').onclick=cerrarOv;
-      $ov('fSvc').onchange=syncDur; syncDur();
+      // Picker de servicios con color (como recepción): tocar una tarjeta la
+      // marca, guarda el valor en #fSvc y recalcula la duración.
+      if(S._ov) S._ov.querySelectorAll('.agm-svc').forEach(function(b){ b.onclick=function(){
+        S._ov.querySelectorAll('.agm-svc').forEach(function(x){ x.classList.remove('on'); });
+        b.classList.add('on'); $ov('fSvc').value=b.getAttribute('data-v'); syncDur();
+      }; });
+      syncDur();
       $ov('fGuardar').onclick=function(){ guardarCita(manual); };
     }
     // Duración: TODOS los servicios ofrecen 30 / 60 / 90 min. Arranca en el
