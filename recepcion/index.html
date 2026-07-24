@@ -1223,7 +1223,7 @@ function esEspecializado(r) {
 
 function loadWaitingRoom(silent) {
   if (!silent) document.getElementById('wrList').innerHTML = '<div class="spinner"></div>';
-  fetch(API_URL + '?action=records').then(r=>r.json()).then(function(res){
+  fetch(API_URL + '?action=records&cb=' + Date.now()).then(r=>r.json()).then(function(res){
     if (!res || !res.ok) { document.getElementById('wrList').innerHTML = '<div class="empty">Error al cargar.</div>'; return; }
     var today = new Date();
     wrRecords = (res.records || []).filter(function(r){

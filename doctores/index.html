@@ -577,7 +577,10 @@ function loadRecords(silent) {
     document.getElementById('lastUpdated').textContent = 'Actualizando...';
   }
   const pedidoEn = Date.now();
-  fetch(API_URL + '?action=records')
+  // cb= (cache-buster) OBLIGATORIO: Apps Script cachea las respuestas GET por
+  // URL exacta. Sin esto, un paciente que acaba de llegar (o cualquier cambio)
+  // NO aparece hasta que expira el cache — se veía como "se demora muchísimo".
+  fetch(API_URL + '?action=records&cb=' + Date.now())
     .then(function(r){ return r.json(); })
     .then(function(res) {
       if (res && res.ok) {
@@ -1988,7 +1991,7 @@ let ultimaVersion = null;
 function chequearCambios() {
   // No interrumpimos al médico si está leyendo una ficha abierta.
   if (document.querySelector('.rec.open')) return;
-  fetch(API_URL + '?action=version')
+  fetch(API_URL + '?action=version&cb=' + Date.now())
     .then(function(r){ return r.json(); })
     .then(function(res){
       if (!res || !res.ok) return;

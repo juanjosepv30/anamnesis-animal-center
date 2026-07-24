@@ -298,7 +298,7 @@ function esHoy(ts){
 }
 
 function cargar(){
-  fetch(API_URL + '?action=records')
+  fetch(API_URL + '?action=records&cb=' + Date.now())
     .then(function(r){ return r.json(); })
     .then(function(res){
       if (!res || !res.ok) return;
@@ -389,7 +389,7 @@ setInterval(reloj, 20000);
 // Así un llamado suena en ~2s en lugar de tardar hasta 8s.
 var ultimaVersion = null;
 function chequearVersion(){
-  fetch(API_URL + '?action=version')
+  fetch(API_URL + '?action=version&cb=' + Date.now())
     .then(function(r){ return r.json(); })
     .then(function(res){
       if (!res || !res.ok) return;
