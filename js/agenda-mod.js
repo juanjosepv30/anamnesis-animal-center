@@ -63,7 +63,9 @@
     '.agm-navb{border:1.5px solid var(--abd);background:#fff;border-radius:8px;padding:7px 10px;font-size:.9rem;font-weight:800;color:var(--apd);cursor:pointer;font-family:inherit;line-height:1}',
     '.agm-navlbl{font-size:.82rem;font-weight:800;color:var(--atx);min-width:120px;text-align:center}',
     '.agm-datewrap{position:relative;display:inline-block}',
-    '.agm-navlbl-pick{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}',
+    // Selector de fecha: se ve como BOTÓN (igual que ‹ › Hoy), no como texto
+    // subrayado. Sigue abriendo el salto a otra fecha al tocarlo.
+    '.agm-navlbl-pick{cursor:pointer;text-decoration:none;border:1.5px solid var(--abd);background:#fff;border-radius:8px;padding:6px 10px}',
     // input date transparente que cubre la etiqueta (tap = calendario nativo).
     '.agm-datewrap input[type=date]{position:absolute;top:-4px;left:-6px;right:-6px;bottom:-4px;opacity:0;cursor:pointer;border:0;padding:0;margin:0;background:transparent}',
     '.agm-seg{display:flex;border:1.5px solid var(--abd);border-radius:9px;overflow:hidden}',
