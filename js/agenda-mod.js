@@ -197,13 +197,19 @@
     el.innerHTML = '<div class="agm"><div class="agm-body"></div></div>';
     var body = el.querySelector('.agm-body');
 
-    fetch(api+'?action=medicos').then(function(r){return r.json();}).then(function(res){
-      S.medicos = (res&&res.ok) ? (res.medicos||[]).map(function(m){return m.medico;}) : [];
-      // sin duplicar (un médico puede tener varias especialidades)
-      var vis={}; S.medicos=S.medicos.filter(function(n){ if(vis[n])return false; vis[n]=true; return true; }).sort();
-      if(!S.med && !medicoFijo && S.medicos.length) S.med=S.medicos[0];
-      pintar();
-    }).catch(function(){ pintar(); });
+    function cargarMedicos(cb){
+      fetch(api+'?action=medicos').then(function(r){return r.json();}).then(function(res){
+        S.medicos = (res&&res.ok) ? (res.medicos||[]).map(function(m){return m.medico;}) : [];
+        var vis={}; S.medicos=S.medicos.filter(function(n){ if(vis[n])return false; vis[n]=true; return true; }).sort();
+        if(!S.med && !medicoFijo && S.medicos.length) S.med=S.medicos[0];
+        if(cb) cb();
+      }).catch(function(){ if(cb) cb(); });
+    }
+    // Con médico fijo (doctores) NO hace falta la lista para dibujar: pintamos YA
+    // (una sola llamada: citas+bloqueos) y traemos los médicos en segundo plano.
+    // Sin médico fijo (recepción) sí necesitamos la lista para el selector.
+    if(medicoFijo){ S.med=medicoFijo; pintar(); cargarMedicos(); }
+    else { cargarMedicos(pintar); }
 
     function medOpts(sel){ return S.medicos.map(function(n){return '<option value="'+esc(n)+'"'+(n===sel?' selected':'')+'>'+esc(n)+'</option>';}).join(''); }
     function $(id){ return body.querySelector('#'+id); }
@@ -213,14 +219,15 @@
     function diasVista(){
       var base=new Date(S.ancla.getFullYear(),S.ancla.getMonth(),S.ancla.getDate());
       if(S.vista==='dia') return [ base ];
-      // '3dias' (celular) y 'semana' (escritorio) muestran la MISMA semana
-      // completa (Lun–Sáb). La diferencia es solo visual: en '3dias' las
-      // columnas son angostas y se ven ~3 a la vez, con scroll horizontal para
-      // recorrer la semana; las flechas cambian de SEMANA.
-      var lun=lunesDe(S.ancla), out=[]; for(var i=0;i<6;i++) out.push(addDias(lun,i)); return out;   // Lun–Sáb
+      // '3dias' (celular): arranca en el DÍA ANCLA (hoy por defecto) y va HACIA
+      // ADELANTE — los días que ya pasaron no importan. Muestra 6 días (se ven
+      // ~3 a la vez y se recorren con scroll horizontal); las flechas avanzan 3.
+      if(S.vista==='3dias'){ var out=[]; for(var i=0;i<6;i++) out.push(addDias(base,i)); return out; }
+      // 'semana' (escritorio): Lun–Sáb de la semana del ancla.
+      var lun=lunesDe(S.ancla), outw=[]; for(var j=0;j<6;j++) outw.push(addDias(lun,j)); return outw;
     }
     function rangoVista(){ var d=diasVista(); return { desde:isoDe(d[0]), hasta:isoDe(d[d.length-1]) }; }
-    function pasoVista(){ return S.vista==='dia'?1:7; }
+    function pasoVista(){ return S.vista==='dia'?1 : (S.vista==='3dias'?3:7); }
     function etiquetaRango(){
       var d=diasVista();
       if(S.vista==='dia') return DIAS[d[0].getDay()]+' '+d[0].getDate()+'/'+(d[0].getMonth()+1);

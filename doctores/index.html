@@ -128,6 +128,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .rec-acts{flex-shrink:0;display:flex;gap:6px;align-items:center}
 .rec-aus{flex-shrink:0;border:1.5px solid var(--bd);background:var(--wh);color:var(--tm);font-weight:700;font-family:inherit;font-size:.82rem;border-radius:9px;padding:8px 12px;cursor:pointer}
 .rec-aus:hover{border-color:#c0392b;color:#c0392b}
+/* En celular, Ausente y Finalizar van UNO ENCIMA DEL OTRO (no se ven mal). */
+@media(max-width:560px){.rec-acts{flex-direction:column;align-items:stretch;gap:5px}.rec-aus,.rec-fin{width:100%;text-align:center}}
 .rec-fin:active{transform:scale(.97)}
 /* Overlay de anamnesis: se abre al tocar cualquier tarjeta, en cualquier estado. */
 .anam-overlay{display:none;position:fixed;inset:0;background:rgba(20,10,30,.55);z-index:200;padding:14px;overflow-y:auto}
@@ -1923,6 +1925,6 @@ loadRecords();              // refresca con el backend por detrás
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js, para que un refresco
      traiga el JS nuevo y no la versión cacheada por el navegador. -->
-<script src="/js/agenda-mod.js?v=20260723a"></script>
+<script src="/js/agenda-mod.js?v=20260723b"></script>
 </body>
 </html>
