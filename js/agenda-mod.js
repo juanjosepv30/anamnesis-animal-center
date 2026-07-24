@@ -71,11 +71,11 @@
     '.agm-seg{display:flex;border:1.5px solid var(--abd);border-radius:8px;overflow:hidden;flex-shrink:0}',
     '.agm-seg button{border:none;background:#fff;padding:5px 9px;font-size:.72rem;font-weight:700;color:var(--atm);cursor:pointer;font-family:inherit}',
     '.agm-seg button.on{background:var(--apl);color:var(--apd)}',
-    // Fila de controles bajo la navegación: leyenda (una sola línea) a la
-    // izquierda y, a la derecha, el toggle Día/3días + Bloqueos juntos.
-    '.agm-toolrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}',
-    '.agm-toolbtns{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto}',
-    '.agm-leg{display:flex;gap:9px;flex-wrap:nowrap;overflow-x:auto;font-size:.66rem;color:var(--atm);min-width:0;-webkit-overflow-scrolling:touch}',
+    // Controles bajo la navegación: primero los botones (Día/3días + Bloqueos)
+    // a la derecha, y en su propio renglón la leyenda a todo el ancho para que
+    // las 6 entren en UNA línea sin recortarse.
+    '.agm-toolbtns{display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:8px}',
+    '.agm-leg{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;font-size:.64rem;color:var(--atm);margin-bottom:8px;-webkit-overflow-scrolling:touch}',
     '.agm-leg span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0}',
     '.agm-lnk{border:1px solid var(--abd);background:#fff;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;color:#b45309;cursor:pointer;font-family:inherit}',
     '.agm-lnk:hover{background:#fff7ed}',
@@ -270,24 +270,22 @@
             '<button class="agm-navb" id="cHoy" style="font-size:.76rem">Hoy</button>'+
           '</div>'+
         '</div>'+
-        '<div class="agm-toolrow">'+
-          '<div class="agm-leg">'+
-            '<span><i class="agm-dot" style="background:#16a34a22;border:1px solid #16a34a"></i>Consulta</span>'+
-            '<span><i class="agm-dot" style="background:#2563eb22;border:1px solid #2563eb"></i>Control</span>'+
-            '<span><i class="agm-dot" style="background:#f9731622;border:1px solid #f97316"></i>Especializada</span>'+
-            '<span><i class="agm-dot" style="background:#7c3aed22;border:1px solid #7c3aed"></i>Cirugía</span>'+
-            '<span><i class="agm-dot" style="background:#fff;box-shadow:inset 0 0 0 2px #16a34a"></i>Llegó</span>'+
-            '<span><i class="agm-dot" style="background:#F7C1C1;border:1px solid #A32D2D"></i>No disp.</span>'+
+        '<div class="agm-toolbtns">'+
+          '<div class="agm-seg">'+
+            '<button id="cDia" class="'+(S.vista==='dia'?'on':'')+'">Día</button>'+
+            (esMovil
+              ? '<button id="cSem" class="'+(S.vista==='3dias'?'on':'')+'">3 días</button>'
+              : '<button id="cSem" class="'+(S.vista==='semana'?'on':'')+'">Semana</button>')+
           '</div>'+
-          '<div class="agm-toolbtns">'+
-            '<div class="agm-seg">'+
-              '<button id="cDia" class="'+(S.vista==='dia'?'on':'')+'">Día</button>'+
-              (esMovil
-                ? '<button id="cSem" class="'+(S.vista==='3dias'?'on':'')+'">3 días</button>'
-                : '<button id="cSem" class="'+(S.vista==='semana'?'on':'')+'">Semana</button>')+
-            '</div>'+
-            '<button class="agm-lnk" id="cBloq">🚫 Bloqueos</button>'+
-          '</div>'+
+          '<button class="agm-lnk" id="cBloq">🚫 Bloqueos</button>'+
+        '</div>'+
+        '<div class="agm-leg">'+
+          '<span><i class="agm-dot" style="background:#16a34a22;border:1px solid #16a34a"></i>Consulta</span>'+
+          '<span><i class="agm-dot" style="background:#2563eb22;border:1px solid #2563eb"></i>Control</span>'+
+          '<span><i class="agm-dot" style="background:#f9731622;border:1px solid #f97316"></i>Especial.</span>'+
+          '<span><i class="agm-dot" style="background:#7c3aed22;border:1px solid #7c3aed"></i>Cirugía</span>'+
+          '<span><i class="agm-dot" style="background:#fff;box-shadow:inset 0 0 0 2px #16a34a"></i>Llegó</span>'+
+          '<span><i class="agm-dot" style="background:#F7C1C1;border:1px solid #A32D2D"></i>No disp.</span>'+
         '</div>'+
         (S.reprog?'<div class="agm-reprog">🔁 Reprogramando a <b>'+esc(S.reprog.pet)+'</b> — toca el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
         (S.vista==='3dias'?'<div class="agm-shint"><i>↔</i>Desliza para ver toda la semana</div>':'')+
