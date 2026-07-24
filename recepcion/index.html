@@ -191,6 +191,16 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .rec-toptabs{display:flex;gap:8px;margin-bottom:14px}
 .rec-toptab{flex:1;border:1.5px solid var(--bd);background:var(--wh);border-radius:12px;padding:11px;font-size:.9rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:inherit}
 .rec-toptab.on{background:var(--pl);color:var(--pd);border-color:var(--p)}
+/* Horarios de atención */
+.hor-card{border:1.5px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:var(--wh)}
+.hor-hd{font-size:.95rem;margin-bottom:10px}
+.hor-hd b{color:var(--tx)}
+.mini-hint{font-size:.68rem;font-weight:700;color:var(--tm);background:var(--bg);border-radius:99px;padding:2px 8px;margin-left:6px}
+.hor-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:10px}
+@media(max-width:640px){.hor-grid{grid-template-columns:repeat(4,1fr)}}
+.hor-dia{display:flex;flex-direction:column;gap:3px}
+.hor-dia-lbl{font-size:.68rem;font-weight:800;color:var(--tm);text-align:center}
+.hor-sel{border:1.5px solid var(--bd);border-radius:8px;padding:6px 4px;font-size:.72rem;font-family:inherit;background:var(--bg);color:var(--tx);outline:none;width:100%}
 
 /* ── Móvil: recepción se usa mucho desde el celular ── */
 @media(max-width:560px){
@@ -310,6 +320,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <button class="rec-toptab on" id="rt-sala" onclick="verVista('sala')">🏠 Recepción</button>
       <button class="rec-toptab" id="rt-agenda" onclick="verVista('agenda')">📅 Agenda</button>
       <button class="rec-toptab" id="rt-interes" onclick="verVista('interes')">📋 Interesados</button>
+      <button class="rec-toptab" id="rt-horarios" onclick="verVista('horarios')">🗓️ Horarios</button>
     </div>
     <div id="recVista">
     <div class="card">
@@ -361,6 +372,13 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
         <div id="interesList"><div class="spinner"></div></div>
       </div>
     </div>
+    <div id="horariosVista" style="display:none">
+      <div class="card">
+        <div class="card-t">Horarios de atención</div>
+        <div class="card-sub">Por médico y día: <b>Mañana</b> (6:00–14:00), <b>Tarde</b> (14:00–22:00), <b>Todo el día</b> o <b>Libre</b>. Fuera de su turno no se puede agendar. Un médico sin horario cargado no tiene restricción.</div>
+        <div id="horariosList"><div class="spinner"></div></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -375,14 +393,69 @@ function verVista(v){
   document.getElementById('rt-sala').classList.toggle('on', v==='sala');
   document.getElementById('rt-agenda').classList.toggle('on', v==='agenda');
   document.getElementById('rt-interes').classList.toggle('on', v==='interes');
-  document.getElementById('recVista').style.display    = v==='sala' ? '' : 'none';
-  document.getElementById('agendaVista').style.display = v==='agenda' ? '' : 'none';
+  document.getElementById('rt-horarios').classList.toggle('on', v==='horarios');
+  document.getElementById('recVista').style.display     = v==='sala' ? '' : 'none';
+  document.getElementById('agendaVista').style.display  = v==='agenda' ? '' : 'none';
   document.getElementById('interesVista').style.display = v==='interes' ? '' : 'none';
+  document.getElementById('horariosVista').style.display = v==='horarios' ? '' : 'none';
   if (v==='agenda' && !_agendaMontada) {
     _agendaMontada = true;
     AgendaMod.mount(document.getElementById('agendaVista'), { medicoFijo:'', api:API_URL });
   }
   if (v==='interes') cargarInteresados();
+  if (v==='horarios') cargarHorarios();
+}
+
+// ── Horarios de atención (turnos semanales por médico) ────────────────────
+var _horariosData = {};   // { medico: ['','M','M',...] }
+var _diasLbl = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+function cargarHorarios(){
+  var cont = document.getElementById('horariosList');
+  cont.innerHTML = '<div class="spinner"></div>';
+  // Necesitamos el directorio de médicos y los horarios guardados.
+  Promise.all([
+    fetch(API_URL + '?action=medicos').then(r=>r.json()),
+    fetch(API_URL + '?action=horarios&cb=' + Date.now()).then(r=>r.json())
+  ]).then(function(res){
+    var meds = (res[0] && res[0].medicos) || [];
+    _horariosData = (res[1] && res[1].horarios) || {};
+    // Fuera los auxiliares puros (solo Apoyo): no agendan, no tienen horario.
+    meds = meds.filter(function(m){
+      var e = (m.especialidades||[]).map(function(x){return String(x).toLowerCase();});
+      return !(e.length>0 && e.every(function(x){return x==='apoyo';}));
+    });
+    if (!meds.length) { cont.innerHTML = '<div class="card-sub">No hay médicos.</div>'; return; }
+    cont.innerHTML = meds.map(pintarHorarioMedico).join('');
+  }).catch(function(){ cont.innerHTML = '<div class="card-sub">Error al cargar.</div>'; });
+}
+function pintarHorarioMedico(m){
+  var med = m.medico;
+  var dias = _horariosData[med] || ['','','','','','',''];
+  var sinHorario = !_horariosData[med];
+  var filas = _diasLbl.map(function(lbl, d){
+    var v = dias[d] || '';
+    function opt(val,txt){ return '<option value="'+val+'"'+(v===val?' selected':'')+'>'+txt+'</option>'; }
+    return '<div class="hor-dia">'+
+      '<span class="hor-dia-lbl">'+lbl+'</span>'+
+      '<select data-med="'+esc(med)+'" data-dia="'+d+'" class="hor-sel">'+
+        opt('','Libre')+opt('M','Mañana')+opt('T','Tarde')+opt('A','Todo el día')+
+      '</select></div>';
+  }).join('');
+  return '<div class="hor-card" id="hor-'+btoa(unescape(encodeURIComponent(med))).replace(/=/g,'')+'">'+
+    '<div class="hor-hd"><b>'+esc(med)+'</b>'+(sinHorario?' <span class="mini-hint">sin horario · sin restricción</span>':'')+'</div>'+
+    '<div class="hor-grid">'+filas+'</div>'+
+    '<button class="wr-btn wr-btn-listo" onclick="guardarHorarioMed(\''+esc(med).replace(/'/g,"\\'")+'\')">Guardar horario</button>'+
+  '</div>';
+}
+function guardarHorarioMed(med){
+  var sels = document.querySelectorAll('.hor-sel[data-med="'+med.replace(/"/g,'\\"')+'"]');
+  var dias = ['','','','','','',''];
+  sels.forEach(function(s){ dias[+s.getAttribute('data-dia')] = s.value; });
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'guardarHorario', medico:med, dias:dias }) })
+    .then(r=>r.json()).then(function(res){
+      if (res && res.ok) { _horariosData[med] = dias; showToast('Horario guardado · ' + med); cargarHorarios(); }
+      else { showToast((res && res.error) || 'No se pudo guardar'); }
+    }).catch(function(){ showToast('Error de conexión'); });
 }
 
 // ── Lista de interesados (waitlist para huecos de cancelaciones) ──────────
@@ -1596,6 +1669,6 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
-<script src="/js/agenda-mod.js?v=20260724k"></script>
+<script src="/js/agenda-mod.js?v=20260724l"></script>
 </body>
 </html>

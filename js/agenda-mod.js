@@ -123,6 +123,9 @@
     // verde para que se note que el paciente ya está en la clínica.
     '.agm-ev.lleg{box-shadow:inset 0 0 0 2px #16a34a}',
     '.agm-blk{position:absolute;left:2px;right:2px;border-radius:6px;background:repeating-linear-gradient(45deg,#F7C1C1,#F7C1C1 6px,#f4b4b4 6px,#f4b4b4 12px);border-left:3px solid #A32D2D;color:#501313;font-size:.7rem;font-weight:700;padding:2px 5px;overflow:hidden;cursor:pointer;z-index:2}',
+    // Fuera de turno (según horario semanal): gris tenue, informativo, DEBAJO de
+    // las citas (z-index 1) y sin capturar clicks (se puede agendar igual).
+    '.agm-off{position:absolute;left:2px;right:2px;border-radius:4px;background:repeating-linear-gradient(45deg,rgba(148,163,184,.15),rgba(148,163,184,.15) 7px,rgba(148,163,184,.28) 7px,rgba(148,163,184,.28) 14px);color:#64748b;font-size:.6rem;font-weight:800;padding:2px 5px;overflow:hidden;pointer-events:none;z-index:1;letter-spacing:.4px}',
     // ── Modal ──
     '.agm-ov{position:fixed;inset:0;background:rgba(20,8,30,.45);display:flex;align-items:flex-start;justify-content:center;z-index:9999;padding:24px 12px;overflow-y:auto}',
     '.agm-modal{background:#fff;border-radius:16px;padding:20px;max-width:460px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}',
@@ -322,9 +325,11 @@
       var r=rangoVista();
       Promise.all([
         fetch(api+'?action=citas&fecha='+r.desde+'&hasta='+r.hasta+'&medico='+encodeURIComponent(med)).then(function(x){return x.json();}),
-        fetch(api+'?action=bloqueos&fecha='+r.desde+'&hasta='+r.hasta+'&medico='+encodeURIComponent(med)).then(function(x){return x.json();})
+        fetch(api+'?action=bloqueos&fecha='+r.desde+'&hasta='+r.hasta+'&medico='+encodeURIComponent(med)).then(function(x){return x.json();}),
+        fetch(api+'?action=horarios&cb='+Date.now()).then(function(x){return x.json();})
       ]).then(function(rr){
         var citas=(rr[0]&&rr[0].citas)||[], bloqs=(rr[1]&&rr[1].bloqueos)||[];
+        S.horarios=(rr[2]&&rr[2].horarios)||{};
         pintarGrid(W, med, citas, bloqs);
       }).catch(function(){ W.innerHTML='<div class="agm-empty">Error al cargar la agenda.</div>'; });
     }
@@ -337,6 +342,7 @@
         .then(function(r){return r.json();}).then(function(res){
           if(res&&res.ok){ cargarCal(); return; }
           if(res&&res.bloqueado){ if(confirm((res.error||'Hay un bloqueo en ese horario.')+' ¿Mover igual?')){ guardarMoverCita(c,fecha,hora,duracion,true); } else { cargarCal(); } return; }
+          if(res&&res.fueraTurno){ if(confirm((res.error||'Ese horario está fuera del turno del médico.')+' ¿Mover igual?')){ guardarMoverCita(c,fecha,hora,duracion,true); } else { cargarCal(); } return; }
           alert((res&&res.error)||'No se pudo mover la cita.'); cargarCal();
         }).catch(function(){ alert('Error de conexión.'); cargarCal(); });
     }
@@ -386,6 +392,17 @@
             h+='<div class="agm-blk" data-bid="'+esc(b.id)+'" title="Toca para editar" style="top:'+yOf(s.ini)+'px;height:'+((s.fin-s.ini)*PXMIN-1)+'px">'+(si===0?'🚫 '+(b.motivo?esc(b.motivo):'No disponible'):'')+'</div>';
           });
         });
+        // Fuera de turno: sombreado gris donde el médico NO atiende ese día según
+        // su horario semanal (mañana/tarde/ambos/libre). Es informativo
+        // (pointer-events:none): igual se puede agendar tocando y confirmando.
+        var _dias7=(S.horarios||{})[med];
+        if(_dias7){
+          var _code=_dias7[new Date(iso+'T12:00:00').getDay()]||'';
+          var _offs = _code==='M' ? [[14*60,H_FIN]] : _code==='T' ? [[H_INI,14*60]] : _code==='A' ? [] : [[H_INI,H_FIN]];
+          _offs.forEach(function(o){ var oi=Math.max(o[0],H_INI), of=Math.min(o[1],H_FIN); if(of-oi<5)return;
+            h+='<div class="agm-off" style="top:'+yOf(oi)+'px;height:'+((of-oi)*PXMIN)+'px">Fuera de turno</div>';
+          });
+        }
         // citas de ese día
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
           var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio); var alt=Math.max(dur*PXMIN-1,18);
@@ -644,8 +661,13 @@
       var fc=$ov('fComp'), file=fc&&fc.files&&fc.files[0];
       function enviar(){
         fetch(api,{method:'POST',body:JSON.stringify({action:'crearCita',data:data})}).then(function(r){return r.json();}).then(function(res){
-          if(res&&res.ok){ cerrarOv(); cargarCal(); }
-          else { var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent=(res&&res.error)||'No se pudo agendar.'; }
+          if(res&&res.ok){ cerrarOv(); cargarCal(); return; }
+          // Fuera del turno del médico: se puede agendar igual si recepción confirma.
+          if(res&&res.fueraTurno&&!data.forzar){
+            if(confirm((res.error||'Ese horario está fuera del turno del médico.')+' ¿Agendar igual?')){ data.forzar=true; enviar(); return; }
+            var gg=$ov('fGuardar'); if(gg){gg.textContent='Agendar →';gg.disabled=false;} return;
+          }
+          var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent=(res&&res.error)||'No se pudo agendar.';
         }).catch(function(){ var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent='Error de conexión.'; });
       }
       if(S.crear.forzar && file){ comprimirImagen(file, function(du){ data.comprobante=du; enviar(); }); }
