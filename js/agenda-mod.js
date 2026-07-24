@@ -12,7 +12,7 @@
   // Servicios AGENDABLES (los que van al desplegable de crear cita). Inyectología
   // y desparasitación NO se agendan (son por orden de llegada), así que no están.
   // "Certificado de viaje" es el nombre del antes llamado "Viajero".
-  var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Vacunación','Rayos X y Ecografía','Ecocardiograma / Electrocardiograma','Certificado de viaje'];
+  var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Terapia física','Vacunación','Rayos X y Ecografía','Ecocardiograma / Electrocardiograma','Certificado de viaje'];
   var DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   var H_INI=6*60, H_FIN=22*60, PXMIN=0.9;          // 06:00–22:00; casillas cómodas
   var Y0=10;                                        // margen arriba (para que 06:00 no pise el header)
@@ -20,6 +20,25 @@
 
   var CSS=[
     '.agm{--ap:#8e3f9e;--apd:#6d2f7a;--apl:#f3e7f7;--abd:#e8daf0;--abg:#faf7ff;--atx:#1a0a2e;--atm:#6b5c7e;-webkit-user-select:none;user-select:none}',
+    // Detalle de cita: datos copiables, duración, botón Actualizar (morado si
+    // cambió), acciones Cancelar/Reprogramar en fila y Llegó grande.
+    '.agm-infbox{display:flex;flex-direction:column;gap:5px;margin:9px 0}',
+    '.agm-inf{display:flex;align-items:center;gap:8px;font-size:.86rem;padding:8px 10px;border-radius:9px;border:1px solid var(--abd);background:var(--abg);cursor:pointer}',
+    '.agm-inf:hover{background:var(--apl)}',
+    '.agm-inf-l{color:var(--atm);font-weight:800;font-size:.7rem;min-width:52px;text-transform:uppercase;letter-spacing:.3px}',
+    '.agm-inf-v{color:var(--atx);font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.agm-inf-cp{font-size:.66rem;color:var(--apd);font-weight:800;opacity:.4}',
+    '.agm-inf:hover .agm-inf-cp{opacity:.9}',
+    '.agm-inf.copiado{background:#e7f6ec;border-color:#8fce9f}',
+    '.agm-inf.copiado .agm-inf-cp{opacity:1;color:#15803d}',
+    '.agm-durrow{display:flex;align-items:center;gap:10px;margin-top:4px}',
+    '.agm-durnow{font-size:.85rem;color:var(--atm);font-weight:800;white-space:nowrap}',
+    '.agm-durrow select{flex:1}',
+    '.agm-actualizar{background:#f3eef7;border:1.5px solid var(--abd);color:var(--atm);font-weight:800;transition:all .15s}',
+    '.agm-actualizar.on{background:var(--ap);border-color:var(--ap);color:#fff}',
+    '.agm-mact2{display:flex;gap:8px;margin-top:12px}',
+    '.agm-mact2 .agm-btn{flex:1}',
+    '.agm-llego{width:100%;margin-top:8px;padding:15px;font-size:1.05rem;background:#3B6D11}',
     // No dejar seleccionar/copiar los textos de la UI (botones, tarjetas). El
     // "selector del mouse" que se activaba al arrastrar molestaba. En los campos
     // de texto SÍ se puede seleccionar, obvio.
@@ -185,6 +204,7 @@
     if(s.indexOf('vacun')!==-1)     return '#ec4899'; // rosado
     if(s.indexOf('inyect')!==-1)    return '#6b7280'; // gris
     if(s.indexOf('cardiograma')!==-1) return '#e11d48'; // rosa fuerte (cardio)
+    if(s.indexOf('terapia')!==-1||s.indexOf('fisica')!==-1) return '#14b8a6'; // terapia física (teal)
     if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1) return '#eab308'; // amarillo
     if(s.indexOf('viaje')!==-1)    return '#0891b2'; // cian
     if(s.indexOf('general')!==-1||s.indexOf('consulta')!==-1) return '#16a34a'; // verde
@@ -719,79 +739,87 @@
       }catch(e){ cb(''); }
     }
 
-    // ══════════ MODAL: detalle de cita (Llegó / Cancelar) ══════════
+    // ══════════ MODAL: detalle de cita (Llegó / Cancelar / Actualizar) ══════════
+    function _copiaFallback(t){ try{ var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }catch(e){} }
     function abrirDetalle(c){
       var d=mkFecha(c.fecha);
+      var dur0=+c.duracion||durServicio(c.servicio);
+      // Fila de dato COPIABLE (toca para copiar teléfono/cédula/nombre/HC).
+      function inf(icon,label,val){ if(val==null||val==='')return '';
+        return '<div class="agm-inf" data-copy="'+esc(String(val))+'"><span>'+icon+'</span>'+
+          '<span class="agm-inf-l">'+label+'</span><span class="agm-inf-v">'+esc(String(val))+'</span>'+
+          '<span class="agm-inf-cp">copiar</span></div>'; }
       overlay(
         '<div class="agm-mh"><div class="agm-mt">'+esc(c.petName||c.owner||'Cita')+'</div><button class="agm-mx" id="dX">×</button></div>'+
         '<div class="agm-when"><span class="agm-wpill">📅 '+esc(DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1))+'</span>'+
           '<span class="agm-wpill">🕐 '+esc(c.hora)+'</span><span class="agm-wpill">'+esc(c.servicio||'')+'</span></div>'+
-        '<div style="font-size:.85rem;color:var(--atm);line-height:1.6">'+
-          (c.owner?'👤 '+esc(c.owner)+'<br>':'')+
-          (c.vetesoftHc?'🗂️ HC '+esc(c.vetesoftHc)+'<br>':'')+
-          (c.phone?'📞 '+esc(c.phone)+'<br>':'')+
-          (c.comprobante?'<a href="'+esc(c.comprobante)+'" target="_blank" rel="noopener" style="color:#6d2f7a;font-weight:700">📎 Ver comprobante</a><br>':'')+
-          (c.llego?'<b style="color:#3B6D11">✓ Ya llegó — turno '+esc(c.turno||'')+'</b>':'')+
+        '<div class="agm-infbox">'+
+          inf('👤','Dueño', c.owner)+
+          inf('🪪','Cédula', c.cedula)+
+          inf('🗂️','HC', c.vetesoftHc)+
+          inf('📞','Teléfono', c.phone)+
         '</div>'+
-        // Horario: cambiar hora y/o duración desde acá (sirve en celular sin
-        // arrastrar). Duración en opciones de 30/60/90 min.
+        (c.comprobante?'<a href="'+esc(c.comprobante)+'" target="_blank" rel="noopener" style="color:#6d2f7a;font-weight:700;font-size:.82rem;display:inline-block;margin-top:2px">📎 Ver comprobante</a>':'')+
+        (c.llego?'<div style="margin-top:6px"><b style="color:#3B6D11">✓ Ya llegó — turno '+esc(c.turno||'')+'</b></div>':'')+
+        // Duración: la actual + desplegable para cambiarla (sin editar la hora).
         (c.llego?'':
-          '<div class="agm-mlbl">Horario</div>'+
-          '<div class="agm-row">'+
-            '<div><label>Hora</label><select id="dHora">'+horaOpts(c.hora)+'</select></div>'+
-            '<div><label>Duración</label><select id="dDur">'+durOpts(c.duracion)+'</select></div>'+
-          '</div>'+
-          '<button class="agm-btn agm-btn-g" id="dGuardarHora" style="width:100%;margin-top:8px">Guardar horario</button>')+
-        // Nota + marca de pago: editables acá mismo, sin reprogramar.
+          '<div class="agm-mlbl">Duración</div>'+
+          '<div class="agm-durrow"><span class="agm-durnow">Actual: '+dur0+' min</span>'+
+            '<select id="dDur">'+durOpts(dur0)+'</select></div>')+
         '<div class="agm-mlbl">Nota</div>'+
         '<textarea id="dNota" rows="2" placeholder="Nota para esta cita…">'+esc(c.notas||'')+'</textarea>'+
         '<label class="agm-chk"><input type="checkbox" id="dPago"'+(c.pagado?' checked':'')+'> 💵 El cliente ya pagó</label>'+
-        // Comprobante de pago: solo aparece si marcan "ya pagó", y es obligatorio.
         '<div id="dPagoBox" style="margin-top:8px;'+(c.pagado?'':'display:none')+'">'+
           (c.compPago?'<a href="'+esc(c.compPago)+'" target="_blank" rel="noopener" style="color:#6d2f7a;font-weight:700;font-size:.82rem">📎 Ver comprobante</a><br>':'')+
           '<label style="font-size:.78rem;color:var(--atm)">Comprobante de pago '+(c.compPago?'(reemplazar, opcional)':'(obligatorio)')+'</label>'+
           '<input type="file" id="dCompPago" accept="image/*" capture="environment">'+
         '</div>'+
-        '<button class="agm-btn agm-btn-g" id="dGuardarNota" style="width:100%;margin-top:10px">Guardar</button>'+
-        '<div class="agm-mact" style="flex-wrap:wrap;margin-top:14px">'+
+        // Actualizar: se pone MORADO solo si algo cambió (nota, pago o duración).
+        (c.llego?'':'<button class="agm-btn agm-actualizar" id="dActualizar" style="width:100%;margin-top:12px">Actualizar</button>')+
+        // Cancelar + Reprogramar ocupan el renglón; Llegó grande abajo.
+        '<div class="agm-mact2">'+
           '<button class="agm-btn agm-btn-g" id="dCancel" style="color:#c0392b;border-color:#f1c0c0">Cancelar cita</button>'+
           (c.llego?'':'<button class="agm-btn agm-btn-g" id="dReprog">🔁 Reprogramar</button>')+
-          (c.llego?'':'<button class="agm-btn agm-block" id="dLlego" style="background:#3B6D11">✓ Llegó</button>')+
         '</div>'+
+        (c.llego?'':'<button class="agm-btn agm-block agm-llego" id="dLlego">✓ Llegó</button>')+
         '<div class="agm-err" id="dErr"></div>'
       );
       $ov('dX').onclick=cerrarOv;
+      // Copiar al tocar un dato.
+      if(S._ov) S._ov.querySelectorAll('.agm-inf').forEach(function(el){
+        el.onclick=function(){ var t=el.getAttribute('data-copy'); var cp=el.querySelector('.agm-inf-cp');
+          function done(){ el.classList.add('copiado'); if(cp)cp.textContent='✓ copiado'; setTimeout(function(){ el.classList.remove('copiado'); if(cp)cp.textContent='copiar'; },1200); }
+          try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done,function(){_copiaFallback(t);done();}); } else { _copiaFallback(t); done(); } }catch(e){ _copiaFallback(t); done(); } };
+      });
       $ov('dCancel').onclick=function(){ if(!confirm('¿Cancelar esta cita?'))return; accionCita('cancelarCita',{id:c.id}); };
       var lb=$ov('dLlego'); if(lb) lb.onclick=function(){ accionCita('llegoCita',{id:c.id}); };
       var rb=$ov('dReprog'); if(rb) rb.onclick=function(){ S.reprog={ id:c.id, pet:(c.petName||c.owner||'la cita') }; cerrarOv(); pintarCal(); };
-      // Mostrar/ocultar el comprobante según el check de pago.
-      var pc=$ov('dPago'); if(pc) pc.onchange=function(){ var b=$ov('dPagoBox'); if(b) b.style.display=this.checked?'':'none'; };
-      // Guardar horario (hora + duración) — usa el mismo camino que mover.
-      var gh=$ov('dGuardarHora'); if(gh) gh.onclick=function(){
+      var pc=$ov('dPago'); if(pc) pc.onchange=function(){ var b=$ov('dPagoBox'); if(b) b.style.display=this.checked?'':'none'; marcarCambio(); };
+      // Botón Actualizar: morado si cambió algo.
+      function hayCambio(){
+        var nota=($ov('dNota')||{}).value||''; var pagado=!!($ov('dPago')||{}).checked;
+        var dur=parseInt(($ov('dDur')||{}).value,10)||dur0; var file=($ov('dCompPago')&&$ov('dCompPago').files&&$ov('dCompPago').files[0]);
+        return nota!==(c.notas||'') || pagado!==!!c.pagado || dur!==dur0 || !!file;
+      }
+      function marcarCambio(){ var b=$ov('dActualizar'); if(b) b.classList.toggle('on', hayCambio()); }
+      ['dNota','dDur','dCompPago'].forEach(function(id){ var el=$ov(id); if(el){ el.addEventListener('input',marcarCambio); el.addEventListener('change',marcarCambio); } });
+      var ac=$ov('dActualizar'); if(ac) ac.onclick=function(){
         var e=$ov('dErr'); if(e)e.textContent='';
-        var nh=($ov('dHora')||{}).value||c.hora, nd=parseInt(($ov('dDur')||{}).value,10)||c.duracion;
-        gh.textContent='Guardando…'; gh.disabled=true;
-        guardarMoverCita(c, c.fecha, nh, nd, false);
-        cerrarOv();
-      };
-      var gn=$ov('dGuardarNota'); if(gn) gn.onclick=function(){
-        var e=$ov('dErr'); if(e)e.textContent='';
-        var pagado=!!($ov('dPago')||{}).checked;
-        var file=($ov('dCompPago')&&$ov('dCompPago').files&&$ov('dCompPago').files[0])||null;
-        // Si marca "ya pagó", el comprobante es OBLIGATORIO (salvo que ya tenga uno).
+        if(!hayCambio()){ cerrarOv(); return; }
+        var nota=($ov('dNota')||{}).value||''; var pagado=!!($ov('dPago')||{}).checked;
+        var dur=parseInt(($ov('dDur')||{}).value,10)||dur0; var file=($ov('dCompPago')&&$ov('dCompPago').files&&$ov('dCompPago').files[0])||null;
         if(pagado && !file && !c.compPago){ if(e)e.textContent='Adjuntá el comprobante de pago.'; return; }
-        gn.textContent='Guardando…'; gn.disabled=true;
-        function enviar(comprobante){
-          var data={ notas:($ov('dNota')||{}).value||'', pagado:pagado };
-          if(comprobante) data.comprobante=comprobante;
-          fetch(api,{method:'POST',body:JSON.stringify({action:'marcarPagoNota',id:c.id,data:data})})
-            .then(function(r){return r.json();}).then(function(res){
-              if(res&&res.ok){ cerrarOv(); cargarCal(); }
-              else { gn.textContent='Guardar'; gn.disabled=false; if(e) e.textContent=(res&&res.error)||'No se pudo guardar.'; }
-            }).catch(function(){ gn.textContent='Guardar'; gn.disabled=false; if(e) e.textContent='Error de conexión.'; });
-        }
-        if(pagado && file){ comprimirImagen(file, function(du){ enviar(du); }); }
-        else { enviar(''); }
+        ac.textContent='Guardando…'; ac.disabled=true;
+        function falla(msg){ ac.textContent='Actualizar'; ac.disabled=false; if(e)e.textContent=msg||'No se pudo guardar.'; }
+        function guardarPagoNota(cb){
+          if(nota===(c.notas||'') && pagado===!!c.pagado && !file){ cb(); return; }
+          function envia(comp){ var data={notas:nota,pagado:pagado}; if(comp)data.comprobante=comp;
+            fetch(api,{method:'POST',body:JSON.stringify({action:'marcarPagoNota',id:c.id,data:data})}).then(function(r){return r.json();}).then(function(res){ if(res&&res.ok)cb(); else falla(res&&res.error); }).catch(function(){falla('Error de conexión.');}); }
+          if(pagado && file){ comprimirImagen(file,function(du){envia(du);}); } else envia(''); }
+        guardarPagoNota(function(){
+          if(dur!==dur0){ cerrarOv(); guardarMoverCita(c, c.fecha, c.hora, dur, false); }  // recarga sola
+          else { cerrarOv(); cargarCal(); }
+        });
       };
     }
     function accionCita(action, payload){
