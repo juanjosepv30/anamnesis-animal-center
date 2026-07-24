@@ -781,8 +781,20 @@ function setView(v) {
   ['sala','atendiendo','reviewed','agenda'].forEach(id =>
     document.getElementById('f-'+id).classList.toggle('active', id === v));
   document.getElementById('dateFilterWrap').style.display = (v === 'reviewed') ? 'flex' : 'none';
-  // Mi agenda: monta el módulo de citas (filtrado por el médico logueado).
+  // Agenda: es SIEMPRE la del médico logueado. Si nadie está identificado
+  // (modo "ver todo"), no mostramos el desplegable de médicos: abrimos el
+  // pop-up "Elige tu nombre" para que el médico se identifique y su agenda se
+  // abra sola (al elegir, setMiMedico re-monta esta misma vista).
   if (v === 'agenda') {
+    if (!miMedico) {
+      document.getElementById('mainCnt').innerHTML =
+        '<div class="empty"><div class="empty-icon">📅</div>'+
+        '<div class="empty-title">Elegí tu nombre para ver tu agenda</div>'+
+        '<div class="empty-sub">La agenda es personal: identifícate arriba y se abre la tuya.</div></div>';
+      renderConsultaBar();
+      abrirIdentidad();
+      return;
+    }
     AgendaMod.mount(document.getElementById('mainCnt'), { medicoFijo: miMedico, api: API_URL });
     renderConsultaBar();   // la barra de "en consulta" sigue visible en la agenda
     return;
@@ -882,7 +894,12 @@ function setMiMedico(v) {
   try { localStorage.setItem('ac_medico', v); } catch (e) {}
   aplicarTabAgenda();
   pintarMedicoChip();
-  renderSala();
+  // Al cambiar de médico se re-renderiza el MÓDULO ACTUAL con el nuevo médico
+  // (no se vuelve a Sala): si estás en Agenda ves la agenda del elegido, en
+  // Atendiendo los suyos, etc. aplicarTabAgenda ya te saca de Agenda si el
+  // nuevo es auxiliar (no agenda).
+  if (activeView === 'agenda') setView('agenda');
+  else renderAll();
   updateCounts();
 }
 
@@ -2078,6 +2095,6 @@ loadRecords();              // refresca con el backend por detrás
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js, para que un refresco
      traiga el JS nuevo y no la versión cacheada por el navegador. -->
-<script src="/js/agenda-mod.js?v=20260724d"></script>
+<script src="/js/agenda-mod.js?v=20260724e"></script>
 </body>
 </html>
