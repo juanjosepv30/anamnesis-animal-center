@@ -679,11 +679,26 @@
           (c.comprobante?'<a href="'+esc(c.comprobante)+'" target="_blank" rel="noopener" style="color:#6d2f7a;font-weight:700">📎 Ver comprobante</a><br>':'')+
           (c.llego?'<b style="color:#3B6D11">✓ Ya llegó — turno '+esc(c.turno||'')+'</b>':'')+
         '</div>'+
+        // Horario: cambiar hora y/o duración desde acá (sirve en celular sin
+        // arrastrar). Duración en opciones de 30/60/90 min.
+        (c.llego?'':
+          '<div class="agm-mlbl">Horario</div>'+
+          '<div class="agm-row">'+
+            '<div><label>Hora</label><select id="dHora">'+horaOpts(c.hora)+'</select></div>'+
+            '<div><label>Duración</label><select id="dDur">'+durOpts(c.duracion)+'</select></div>'+
+          '</div>'+
+          '<button class="agm-btn agm-btn-g" id="dGuardarHora" style="width:100%;margin-top:8px">Guardar horario</button>')+
         // Nota + marca de pago: editables acá mismo, sin reprogramar.
-        '<div class="agm-mlbl">Nota y pago</div>'+
+        '<div class="agm-mlbl">Nota</div>'+
         '<textarea id="dNota" rows="2" placeholder="Nota para esta cita…">'+esc(c.notas||'')+'</textarea>'+
         '<label class="agm-chk"><input type="checkbox" id="dPago"'+(c.pagado?' checked':'')+'> 💵 El cliente ya pagó</label>'+
-        '<button class="agm-btn agm-btn-g" id="dGuardarNota" style="width:100%;margin-top:10px">Guardar nota / pago</button>'+
+        // Comprobante de pago: solo aparece si marcan "ya pagó", y es obligatorio.
+        '<div id="dPagoBox" style="margin-top:8px;'+(c.pagado?'':'display:none')+'">'+
+          (c.compPago?'<a href="'+esc(c.compPago)+'" target="_blank" rel="noopener" style="color:#6d2f7a;font-weight:700;font-size:.82rem">📎 Ver comprobante</a><br>':'')+
+          '<label style="font-size:.78rem;color:var(--atm)">Comprobante de pago '+(c.compPago?'(reemplazar, opcional)':'(obligatorio)')+'</label>'+
+          '<input type="file" id="dCompPago" accept="image/*" capture="environment">'+
+        '</div>'+
+        '<button class="agm-btn agm-btn-g" id="dGuardarNota" style="width:100%;margin-top:10px">Guardar</button>'+
         '<div class="agm-mact" style="flex-wrap:wrap;margin-top:14px">'+
           '<button class="agm-btn agm-btn-g" id="dCancel" style="color:#c0392b;border-color:#f1c0c0">Cancelar cita</button>'+
           (c.llego?'':'<button class="agm-btn agm-btn-g" id="dReprog">🔁 Reprogramar</button>')+
@@ -695,15 +710,34 @@
       $ov('dCancel').onclick=function(){ if(!confirm('¿Cancelar esta cita?'))return; accionCita('cancelarCita',{id:c.id}); };
       var lb=$ov('dLlego'); if(lb) lb.onclick=function(){ accionCita('llegoCita',{id:c.id}); };
       var rb=$ov('dReprog'); if(rb) rb.onclick=function(){ S.reprog={ id:c.id, pet:(c.petName||c.owner||'la cita') }; cerrarOv(); pintarCal(); };
+      // Mostrar/ocultar el comprobante según el check de pago.
+      var pc=$ov('dPago'); if(pc) pc.onchange=function(){ var b=$ov('dPagoBox'); if(b) b.style.display=this.checked?'':'none'; };
+      // Guardar horario (hora + duración) — usa el mismo camino que mover.
+      var gh=$ov('dGuardarHora'); if(gh) gh.onclick=function(){
+        var e=$ov('dErr'); if(e)e.textContent='';
+        var nh=($ov('dHora')||{}).value||c.hora, nd=parseInt(($ov('dDur')||{}).value,10)||c.duracion;
+        gh.textContent='Guardando…'; gh.disabled=true;
+        guardarMoverCita(c, c.fecha, nh, nd, false);
+        cerrarOv();
+      };
       var gn=$ov('dGuardarNota'); if(gn) gn.onclick=function(){
         var e=$ov('dErr'); if(e)e.textContent='';
+        var pagado=!!($ov('dPago')||{}).checked;
+        var file=($ov('dCompPago')&&$ov('dCompPago').files&&$ov('dCompPago').files[0])||null;
+        // Si marca "ya pagó", el comprobante es OBLIGATORIO (salvo que ya tenga uno).
+        if(pagado && !file && !c.compPago){ if(e)e.textContent='Adjuntá el comprobante de pago.'; return; }
         gn.textContent='Guardando…'; gn.disabled=true;
-        var payload={ id:c.id, data:{ notas:($ov('dNota')||{}).value||'', pagado:!!($ov('dPago')||{}).checked } };
-        fetch(api,{method:'POST',body:JSON.stringify({action:'marcarPagoNota',id:payload.id,data:payload.data})})
-          .then(function(r){return r.json();}).then(function(res){
-            if(res&&res.ok){ cerrarOv(); cargarCal(); }
-            else { gn.textContent='Guardar nota / pago'; gn.disabled=false; if(e) e.textContent=(res&&res.error)||'No se pudo guardar.'; }
-          }).catch(function(){ gn.textContent='Guardar nota / pago'; gn.disabled=false; if(e) e.textContent='Error de conexión.'; });
+        function enviar(comprobante){
+          var data={ notas:($ov('dNota')||{}).value||'', pagado:pagado };
+          if(comprobante) data.comprobante=comprobante;
+          fetch(api,{method:'POST',body:JSON.stringify({action:'marcarPagoNota',id:c.id,data:data})})
+            .then(function(r){return r.json();}).then(function(res){
+              if(res&&res.ok){ cerrarOv(); cargarCal(); }
+              else { gn.textContent='Guardar'; gn.disabled=false; if(e) e.textContent=(res&&res.error)||'No se pudo guardar.'; }
+            }).catch(function(){ gn.textContent='Guardar'; gn.disabled=false; if(e) e.textContent='Error de conexión.'; });
+        }
+        if(pagado && file){ comprimirImagen(file, function(du){ enviar(du); }); }
+        else { enviar(''); }
       };
     }
     function accionCita(action, payload){
@@ -780,6 +814,8 @@
 
     // ══════════ BLOQUEOS ══════════
     function horaOpts(sel){ var h='';for(var m=6*60;m<=20*60;m+=30){var v=min2hm(m);h+='<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>';}return h; }
+    // Duración de un servicio: opciones fijas 30 / 60 / 90 min.
+    function durOpts(sel){ sel=parseInt(sel,10)||60; if([30,60,90].indexOf(sel)===-1){ sel=[30,60,90].reduce(function(a,b){return Math.abs(b-sel)<Math.abs(a-sel)?b:a;}); } return [30,60,90].map(function(m){ return '<option value="'+m+'"'+(m===sel?' selected':'')+'>'+m+' min</option>'; }).join(''); }
     function pintarBloquear(){
       body.innerHTML=
         '<button class="agm-lnk" id="bVolver" style="margin-bottom:12px;color:var(--apd)">‹ Volver a la agenda</button>'+
