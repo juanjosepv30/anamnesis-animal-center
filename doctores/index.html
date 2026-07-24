@@ -98,6 +98,13 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .cbar-venc .cbar-l{color:#92400e}
 .cbar-btn{flex-shrink:0;border:none;background:#16a34a;color:#fff;font-weight:800;font-family:inherit;font-size:.85rem;border-radius:9px;padding:9px 14px;cursor:pointer}
 @media(max-width:560px){.cbar{margin:8px 12px 0;padding:9px 12px}.cbar-l{font-size:.84rem}}
+/* Jalar-para-recargar (pull to refresh). El JS mueve el translateY al jalar. */
+.ptr{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;background:var(--wh);color:var(--p);font-weight:700;font-size:.85rem;z-index:150;transform:translateY(-110%);box-shadow:0 2px 8px rgba(0,0,0,.1);pointer-events:none}
+.ptr.ready{color:#16a34a}
+.ptr-ico{display:inline-block;transition:transform .15s}
+.ptr.ready .ptr-ico{transform:rotate(180deg)}
+.ptr.loading .ptr-ico{animation:ptrspin .7s linear infinite}
+@keyframes ptrspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .date-group{margin-bottom:24px}
 .date-lbl{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ts);margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .date-lbl::after{content:'';flex:1;height:1px;background:var(--bd)}
@@ -486,6 +493,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
   </div>
 </div>
 
+<!-- Jalar hacia abajo desde arriba de todo para RECARGAR (gesto de celular). -->
+<div id="ptr" class="ptr"><span class="ptr-ico">↓</span><span class="ptr-txt">Jala para recargar</span></div>
+
 <!-- Barra PERSISTENTE: mi paciente en consulta, visible en TODAS las pestañas
      para que el médico no olvide cerrar mientras navega. La llena renderConsultaBar(). -->
 <div id="consultaBar"></div>
@@ -738,20 +748,10 @@ function pickNext(list, filaKey, yaLlamados) {
     .sort((a,b) => a.t - b.t);
   if (prog.length) return prog[0].r;
 
-  // 2. Intercalado (solo en Generales, que es donde conviven los dos tipos).
-  //    Mantiene la proporción 1 inyectología cada 2 largos: así las
-  //    inyecciones no esperan 80 min, y las consultas NUNCA se quedan
-  //    varadas aunque lleguen inyecciones sin parar.
-  if (filaKey === 'generales' && yaLlamados) {
-    const inyEsperando = list.filter(esInyeccion).sort(porLlegada);
-    if (inyEsperando.length) {
-      const inyLlamadas   = yaLlamados.filter(esInyeccion).length;
-      const largosLlamados = yaLlamados.length - inyLlamadas;
-      if (inyLlamadas < Math.floor(largosLlamados / 2)) return inyEsperando[0];
-    }
-  }
-
-  // 3. El que más lleva esperando
+  // 2. El que más lleva esperando. (Antes había un "intercalado" que metía una
+  //    inyectología cada 2 generales sin importar la espera; se quitó porque
+  //    hacía saltar la cola. Ahora inyección/desparasitación esperan su turno
+  //    como todos — y además se asignan a personal de apoyo, ver flujo nuevo.)
   return list.slice().sort(porLlegada)[0];
 }
 
@@ -1912,6 +1912,36 @@ setInterval(function(){ if (!pausado) chequearCambios(); }, 5000);
 setInterval(function(){ if (!pausado && !document.querySelector('.rec.open')) loadRecords(true); }, 120000); // red de seguridad
 // El cronómetro de "En consulta" avanza solo, cada 30s, sin re-renderizar todo.
 setInterval(function(){ if (!pausado) tickConsultas(); }, 30000);
+
+// ── Jalar para recargar (pull-to-refresh) ──
+// Desde arriba de todo (scrollY 0), jalás hacia abajo; si pasás el umbral y
+// soltás, recarga la página. Forma fácil de refrescar en el celular.
+(function(){
+  var ptr=document.getElementById('ptr'); if(!ptr) return;
+  var txt=ptr.querySelector('.ptr-txt');
+  var startY=0, pulling=false, dist=0, THRESH=64, MAX=80;
+  function paint(d){ var shown=Math.min(d,MAX+40); var pct=-110+Math.min(110,(shown/(MAX))*110);
+    ptr.style.transform='translateY('+pct+'%)'; var ready=d>=THRESH; ptr.classList.toggle('ready',ready);
+    if(txt) txt.textContent=ready?'Suelta para recargar':'Jala para recargar'; }
+  function reset(){ ptr.style.transform='translateY(-110%)'; ptr.classList.remove('ready'); }
+  window.addEventListener('touchstart', function(e){
+    // Solo si estamos arriba de todo y no hay un panel/modal abierto.
+    if(window.scrollY<=0 && !document.querySelector('.anam-overlay.show') && e.touches.length===1){
+      startY=e.touches[0].clientY; pulling=true; dist=0;
+    }
+  }, {passive:true});
+  window.addEventListener('touchmove', function(e){
+    if(!pulling) return;
+    dist=e.touches[0].clientY-startY;
+    if(dist>0 && window.scrollY<=0){ paint(dist); }
+    else { pulling=false; reset(); }
+  }, {passive:true});
+  window.addEventListener('touchend', function(){
+    if(pulling && dist>=THRESH){ ptr.classList.add('loading'); if(txt) txt.textContent='Recargando…'; ptr.style.transform='translateY(0)'; location.reload(); }
+    else if(pulling){ reset(); }
+    pulling=false;
+  }, {passive:true});
+})();
 
 // ── Arranque ──
 // Ya no hay puerta de "quién eres / de turno": el médico entra directo. Su
