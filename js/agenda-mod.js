@@ -74,7 +74,7 @@
     // Controles bajo la navegación: primero los botones (Día/3días + Bloqueos)
     // a la derecha, y en su propio renglón la leyenda a todo el ancho para que
     // las 6 entren en UNA línea sin recortarse.
-    '.agm-toolbtns{display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:8px}',
+    '.agm-toolbtns{display:flex;align-items:center;gap:6px;justify-content:flex-start;margin-bottom:8px}',
     '.agm-leg{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;font-size:.64rem;color:var(--atm);margin-bottom:8px;-webkit-overflow-scrolling:touch}',
     '.agm-leg span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0}',
     '.agm-lnk{border:1px solid var(--abd);background:#fff;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;color:#b45309;cursor:pointer;font-family:inherit}',
