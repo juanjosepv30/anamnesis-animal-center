@@ -233,6 +233,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .modal{background:var(--wh);border-radius:18px;width:100%;max-width:440px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25)}
 .modal-t{font-size:1.15rem;font-weight:700;color:var(--tx);padding:20px 22px 4px}
 .modal-sub{font-size:.83rem;color:var(--tm);line-height:1.5;padding:0 22px 14px}
+/* Modales anchos (Horarios / Interesados): más espacio y contenido scrolleable. */
+.modal-ancho{max-width:840px}
+.modal-ancho .search-row,.modal-ancho #iResults,.modal-ancho #iForm{padding:0 22px}
+.modal-ancho #horariosList{max-height:62vh;overflow-y:auto;padding:0 22px}
+.modal-ancho #interesList{max-height:40vh;overflow-y:auto;padding:0 22px}
+.agenda-topbar{display:flex;justify-content:flex-end;margin-bottom:10px}
 .turnos-lista{overflow-y:auto;padding:0 14px;flex:1}
 .turno-item{display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:11px;cursor:pointer;border:1.5px solid transparent}
 .turno-item:hover{background:var(--bg2)}
@@ -262,6 +268,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     </div>
     <div class="hdr-acts">
       <button class="btn-turno-cfg" onclick="abrirTurnos()">🩺 Médicos de turno</button>
+      <button class="btn-turno-cfg" onclick="abrirHorarios()">🗓️ Horarios</button>
     </div>
   </header>
 
@@ -319,8 +326,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div class="rec-toptabs">
       <button class="rec-toptab on" id="rt-sala" onclick="verVista('sala')">🏠 Recepción</button>
       <button class="rec-toptab" id="rt-agenda" onclick="verVista('agenda')">📅 Agenda</button>
-      <button class="rec-toptab" id="rt-interes" onclick="verVista('interes')">📋 Interesados</button>
-      <button class="rec-toptab" id="rt-horarios" onclick="verVista('horarios')">🗓️ Horarios</button>
     </div>
     <div id="recVista">
     <div class="card">
@@ -353,32 +358,41 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <div id="wrList"><div class="spinner"></div></div>
     </div>
     </div><!-- /recVista -->
-    <div id="agendaVista" style="display:none"></div>
-    <div id="interesVista" style="display:none">
-      <div class="card">
-        <div class="card-t">Agregar interesado</div>
-        <div class="card-sub">Personas que llamaron por un horario y no había cupo. Buscá su historia en Vetesoft por cédula (o cargalo a mano); cuando se abra un hueco lo contactás desde acá.</div>
-        <div class="search-row">
-          <input type="number" id="iCedula" placeholder="Cédula" onkeydown="if(event.key==='Enter')buscarInteres()">
-          <input type="text" id="iPet" placeholder="Nombre de la mascota (opcional)" onkeydown="if(event.key==='Enter')buscarInteres()">
-          <input type="text" id="iOwner" placeholder="Nombre del dueño (opcional)" onkeydown="if(event.key==='Enter')buscarInteres()">
-          <button onclick="buscarInteres()">🔍 Buscar</button>
-        </div>
-        <div id="iResults"></div>
-        <div id="iForm"></div>
+    <div id="agendaVista" style="display:none">
+      <div class="agenda-topbar">
+        <button class="btn-turno-cfg" onclick="abrirInteresados()">📋 Lista de interesados</button>
       </div>
-      <div class="card">
-        <div class="card-t">Lista de interesados</div>
-        <div id="interesList"><div class="spinner"></div></div>
-      </div>
+      <div id="agendaMount"></div>
     </div>
-    <div id="horariosVista" style="display:none">
-      <div class="card">
-        <div class="card-t">Horarios de atención</div>
-        <div class="card-sub">Por médico y día elegí el turno: <b>Mañana</b> 6–14, <b>Tarde</b> 14–22, <b>Noche</b> 22–6, <b>12h</b> 8–20, <b>Todo el día</b> 6–22 o <b>No atiende</b>. Fuera de su turno no se puede agendar. Un médico sin horario cargado no tiene restricción. La semana va de lunes a domingo.</div>
-        <div id="horariosList"><div class="spinner"></div></div>
-      </div>
+  </div>
+</div>
+
+<!-- Interesados: se abre desde la agenda (huecos por cancelaciones). -->
+<div class="modal-bg" id="interesModal" style="display:none" onclick="if(event.target===this)cerrarInteresados()">
+  <div class="modal modal-ancho">
+    <div class="modal-t">📋 Lista de interesados</div>
+    <div class="modal-sub">Personas que llamaron por un horario y no había cupo. Busca su historia en Vetesoft por cédula (o cárgalo a mano); cuando se abra un hueco lo contactas desde acá.</div>
+    <div class="search-row">
+      <input type="number" id="iCedula" placeholder="Cédula" onkeydown="if(event.key==='Enter')buscarInteres()">
+      <input type="text" id="iPet" placeholder="Nombre de la mascota (opcional)" onkeydown="if(event.key==='Enter')buscarInteres()">
+      <input type="text" id="iOwner" placeholder="Nombre del dueño (opcional)" onkeydown="if(event.key==='Enter')buscarInteres()">
+      <button onclick="buscarInteres()">🔍 Buscar</button>
     </div>
+    <div id="iResults"></div>
+    <div id="iForm"></div>
+    <div class="modal-t" style="font-size:.95rem;margin-top:16px">En espera</div>
+    <div id="interesList"><div class="spinner"></div></div>
+    <div class="modal-acts"><button class="modal-cancel" onclick="cerrarInteresados()">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- Horarios de atención: se abre desde el header (se toca una vez al mes). -->
+<div class="modal-bg" id="horariosModal" style="display:none" onclick="if(event.target===this)cerrarHorarios()">
+  <div class="modal modal-ancho">
+    <div class="modal-t">🗓️ Horarios de atención</div>
+    <div class="modal-sub">Por médico y día elige el turno: <b>Mañana</b> 6–14, <b>Tarde</b> 14–22, <b>Noche</b> 22–6, <b>12h</b> 8–20, <b>Todo el día</b> 6–22 o <b>No atiende</b>. Fuera de su turno no se puede agendar. Un médico sin horario cargado no tiene restricción. La semana va de lunes a domingo.</div>
+    <div id="horariosList"><div class="spinner"></div></div>
+    <div class="modal-acts"><button class="modal-cancel" onclick="cerrarHorarios()">Cerrar</button></div>
   </div>
 </div>
 
@@ -392,19 +406,19 @@ var _agendaMontada = false;
 function verVista(v){
   document.getElementById('rt-sala').classList.toggle('on', v==='sala');
   document.getElementById('rt-agenda').classList.toggle('on', v==='agenda');
-  document.getElementById('rt-interes').classList.toggle('on', v==='interes');
-  document.getElementById('rt-horarios').classList.toggle('on', v==='horarios');
   document.getElementById('recVista').style.display     = v==='sala' ? '' : 'none';
   document.getElementById('agendaVista').style.display  = v==='agenda' ? '' : 'none';
-  document.getElementById('interesVista').style.display = v==='interes' ? '' : 'none';
-  document.getElementById('horariosVista').style.display = v==='horarios' ? '' : 'none';
   if (v==='agenda' && !_agendaMontada) {
     _agendaMontada = true;
-    AgendaMod.mount(document.getElementById('agendaVista'), { medicoFijo:'', api:API_URL, vistaFija:'semana' });
+    AgendaMod.mount(document.getElementById('agendaMount'), { medicoFijo:'', api:API_URL, vistaFija:'semana' });
   }
-  if (v==='interes') cargarInteresados();
-  if (v==='horarios') cargarHorarios();
 }
+// Horarios: modal desde el header (se toca una vez al mes).
+function abrirHorarios(){ document.getElementById('horariosModal').style.display='flex'; cargarHorarios(); }
+function cerrarHorarios(){ document.getElementById('horariosModal').style.display='none'; }
+// Interesados: modal desde la agenda (huecos por cancelaciones).
+function abrirInteresados(){ document.getElementById('interesModal').style.display='flex'; cargarInteresados(); }
+function cerrarInteresados(){ document.getElementById('interesModal').style.display='none'; }
 
 // ── Horarios de atención (turnos semanales por médico) ────────────────────
 var _horariosData = {};   // { medico: ['','06:00-14:00',...] } (rangos, índice getDay 0..6)

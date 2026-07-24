@@ -46,7 +46,7 @@ textarea:focus{border-color:var(--p);background:var(--wh)}
   <img src="/img/icono-app-morado.png" alt="Animal Center" class="logo" onerror="this.style.display='none'">
   <h1>¿Cómo te fue?</h1>
   <div class="sub">Tu opinión nos ayuda a cuidar mejor a las mascotas de Animal Center. ¡Solo te toma un momento!</div>
-  <label for="com" class="com-lbl">Contanos cómo te fue</label>
+  <label for="com" class="com-lbl" id="comLbl">Cuéntanos cómo te fue</label>
   <textarea id="com" placeholder="Cómo te atendieron, cómo sigue tu mascota, lo que quieras contarnos…" oninput="chequear()"></textarea>
   <div class="rate-lbl">¿Y una valoración? <span style="font-weight:400">(opcional)</span></div>
   <div class="stars stars-sm" id="stars">
@@ -66,6 +66,18 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_N
 const LBL = ['','Muy mal 😟','Regular 😕','Bien 🙂','Muy bien 😃','¡Excelente! 🤩'];
 let sel = 0;
 const idVisita = (function(){ try { return new URLSearchParams(location.search).get('id') || ''; } catch(e){ return ''; } })();
+
+// Traemos qué médico atendió esa visita, para personalizar el saludo:
+// "Cuéntanos cómo te fue con el Dr. X".
+if (idVisita) {
+  fetch(API_URL + '?action=resenaInfo&id=' + encodeURIComponent(idVisita) + '&cb=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (res && res.ok && res.medico) {
+        document.getElementById('comLbl').textContent = 'Cuéntanos cómo te fue con ' + res.medico;
+      }
+    }).catch(function(){});
+}
 
 const stars = document.querySelectorAll('.star');
 stars.forEach(function(s){
@@ -109,12 +121,12 @@ function enviar(){
           '<b>¡Gracias por tu opinión!</b><br>La tendremos muy en cuenta para seguir cuidando a tu mascota.</div>';
       } else {
         btn.disabled = false; btn.textContent = 'Enviar mi opinión';
-        document.getElementById('err').textContent = (res && res.error) || 'No se pudo enviar. Probá de nuevo.';
+        document.getElementById('err').textContent = (res && res.error) || 'No se pudo enviar. Intenta de nuevo.';
       }
     })
     .catch(function(){
       btn.disabled = false; btn.textContent = 'Enviar mi opinión';
-      document.getElementById('err').textContent = 'Error de conexión. Probá de nuevo.';
+      document.getElementById('err').textContent = 'Error de conexión. Intenta de nuevo.';
     });
 }
 
