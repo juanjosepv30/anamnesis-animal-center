@@ -9,7 +9,10 @@
 // agendar ahí mismo. Colores: cirugía morado, consulta/control rosado, verde
 // cuando el paciente ya llegó, rojo cuando el médico no está disponible.
 (function(){
-  var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Vacunación','Inyectología','Desparasitación','Rayos X y Ecografía','Ecocardiograma / Electrocardiograma','Viajero'];
+  // Servicios AGENDABLES (los que van al desplegable de crear cita). Inyectología
+  // y desparasitación NO se agendan (son por orden de llegada), así que no están.
+  // "Certificado de viaje" es el nombre del antes llamado "Viajero".
+  var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Vacunación','Rayos X y Ecografía','Ecocardiograma / Electrocardiograma','Certificado de viaje'];
   var DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   var H_INI=6*60, H_FIN=22*60, PXMIN=0.9;          // 06:00–22:00; casillas cómodas
   var Y0=10;                                        // margen arriba (para que 06:00 no pise el header)
@@ -162,7 +165,7 @@
     if(s.indexOf('inyect')!==-1)    return '#6b7280'; // gris
     if(s.indexOf('cardiograma')!==-1) return '#e11d48'; // rosa fuerte (cardio)
     if(s.indexOf('rayos')!==-1||s.indexOf('ecograf')!==-1) return '#eab308'; // amarillo
-    if(s.indexOf('viajer')!==-1)    return '#0891b2'; // cian
+    if(s.indexOf('viaje')!==-1)    return '#0891b2'; // cian
     if(s.indexOf('general')!==-1||s.indexOf('consulta')!==-1) return '#16a34a'; // verde
     return '#94a3b8';
   }

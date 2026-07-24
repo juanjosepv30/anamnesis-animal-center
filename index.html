@@ -425,9 +425,9 @@ var QUESTIONS = [
   ]},
 
   // ── VIAJERO (solo ese servicio) ──
-  {id:'via_destino', group:'VIAJERO', q:'¿A qué destino viaja?', type:'text', onlyServices:['Viajero'], branch:true, label:'Destino', placeholder:'Ej: España, Estados Unidos, Medellín'},
-  {id:'via_fecha', group:'VIAJERO', q:'¿Cuándo viaja?', sub:'Selecciona la fecha del viaje.', type:'date', onlyServices:['Viajero'], branch:true, label:'Fecha del viaje'},
-  {id:'via_modo', group:'VIAJERO', q:'¿Cómo viaja tu mascota?', type:'single', onlyServices:['Viajero'], branch:true, label:'Modo de viaje', options:[
+  {id:'via_destino', group:'VIAJERO', q:'¿A qué destino viaja?', type:'text', onlyServices:['Viajero','Certificado de viaje'], branch:true, label:'Destino', placeholder:'Ej: España, Estados Unidos, Medellín'},
+  {id:'via_fecha', group:'VIAJERO', q:'¿Cuándo viaja?', sub:'Selecciona la fecha del viaje.', type:'date', onlyServices:['Viajero','Certificado de viaje'], branch:true, label:'Fecha del viaje'},
+  {id:'via_modo', group:'VIAJERO', q:'¿Cómo viaja tu mascota?', type:'single', onlyServices:['Viajero','Certificado de viaje'], branch:true, label:'Modo de viaje', options:[
     {label:'En cabina', value:'Cabina'}, {label:'En bodega', value:'Bodega'},
     {label:'Terrestre', value:'Terrestre'}, {label:'No sé todavía', value:'No se'}
   ]},
