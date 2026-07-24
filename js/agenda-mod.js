@@ -14,7 +14,10 @@
   // "Certificado de viaje" es el nombre del antes llamado "Viajero".
   var SERVICIOS=['Consulta general','Consulta especializada','Control general','Control especializado','Cirugía','Terapia física','Vacunación','Rayos X y Ecografía','Ecocardiograma / Electrocardiograma','Certificado de viaje'];
   var DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  var H_INI=6*60, H_FIN=22*60, PXMIN=0.9;          // 06:00–22:00; casillas cómodas
+  // Alto por minuto. En CELULAR se agranda 50% (1.35) para que la agenda se vea
+  // más grande verticalmente (el ancho no puede crecer). En escritorio queda 0.9.
+  var _agmMovil = !!(window.matchMedia && window.matchMedia('(max-width:640px)').matches);
+  var H_INI=6*60, H_FIN=22*60, PXMIN=(_agmMovil?1.35:0.9);   // 06:00–22:00
   var Y0=10;                                        // margen arriba (para que 06:00 no pise el header)
   var ALTO=(H_FIN-H_INI)*PXMIN + Y0*2;             // alto total; la PÁGINA scrollea, no un cuadro interno
 

@@ -117,6 +117,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
       <b>Al empezar tu turno:</b> apenas abras la página aparece un recuadro de <b>Médicos de turno</b>. Marca quién atiende consulta general en esta jornada (mañana 6–2, tarde 2–10) y toca <span class="pill">Guardar</span> — a esos médicos les empiezan a llegar las notificaciones. Si alguien se enferma o un especialista (Dr. Wilmer, Dr. Alberto) va a ayudar con generales, entra a <span class="pill">🩺 Médicos de turno</span> arriba a la derecha y ajústalo. La página sola te vuelve a preguntar cuando cambia la jornada.
     </div>
 
+    <div class="nota" style="border-color:#0d9488;background:#effcf9">
+      <b>Arriba tienes dos botones más:</b> <span class="pill">🗓️ Horarios</span> (los turnos de cada médico por semana — se cargan una vez al mes; mira la sección <b>📅 La Agenda</b>) y, dentro de la Agenda, <span class="pill">📋 Lista de interesados</span> (para no perder los huecos de las cancelaciones).
+    </div>
+
     <div class="paso"><div class="paso-n">1</div><div class="paso-c">
       <div class="paso-t">Busca por la cédula</div>
       <div class="paso-d">Escribe la <b>cédula</b> y dale <b>Enter</b> — es lo más rápido y certero, porque la cédula es única (los nombres se repiten un montón).<br>
@@ -199,27 +203,42 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
     <div class="paso"><div class="paso-n">2</div><div class="paso-c">
       <div class="paso-t">Los colores te cuentan todo</div>
-      <div class="paso-d">
-        <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#CECBF6;border:1px solid #534AB7;vertical-align:middle"></span> <b>Morado</b> = cirugía &nbsp;·&nbsp;
-        <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#F4C0D1;border:1px solid #993556;vertical-align:middle"></span> <b>Rosado</b> = consulta / control &nbsp;·&nbsp;
-        <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#C0DD97;border:1px solid #3B6D11;vertical-align:middle"></span> <b>Verde</b> = ya llegó &nbsp;·&nbsp;
-        <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#F7C1C1;border:1px solid #A32D2D;vertical-align:middle"></span> <b>Rojo rayado</b> = no disponible.<br>
-        Sirve sobre todo para las <b>cirugías</b>: de un vistazo sabes cuántas hay y cuáles ya llegaron (verde) y cuáles no.</div>
+      <div class="paso-d">Cada servicio tiene <b>su color</b> — el mismo en recepción, la agenda y la pantalla:<br>
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#16a34a;vertical-align:middle"></span> Verde = <b>consulta/control general</b> ·
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#f97316;vertical-align:middle"></span> Naranja = <b>especializada</b> ·
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#2563eb;vertical-align:middle"></span> Azul = <b>control</b> ·
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#7c3aed;vertical-align:middle"></span> Morado = <b>cirugía</b> ·
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#14b8a6;vertical-align:middle"></span> Teal = <b>terapia física</b> ·
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#ec4899;vertical-align:middle"></span> Rosado = <b>vacunación</b> ·
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#6b7280;vertical-align:middle"></span> Gris = <b>inyectología/desparasitación</b> ·
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#e11d48;vertical-align:middle"></span> Rosa fuerte = <b>cardiología (eco/electro)</b> ·
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#eab308;vertical-align:middle"></span> Amarillo = <b>rayos X y ecografía</b> ·
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#0891b2;vertical-align:middle"></span> Cian = <b>certificado de viaje</b>.<br>
+        Y además: <b>anillo verde</b> = ya llegó · <b>rojo rayado</b> = no disponible (bloqueo) · <b>gris rayado</b> = fuera del turno del médico.</div>
     </div></div>
 
     <div class="paso"><div class="paso-n">3</div><div class="paso-c">
       <div class="paso-t">Para agendar, toca un espacio vacío</div>
-      <div class="paso-d">Pasas el mouse y se resalta la franja con la hora. <b>Tocas el hueco libre</b> y se abre la tarjeta con el día, la hora y el médico ya puestos. Buscas al paciente (cédula, mascota o dueño), eliges el <b>servicio</b>, y <span class="pill">Agendar →</span>. Listo.</div>
+      <div class="paso-d">Tocas el <b>hueco libre</b> y se abre la tarjeta con el día, la hora y el médico ya puestos. Buscas al paciente (lo más rápido y certero es la <b>cédula</b>; también sirve por mascota o dueño), eliges el <b>servicio tocando su tarjeta de color</b>, y <span class="pill">Agendar →</span>. Listo.</div>
     </div></div>
 
     <div class="paso"><div class="paso-n">4</div><div class="paso-c">
-      <div class="paso-t">Cada servicio dura lo suyo</div>
-      <div class="paso-d">El <b>control</b> ocupa <b>media hora</b>; la <b>consulta</b>, <b>una hora</b>. Si necesitas meter un paciente y no hay campo, en una consulta puedes bajar la duración a <b>30 min</b> desde la tarjeta. El sistema no te deja pisar otra cita: si se cruza, te avisa.</div>
+      <div class="paso-t">La duración la eliges tú</div>
+      <div class="paso-d">Cada servicio arranca con su duración típica (control <b>30</b>, consulta/cirugía/terapia <b>60</b>…), pero puedes elegir <b>30, 60 o 90 min</b> en el desplegable. El sistema no te deja <b>pisar otra cita</b> ni agendar <b>fuera del turno</b> del médico: si algo se cruza, te avisa y puedes confirmar para hacerlo igual.</div>
     </div></div>
 
     <div class="paso"><div class="paso-n">5</div><div class="paso-c">
       <div class="paso-t">Cuando el paciente con cita llega → «Llegó»</div>
       <div class="paso-d">Tocas la cita y le das <span class="pill">✓ Llegó</span>. Con eso el paciente <b>entra a la sala</b> (le sale turno al médico), le llega el <b>link de la anamnesis</b> por WhatsApp, y la cita se pone <b>verde</b>. No hay que registrarlo aparte: la cita ya tiene sus datos.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">👆</div><div class="paso-c">
+      <div class="paso-t">Tocar una cita — su tarjeta</div>
+      <div class="paso-d">Al tocar una cita ves sus datos: <b>dueño, cédula, HC y teléfono</b>. Cada uno lo podés <b>copiar</b> tocándolo (dice "✓ copiado"). Desde ahí también:<br>
+      · <b>Cambiar la duración</b> (desplegable) y la <b>nota</b> o marcar <b>pago</b> — el botón <span class="pill">Actualizar</span> se pone <b>morado</b> solo cuando cambiaste algo, y guarda todo junto.<br>
+      · <span class="pill">🔁 Reprogramar</span>: la movés a otro horario (en el celular es la forma fácil — tocás y elegís el nuevo hueco).<br>
+      · <span class="pill">Cancelar cita</span> o <span class="pill">✓ Llegó</span>.<br>
+      <b>💻 En computador</b> también podés <b>arrastrar</b> la cita para moverla o estirarla para cambiar la duración.</div>
     </div></div>
 
     <div class="titulo-bloque">La prioridad de las citas — lo importante</div>
@@ -237,13 +256,53 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     </div></div>
 
     <div class="paso"><div class="paso-n">✎</div><div class="paso-c">
-      <div class="paso-t">Editar o quitar un bloqueo desde el calendario</div>
-      <div class="paso-d">Tocas el <b>bloque rojo</b> en la agenda y se abre una tarjeta para <b>cambiar</b> las horas/días, <b>Quitar</b> el bloqueo, o <b>Agendar una cita igual</b> ahí (te avisa que está bloqueado y te pide confirmar).</div>
+      <div class="paso-t">Editar o quitar un bloqueo</div>
+      <div class="paso-d">Se hace desde la pestaña <span class="pill">🚫 Bloqueos</span> (elegís el médico y ves/editás/quitás sus bloqueos).<br>
+      <b>Ojo:</b> tocar un bloque rojo <b>en el calendario ya NO lo edita</b> — sirve para <b>agendar una cita ahí</b>: te avisa "este horario tiene un bloqueo, ¿seguro?" y, si confirmás, arranca el alta de la cita.</div>
     </div></div>
 
     <div class="paso"><div class="paso-n">👀</div><div class="paso-c">
       <div class="paso-t">Ver cuándo está libre un doctor general</div>
-      <div class="paso-d">Si un cliente quiere agendar con un doctor general, eliges ese médico en la agenda y ves su semana: en <b>rojo</b> cuando no está, y los huecos libres son cuando <b>sí</b> puede. Ojo: una <b>cita general agendada tiene prioridad</b> sobre los servicios generales sin cita, así que agendar le asegura su lugar.</div>
+      <div class="paso-d">Si un cliente quiere agendar con un doctor general, eliges ese médico en la agenda y ves su semana: en <b>rojo</b> cuando no está, <b>gris rayado</b> cuando está fuera de su turno, y los huecos libres son cuando <b>sí</b> puede. Ojo: una <b>cita general agendada tiene prioridad</b> sobre los servicios generales sin cita, así que agendar le asegura su lugar.</div>
+    </div></div>
+
+    <div class="titulo-bloque">🗓️ Horarios de los médicos — sus turnos por semana</div>
+
+    <div class="nota" style="border-color:#0d9488;background:#effcf9">
+      Para que el sistema sepa <b>cuándo atiende cada médico</b> y <b>bloquee solo</b> las horas fuera de su turno. Se entra por el botón <span class="pill">🗓️ Horarios</span> arriba a la derecha en recepción. <b>Se carga una vez al mes</b> y listo.
+    </div>
+
+    <div class="paso"><div class="paso-n">1</div><div class="paso-c">
+      <div class="paso-t">Elige la semana</div>
+      <div class="paso-d">Arriba te mueves entre las <b>semanas del mes</b> con las flechas <b>‹ ›</b> ("Semana del 20/7 al 26/7"). El horario es <b>por semana</b>, porque los turnos van rotando.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">2</div><div class="paso-c">
+      <div class="paso-t">Cárgale el turno a cada médico, por día</div>
+      <div class="paso-d">Por cada día eliges: <b>Mañana</b> (6–14), <b>Tarde</b> (14–22), <b>Noche</b> (22–6), <b>12h</b> (8–20), <b>Todo el día</b> o <b>No atiende</b>. Cuando termines la semana, toca <span class="pill">💾 Guardar semana</span>.<br>
+      Un médico <b>sin horario cargado</b> esa semana no tiene restricción (se puede agendar a cualquier hora, como antes).</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">3</div><div class="paso-c">
+      <div class="paso-t">Atajos para no repetir trabajo</div>
+      <div class="paso-d">· <span class="pill">🔁 Repetir en el mes</span>: copia el horario de esa semana a <b>todas las semanas del mes</b> (para cuando son iguales).<br>
+      · <span class="pill">📋 Copiar de otra semana</span>: trae el horario de otra semana a la actual — ideal para <b>intercalado</b> (copias la semana 1 a la 3) o "2 iguales y 2 distintas".</div>
+    </div></div>
+
+    <div class="nota" style="border-color:#b45309;background:#fff7ed">
+      <b>Fuera del turno no se agenda.</b> Si intentas poner una cita en una hora fuera del turno del médico, el sistema te avisa y la marca <b>gris rayado (Fuera de turno)</b> en la agenda. Si es una excepción, puedes confirmar para agendar igual.
+    </div>
+
+    <div class="titulo-bloque">📋 Lista de interesados — no perder los huecos</div>
+
+    <div class="paso"><div class="paso-n">1</div><div class="paso-c">
+      <div class="paso-t">Guarda a los que llamaron y no había cupo</div>
+      <div class="paso-d">Dentro de la <b>Agenda</b> hay un botón <span class="pill">📋 Lista de interesados</span>. Ahí anotas a la gente que llamó buscando un horario que estaba lleno: buscas su historia por <b>cédula</b> (o la cargas a mano) y queda guardada.</div>
+    </div></div>
+
+    <div class="paso"><div class="paso-n">2</div><div class="paso-c">
+      <div class="paso-t">Cuando se abre un hueco, los contactas</div>
+      <div class="paso-d">Si alguien <b>cancela</b> y queda un espacio, entras a la lista y con un botón les escribes por <b>WhatsApp</b>. Luego los marcas <b>Contactado</b>, <b>Agendó</b> o <b>Descartar</b>. Así no se pierden esos huecos.</div>
     </div></div>
   </div>
 
@@ -268,10 +327,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     </div></div>
 
     <div class="paso"><div class="paso-n">3</div><div class="paso-c">
-      <div class="paso-t">Elige el consultorio y llama — desde donde estés</div>
-      <div class="paso-d">Puedes llamar <b>desde tu propio consultorio</b>, desde el celular o el computador. Antes de llamar, <b>elige el consultorio</b> — el botón Llamar no se activa hasta que lo hagas (a ti, especialista, ya te aparece el tuyo). Luego toca <span class="pill">🔔 Llamar</span>. Al cliente le llega un WhatsApp: <b>"pasa al consultorio X"</b>.<br>
-      <b>¿Sonó de verdad en la sala?</b> No tienes que adivinar: en la tarjeta del paciente aparece primero <b style="color:#b45309">⏳ Esperando que suene…</b> (ámbar) y, cuando la pantalla de la sala confirma que sonó, cambia a <b style="color:#15803d">📢 Sonó en la sala ✓</b> (verde) con la hora. Si NO cambia a verde, algo pasó con la pantalla — vuelve a llamar o avisa a recepción.<br>
-      <b style="color:#b45309">📌 Que quede bien registrado quién atiende:</b> si estás mirando <b>Ver todos</b> (por ejemplo, un especialista que va a ayudar con un servicio general), al llamar te aparece un cuadrito <b>"¿Quién va a atender?"</b> — elige tu nombre. <b>No te cambia de perfil ni de vista</b>: solo deja tu nombre en la tarjeta para que en Finalizados se sepa quién hizo el servicio. Si atiendes cirugía o desparasitación, lo mismo — marca bien el doctor.</div>
+      <div class="paso-t">Elige el consultorio y toca «Atender» — desde donde estés</div>
+      <div class="paso-d">Puedes hacerlo <b>desde tu consultorio</b>, el celular o el computador. Elige el <b>consultorio</b> (el botón no se activa hasta que lo hagas; a ti, especialista, ya te aparece el tuyo) y toca <span class="pill">✓ Atender</span>. Con <b>un solo botón</b>: <b>suena el llamado en la sala</b>, al cliente le llega un WhatsApp <b>"pasa al consultorio X"</b>, y el paciente pasa a tu pestaña <b>Atendiendo</b>. Tienes <b>~2 minutos de gracia</b> antes de que arranque el cronómetro (por si el cliente demora en entrar; ahí puedes marcarlo Ausente sin que cuente).<br>
+      <b>¿Sonó de verdad en la sala?</b> No adivinas: en la tarjeta aparece primero <b style="color:#b45309">⏳ Esperando que suene…</b> y, cuando la pantalla confirma, cambia a <b style="color:#15803d">📢 Sonó en la sala ✓</b> con la hora. Si NO cambia, algo pasó con la pantalla — usa <span class="pill">🔔 Llamar otra vez</span> o avisa a recepción.<br>
+      <b style="color:#b45309">📌 Que quede registrado quién atiende:</b> si estás en <b>Ver todos</b> (ej. un especialista ayudando con generales), al atender te aparece <b>"¿Quién va a atender?"</b> — elige tu nombre. No te cambia de perfil: solo deja tu nombre en la tarjeta para que en Finalizados se sepa quién hizo el servicio.</div>
     </div></div>
 
     <div class="paso"><div class="paso-n">4</div><div class="paso-c">
@@ -280,16 +339,15 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     </div></div>
 
     <div class="paso"><div class="paso-n">5</div><div class="paso-c">
-      <div class="paso-t">Atiende y pasa al siguiente</div>
-      <div class="paso-d">Cuando el paciente <b>entra al consultorio</b>, toca <span class="pill">✓ Atender</span> (al lado de Ausente). Su tarjeta desaparece de la pantalla de todos y <b>se habilita el siguiente turno</b>.<br>
-      Cuando llames y atiendas al siguiente, el anterior pasa <b>solo</b> a <b>Atendido</b> — no tienes que marcar "terminé".<br>
-      ¿No apareció? <span class="pill">🔔 Llamar otra vez</span> (le suena de nuevo en la sala) o <span class="pill">Ausente</span>.</div>
+      <div class="paso-t">Cierra con «Finalizar» y pasa al siguiente</div>
+      <div class="paso-d">Mientras atiendes, arriba se ve una <b>barra "En consulta"</b> con el cronómetro y el botón <span class="pill">✓ Finalizar</span> — aparece en <b>todos los módulos</b> para que no se te olvide cerrar mientras navegas. Al terminar, toca Finalizar.<br>
+      No tienes que esperar: puedes <b>llamar al siguiente</b> apenas el actual pasó de la gracia (el botón Atender se libera solo). Si te olvidas de cerrar, el sistema igual lo cierra en la noche.<br>
+      ¿No apareció el que llamaste? <span class="pill">🔔 Llamar otra vez</span> o <span class="pill">Ausente</span>.</div>
     </div></div>
 
-    <div class="paso"><div class="paso-n">✓</div><div class="paso-c">
-      <div class="paso-t">¿Era el último del día?</div>
-      <div class="paso-d">Como no hay un "siguiente" que lo cierre, usa el botón chico <span class="pill">Marcar atendido</span> de esa misma tarjeta. (Si te olvidas, el sistema igual lo cierra solo en la noche.)</div>
-    </div></div>
+    <div class="nota">
+      <b>📲 En el celular:</b> para <b>refrescar</b> la sala, <b>jala la pantalla hacia abajo</b> desde arriba de todo (como en las apps). En la <b>agenda</b> no hace falta — se actualiza sola.
+    </div>
 
     <div class="nota">
       Arriba ves <b>🩺 En consulta ahora</b>: quiénes están siendo atendidos en la clínica y en qué consultorio. Es solo para que sepas cómo va la sala — no tienes que hacer nada ahí.
