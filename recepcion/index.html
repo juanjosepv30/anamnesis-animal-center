@@ -1182,6 +1182,12 @@ function wrItem(r, acts) {
       (/general/i.test(r.service||'') && enCola
         ? '<div class="wr-asignar" onclick="pedirAsignar('+r.rowIndex+')">👨‍⚕️ '+(r.medicoPref?esc(r.medicoPref)+' ✎':'Asignar médico')+'</div>'
         : '')+
+      // Inyección/desparasitación/ecografía: chip para asignar a personal de
+      // APOYO. Al asignar, la tarjeta sale de la cola general y le aparece SOLO
+      // a esa persona, que recibe el WhatsApp con la anamnesis.
+      (/inyect|desparasit|ecograf|rayos/i.test(r.service||'') && enCola
+        ? '<div class="wr-asignar wr-apoyo" onclick="pedirAsignar('+r.rowIndex+',\'apoyo\')">🩹 '+(r.medicoPref?esc(r.medicoPref)+' ✎':'Asignar a apoyo')+'</div>'
+        : '')+
       // #1 — Editar turno: corregir el paciente sin perder el turno. Solo
       // mientras sigue en la cola (aún no lo atendieron).
       (enCola
@@ -1254,15 +1260,25 @@ function markAtendidoRecep(rowIndex) {
 
 // ── Asignar médico general a un turno ya creado ──────────────
 var _asignarRow = null;
-function pedirAsignar(rowIndex) {
+function pedirAsignar(rowIndex, modo) {
   var r = null;
   for (var i = 0; i < wrRecords.length; i++) if (wrRecords[i].rowIndex === rowIndex) { r = wrRecords[i]; break; }
   if (!r) return;
   _asignarRow = rowIndex;
   document.getElementById('asignarSub').textContent = (r.turno || '') + ' · ' + (r.petName || '');
-  var docs = _turnosActuales || [];
+  var docs, placeholder;
+  if (modo === 'apoyo') {
+    // Personal de APOYO: los del directorio con especialidad "Apoyo".
+    docs = (_turnosMedicos || []).filter(function(m){
+      return (m.especialidades || []).some(function(e){ return String(e).toLowerCase() === 'apoyo'; });
+    }).map(function(m){ return m.medico; });
+    placeholder = '— Elige quién lo hace —';
+  } else {
+    docs = _turnosActuales || [];
+    placeholder = '— Cualquiera (por orden de llegada) —';
+  }
   document.getElementById('asignarSel').innerHTML =
-    '<option value="">— Cualquiera (por orden de llegada) —</option>' +
+    '<option value="">'+esc(placeholder)+'</option>' +
     docs.map(function(n){ return '<option value="'+esc(n)+'"'+(n===r.medicoPref?' selected':'')+'>'+esc(n)+'</option>'; }).join('');
   document.getElementById('asignarModal').style.display = 'flex';
 }

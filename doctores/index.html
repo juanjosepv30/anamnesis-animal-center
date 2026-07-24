@@ -105,6 +105,16 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .ptr.ready .ptr-ico{transform:rotate(180deg)}
 .ptr.loading .ptr-ico{animation:ptrspin .7s linear infinite}
 @keyframes ptrspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+/* Sección "Asignados a ti" (personal de apoyo). */
+.asig-box{background:#fff;border:1.5px solid #bcd8ff;border-left:5px solid #2563eb;border-radius:12px;padding:10px 12px;margin-bottom:14px}
+.asig-hd{font-size:.82rem;font-weight:800;color:#1e3a5f;margin-bottom:8px}
+.asig-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid #eef2f7;flex-wrap:wrap}
+.asig-item:first-of-type{border-top:none}
+.asig-t{font-weight:700;font-size:.9rem;color:var(--tx)}
+.asig-m{font-size:.76rem;color:var(--tm);margin-top:2px}
+.asig-ctrls{display:flex;gap:6px;align-items:center}
+.asig-ctrls select{border:1.5px solid var(--bd);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:.8rem}
+@media(max-width:560px){.asig-item{flex-direction:column;align-items:stretch}.asig-ctrls{width:100%}.asig-ctrls select{flex:1}}
 .date-group{margin-bottom:24px}
 .date-lbl{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ts);margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .date-lbl::after{content:'';flex:1;height:1px;background:var(--bd)}
@@ -1081,7 +1091,37 @@ function renderSala() {
   // miHtml (mi paciente en consulta) YA NO va en la Sala: vive en la pestaña
   // "Atendiendo". En la Sala queda la cola + el strip de "en consulta ahora"
   // (los de OTROS médicos, como referencia).
-  let html = stripHtml + '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
+  // "Asignados a ti": turnos que recepción me asignó (medicoPref) pero que NO
+  // caen en mis filas normales — ej. personal de apoyo (especialidad Apoyo) con
+  // una inyección/desparasitación asignada, que vive en la fila de generales.
+  // Así el asignado la ve y la atiende aunque no sea "su" fila.
+  let asignadosHtml = '';
+  if (miMedico) {
+    const misFilasKeys = misFilas();
+    const enEsp = e => e === 'esperando' || e === 'llenando' || !e;
+    const misAsignados = hoy.filter(r => r.medicoPref === miMedico && enEsp(r.estadoTurno) && misFilasKeys.indexOf(recordFila(r)) === -1);
+    if (misAsignados.length) {
+      misAsignados.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+      asignadosHtml = '<div class="asig-box"><div class="asig-hd">🩹 Asignados a ti</div>' +
+        misAsignados.map(function(r){
+          const rc = serviceColor(r.service);
+          const opts = '<option value="">— Elige el consultorio —</option>' +
+            roomsFor('generales').map(function(rm){ return '<option value="'+rm+'">'+rm+'</option>'; }).join('');
+          return '<div class="asig-item">'+
+            '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
+              '<div class="asig-t"><span class="turno-badge" style="background:'+rc+'">'+esc(r.turno||'')+'</span> '+esc(nombreConMascotas(r))+'</div>'+
+              '<div class="asig-m">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+'</div>'+
+            '</div>'+
+            '<div class="asig-ctrls">'+
+              '<select id="asigroom-'+r.rowIndex+'">'+opts+'</select>'+
+              '<button class="btn-call" style="background:'+rc+'" onclick="atenderAsignado('+r.rowIndex+')">✓ Atender</button>'+
+            '</div>'+
+          '</div>';
+        }).join('') + '</div>';
+    }
+  }
+
+  let html = asignadosHtml + stripHtml + '<div class="filas' + (filasVisibles.length === 1 ? ' una' : '') + '">';
 
   // Cuando un médico tiene las dos filas (Tatiana es gastro Y general),
   // hay que decirle cuál llamar primero. Ver decidirEntreFilas.
@@ -1306,6 +1346,26 @@ function confirmarQuien(){
   document.getElementById('quienModal').style.display = 'none';
   var cb = _quienCb; _quienCb = null;
   if (cb) cb(m);
+}
+
+// Atender un turno de la sección "Asignados a ti" (personal de apoyo). Usa el
+// mismo flujo del botón único (atenderDirecto: anuncia + gracia + lleva a la
+// pestaña Atendiendo). El consultorio sale de su propio selector.
+function atenderAsignado(rowIndex) {
+  var sel = document.getElementById('asigroom-' + rowIndex);
+  var room = sel ? sel.value : '';
+  if (!room) { showToast('Elige el consultorio primero'); return; }
+  conMedico(function(med){
+    fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atenderDirecto', rowIndex: rowIndex, consultorio: room, medico: med }) })
+      .then(r => r.json()).then(function(res){
+        if (res && res.ok) {
+          var rec = allRecords.find(x => x.rowIndex === rowIndex);
+          if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; rec.calledBy = med; rec.calledAt = new Date().toISOString(); }
+          showToast('✓ Atendiendo a ' + room);
+          setView('atendiendo');
+        } else showToast('❌ Error al atender');
+      }).catch(function(){ showToast('❌ Error de conexión'); });
+  });
 }
 
 // Botón ÚNICO "Atender": un toque llama al paciente (lo anuncia en la sala),
