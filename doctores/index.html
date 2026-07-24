@@ -481,10 +481,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <div class="srch">
   <div class="srch-inner">
     <div class="filter-btns">
-      <button class="fbtn active" id="f-sala" onclick="setView('sala')">🔔 Sala de espera</button>
-      <button class="fbtn" id="f-atendiendo" onclick="setView('atendiendo')">🩺 Atendiendo</button>
-      <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">✓ Finalizados</button>
-      <button class="fbtn" id="f-agenda" onclick="setView('agenda')">📅 Mi agenda</button>
+      <button class="fbtn active" id="f-sala" onclick="setView('sala')">Sala de espera</button>
+      <button class="fbtn" id="f-atendiendo" onclick="setView('atendiendo')">Atendiendo</button>
+      <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">Finalizados</button>
+      <button class="fbtn" id="f-agenda" onclick="setView('agenda')">Agenda</button>
     </div>
     <div class="date-filter-wrap" id="dateFilterWrap" style="display:none">
       <span class="df-lbl">📅 Ver otro día</span>
@@ -562,7 +562,10 @@ function recordsDelCache(){
 function loadRecords(silent) {
   // Spinner SOLO si no hay nada que mostrar todavía (ni caché ni datos). Si ya
   // pintamos algo, se refresca sin parpadeo.
-  if (!silent && !allRecords.length) {
+  // OJO: no pisar la agenda. Si el médico está en la pestaña Agenda (que se
+  // monta aparte en mainCnt), este spinner de "sala" la tapaba y, como
+  // renderAll no re-renderiza en modo agenda, quedaba pegado ("no cargaba").
+  if (!silent && !allRecords.length && activeView !== 'agenda') {
     document.getElementById('mainCnt').innerHTML =
       '<div class="cargando"><div class="spinner"></div><div class="cargando-t">Cargando tu sala…</div></div>';
     document.getElementById('lastUpdated').textContent = 'Actualizando...';
@@ -597,6 +600,7 @@ function loadRecords(silent) {
 }
 
 function showError(msg) {
+  if (activeView === 'agenda') return;   // no tapar la agenda con un error de la cola
   document.getElementById('mainCnt').innerHTML =
     '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Algo salió mal</div><div class="empty-sub">' + msg + '</div></div>';
 }
@@ -2068,6 +2072,6 @@ loadRecords();              // refresca con el backend por detrás
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js, para que un refresco
      traiga el JS nuevo y no la versión cacheada por el navegador. -->
-<script src="/js/agenda-mod.js?v=20260724b"></script>
+<script src="/js/agenda-mod.js?v=20260724c"></script>
 </body>
 </html>

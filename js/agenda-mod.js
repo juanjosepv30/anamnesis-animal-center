@@ -96,9 +96,14 @@
     '.agm-hlbl{position:absolute;left:0;right:0;text-align:right;padding-right:6px;font-size:.66rem;font-weight:700;color:#9c8bb0;transform:translateY(-6px)}',
     '.agm-hover{position:absolute;left:1px;right:1px;background:rgba(142,63,158,.16);border:1.5px solid var(--ap);border-radius:5px;pointer-events:none;z-index:4;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;font-size:.66rem;font-weight:800;color:var(--apd)}',
     '.agm-ev{position:absolute;left:2px;right:2px;border-radius:6px;padding:2px 5px;font-size:.72rem;line-height:1.2;overflow:hidden;cursor:pointer;border-left:3px solid;z-index:2}',
-    // Arrastrar/estirar citas. touch-action:none para poder arrastrar en celular.
-    '.agm-ev.agm-drag{cursor:grab;touch-action:none}',
+    // Arrastrar/estirar citas. En táctil el scroll queda LIBRE (touch-action
+    // auto): el arrastre se ARMA con una pulsación larga (~500ms), no con el
+    // primer roce, para no mover citas sin querer al hacer scroll.
+    '.agm-ev.agm-drag{cursor:grab}',
     '.agm-ev.agm-dragging{opacity:.35}',
+    // Cita con el arrastre ARMADO tras la pulsación larga: se resalta para que
+    // el dedo sepa que ya puede mover.
+    '.agm-ev.agm-armed{outline:2px solid #6d2f7a;outline-offset:1px;box-shadow:0 4px 14px rgba(109,47,122,.4)}',
     '.agm-rz{position:absolute;left:0;right:0;bottom:0;height:10px;cursor:ns-resize;touch-action:none;display:flex;align-items:flex-end;justify-content:center}',
     '.agm-rz:after{content:"";width:26px;height:3px;margin-bottom:2px;border-radius:2px;background:rgba(0,0,0,.28)}',
     '.agm-ghost{position:fixed;z-index:9998;border-radius:6px;background:rgba(109,47,122,.94);color:#fff;font-size:.72rem;font-weight:700;padding:3px 6px;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.3);overflow:hidden;white-space:nowrap}',
@@ -447,9 +452,21 @@
         evEl.addEventListener('pointerdown', function(ev){
           if(ev.target.closest('.agm-rz')) return;
           if(ev.button&&ev.button!==0) return;
+          var esTactil = ev.pointerType==='touch';
           var x0=ev.clientX, y0=ev.clientY, grab=y0-evEl.getBoundingClientRect().top;
           var moviendo=false, tIso=c.fecha, tMin=hm2min(c.hora), ghost=null;
+          // En táctil el arrastre se ARMA con pulsación larga; hasta entonces el
+          // dedo puede hacer scroll libremente. En desktop arma de una (mouse).
+          var armado = !esTactil, pressT=null;
+          function armar(){ armado=true; evEl.classList.add('agm-armed');
+            try{ evEl.setPointerCapture(ev.pointerId); }catch(e){}
+            if(navigator.vibrate){ try{navigator.vibrate(25);}catch(e){} } }
+          if(esTactil){ pressT=setTimeout(armar, 500); }
           function mv(e){ var dx=e.clientX-x0, dy=e.clientY-y0;
+            // Táctil aún no armado: si el dedo se desplaza, es SCROLL → cancelar
+            // el arme y soltar el gesto al navegador (no movemos la cita).
+            if(!armado){ if(esTactil && Math.abs(dx)+Math.abs(dy)>10){ clearTimeout(pressT); fin(); } return; }
+            if(esTactil) e.preventDefault();
             if(!moviendo){ if(Math.abs(dx)+Math.abs(dy)<6) return; moviendo=true; evEl.classList.add('agm-dragging'); }
             var col=colBajoX(e.clientX)||evEl.closest('.agm-body2[data-iso]'); if(!col) return;
             tIso=col.getAttribute('data-iso'); tMin=minDesdeTop(col, e.clientY-grab);
@@ -459,9 +476,17 @@
             ghost.style.top=(r.top+yOf(tMin))+'px'; ghost.style.height=Math.max(dur*PXMIN-1,18)+'px';
             ghost.firstChild.textContent=min2hm(tMin)+' '+(c.petName||c.owner||'');
           }
-          function up(){ document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up);
-            evEl.classList.remove('agm-dragging'); if(ghost) ghost.remove();
-            if(!moviendo){ abrirDetalle(c); return; }
+          function fin(){ document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up); document.removeEventListener('pointercancel',up);
+            evEl.classList.remove('agm-dragging'); evEl.classList.remove('agm-armed'); if(ghost){ ghost.remove(); ghost=null; } }
+          function up(e){ if(pressT) clearTimeout(pressT);
+            var cancelado = e && e.type==='pointercancel';
+            fin();
+            if(!moviendo){
+              // Sin arrastre: un toque/click normal abre el detalle. Un
+              // pointercancel (el navegador tomó el gesto para hacer scroll) no.
+              if(!cancelado) abrirDetalle(c);
+              return;
+            }
             S._noClick=true; setTimeout(function(){S._noClick=false;},350);
             var nHora=min2hm(tMin);
             if(tIso===c.fecha && nHora===c.hora){ return; }
@@ -469,7 +494,7 @@
             if(!confirm('¿Mover la cita de '+(c.petName||c.owner||'')+' a '+DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+' a las '+nHora+'?')){ cargarCal(); return; }
             guardarMoverCita(c, tIso, nHora, dur, false);
           }
-          document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up);
+          document.addEventListener('pointermove',mv,{passive:false}); document.addEventListener('pointerup',up); document.addEventListener('pointercancel',up);
         });
       });
       W.querySelectorAll('.agm-blk').forEach(function(bk){
