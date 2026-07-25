@@ -341,9 +341,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
         <!-- La cédula va primera y con el foco: es única, así que encuentra
              mejor que los nombres (que se repiten). Enter en cualquier campo
              dispara la búsqueda, para no tener que ir hasta el botón. -->
-        <input type="number" id="qCedula" placeholder="Cédula" autofocus onkeydown="if(event.key==='Enter')doSearch()">
-        <input type="text" id="qPet" placeholder="Nombre de la mascota (opcional)" onkeydown="if(event.key==='Enter')doSearch()">
-        <input type="text" id="qOwner" placeholder="Nombre del dueño (opcional)" onkeydown="if(event.key==='Enter')doSearch()">
+        <input type="number" id="qCedula" placeholder="Cédula" autofocus oninput="doSearchVivo()" onkeydown="if(event.key==='Enter')doSearch()">
+        <input type="text" id="qPet" placeholder="Nombre de la mascota (opcional)" oninput="doSearchVivo()" onkeydown="if(event.key==='Enter')doSearch()">
+        <input type="text" id="qOwner" placeholder="Nombre del dueño (opcional)" oninput="doSearchVivo()" onkeydown="if(event.key==='Enter')doSearch()">
         <button onclick="doSearch()">🔍 Buscar</button>
       </div>
       <div class="results" id="results"></div>
@@ -378,9 +378,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div class="modal-t">📋 Lista de interesados</div>
     <div class="modal-sub">Personas que llamaron por un horario y no había cupo. Busca su historia en Vetesoft por cédula (o cárgalo a mano); cuando se abra un hueco lo contactas desde acá.</div>
     <div class="search-row">
-      <input type="number" id="iCedula" placeholder="Cédula" onkeydown="if(event.key==='Enter')buscarInteres()">
-      <input type="text" id="iPet" placeholder="Nombre de la mascota (opcional)" onkeydown="if(event.key==='Enter')buscarInteres()">
-      <input type="text" id="iOwner" placeholder="Nombre del dueño (opcional)" onkeydown="if(event.key==='Enter')buscarInteres()">
+      <input type="number" id="iCedula" placeholder="Cédula" oninput="buscarInteresVivo()" onkeydown="if(event.key==='Enter')buscarInteres()">
+      <input type="text" id="iPet" placeholder="Nombre de la mascota (opcional)" oninput="buscarInteresVivo()" onkeydown="if(event.key==='Enter')buscarInteres()">
+      <input type="text" id="iOwner" placeholder="Nombre del dueño (opcional)" oninput="buscarInteresVivo()" onkeydown="if(event.key==='Enter')buscarInteres()">
       <button onclick="buscarInteres()">🔍 Buscar</button>
     </div>
     <div id="iResults"></div>
@@ -542,34 +542,54 @@ function serviciosInteres(){
 }
 
 // Mismo buscador que registrar un turno: por cédula/nombre contra Vetesoft.
+function _pintarResInteres(rows){
+  var btnManual = '<button class="btn-nuevo" onclick="interesManual()">+ No tiene historia clínica — cargar a mano</button>';
+  var cont = document.getElementById('iResults');
+  if (!rows.length) { cont.innerHTML = '<div class="res-note">No se encontró.</div>' + btnManual; return; }
+  var html = '';
+  rows.forEach(function(r, i){
+    window['_ir'+i] = r;
+    var hc = r.registro ? '<span class="res-hc">HC '+esc(r.registro)+'</span>' : '';
+    html += '<div class="res-item" onclick="pickInteres(_ir'+i+')"><div class="res-name">'+esc(r.petName||'')+hc+'</div>'+
+            '<div class="res-meta">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+' | 👤 '+esc(r.owner||'')+(r.documento?' · CC '+esc(r.documento):'')+(r.phone?' · 📞 '+esc(r.phone):'')+'</div></div>';
+  });
+  html += '<div class="res-ninguno">¿Ninguno es? ' + btnManual + '</div>';
+  cont.innerHTML = html;
+}
+var _intTok = 0;
 function buscarInteres(){
   var ced   = document.getElementById('iCedula').value.trim();
   var pet   = document.getElementById('iPet').value.trim();
   var owner = document.getElementById('iOwner').value.trim();
-  if (!ced && !pet && !owner) { showToast('Ingresá al menos un dato'); return; }
+  var term  = (ced + ' ' + pet + ' ' + owner).trim();
+  if (term.length < 2) { document.getElementById('iResults').innerHTML = ''; return; }
   document.getElementById('iForm').innerHTML = '';
-  document.getElementById('iResults').innerHTML = '<div class="spinner"></div>';
-  var url = API_URL + '?action=search&petName=' + encodeURIComponent(pet) +
-            '&ownerName=' + encodeURIComponent(owner) + '&cedula=' + encodeURIComponent(ced);
-  fetch(url).then(r=>r.json()).then(function(res){
-    var btnManual = '<button class="btn-nuevo" onclick="interesManual()">+ No tiene historia clínica — cargar a mano</button>';
-    if (!res || !res.ok || !res.results || !res.results.length) {
-      document.getElementById('iResults').innerHTML = '<div class="res-note">No se encontró en Vetesoft.</div>' + btnManual;
-      return;
+  var mi = ++_intTok;
+  function buscar(){
+    if (mi !== _intTok) return;
+    var rows = window.VetIndex ? VetIndex.search(term, null, 20) : [];
+    _pintarResInteres(rows);
+    var num = ced.replace(/\D/g, '');
+    if (num.length >= 6) {
+      fetch(API_URL + '?action=search&cedula=' + encodeURIComponent(num) + '&cb=' + Date.now())
+        .then(r=>r.json()).then(function(res){
+          if (mi !== _intTok) return;
+          var extra = ((res && res.results) || []).filter(function(x){ return !rows.some(function(y){ return String(y.id)===String(x.id); }); });
+          if (extra.length) { rows = extra.concat(rows); _pintarResInteres(rows); }
+        }).catch(function(){});
     }
-    var html = '';
-    res.results.forEach(function(r, i){
-      window['_ir'+i] = r;
-      var hc = r.registro ? '<span class="res-hc">HC '+esc(r.registro)+'</span>' : '';
-      html += '<div class="res-item" onclick="pickInteres(_ir'+i+')"><div class="res-name">'+esc(r.petName||'')+hc+'</div>'+
-              '<div class="res-meta">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+' | 👤 '+esc(r.owner||'')+(r.documento?' · CC '+esc(r.documento):'')+'</div></div>';
-    });
-    html += '<div class="res-ninguno">¿Ninguno es? ' + btnManual + '</div>';
-    document.getElementById('iResults').innerHTML = html;
-  }).catch(function(){
-    document.getElementById('iResults').innerHTML = '<div class="res-note">Error de conexión con Vetesoft.</div>';
-  });
+  }
+  if (window.VetIndex && VetIndex.listo()) { buscar(); }
+  else if (window.VetIndex) {
+    document.getElementById('iResults').innerHTML = '<div class="spinner"></div>';
+    VetIndex.load(API_URL).then(function(x){ if (mi!==_intTok) return; if (x) buscar(); else {
+      var url = API_URL + '?action=search&petName=' + encodeURIComponent(pet) + '&ownerName=' + encodeURIComponent(owner) + '&cedula=' + encodeURIComponent(ced) + '&cb=' + Date.now();
+      fetch(url).then(r=>r.json()).then(function(res){ if (mi===_intTok) _pintarResInteres((res&&res.results)||[]); }).catch(function(){ document.getElementById('iResults').innerHTML = '<div class="res-note">Error de conexión.</div>'; });
+    }});
+  }
 }
+var _intDeb = null;
+function buscarInteresVivo(){ clearTimeout(_intDeb); _intDeb = setTimeout(buscarInteres, 200); }
 
 function pickInteres(r){
   abrirFormInteres({ nombre: r.owner || '', tel: telSugerido(r.phone), hc: r.registro || '', pet: r.petName || '' });
@@ -928,6 +948,8 @@ function nearestHalfHour() {
 function iniciar() {
   loadWaitingRoom();
   cargarTurnos();       // ¿ya está configurada la jornada? si no, abre el pop-up
+  // Precarga el índice de Vetesoft en segundo plano para que el buscador sea instantáneo.
+  try { if (window.VetIndex) VetIndex.load(API_URL); } catch (e) {}
   // Se refresca sola, pero se pausa si recepción está registrando a alguien.
   // (No hay pausa por inactividad: recepción necesita la página siempre lista.)
   setInterval(function(){ if (!selected) loadWaitingRoom(true); }, 60000);
@@ -1084,44 +1106,63 @@ function serviceColor(s){
 }
 
 // ── Búsqueda en Vetesoft ─────────────────────────────────────
+// Pinta la lista de resultados de búsqueda (reutilizada por vivo y por botón).
+function _pintarResBusq(rows){
+  var btnNuevo = '<button class="btn-nuevo" onclick="registrarNuevo()">+ No tiene historia clínica — registrar nuevo</button>';
+  var cont = document.getElementById('results');
+  if (!rows.length) { cont.innerHTML = '<div class="res-note">No se encontró.</div>' + btnNuevo; return; }
+  var html = '';
+  rows.forEach(function(r, i){
+    window['_r'+i] = r;
+    var hc = r.registro ? '<span class="res-hc">HC '+esc(r.registro)+'</span>' : '';
+    html += '<div class="res-item" onclick="pickResult(_r'+i+')"><div class="res-name">'+esc(r.petName||'')+hc+'</div>'+
+            '<div class="res-meta">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+' | 👤 '+esc(r.owner||'')+(r.documento?' · CC '+esc(r.documento):'')+(r.phone?' · 📞 '+esc(r.phone):'')+'</div></div>';
+  });
+  html += '<div class="res-ninguno">¿Ninguno es? ' + btnNuevo + '</div>';
+  cont.innerHTML = html;
+}
+var _busqTok = 0;
 function doSearch() {
   const owner = document.getElementById('qOwner').value.trim();
   const pet   = document.getElementById('qPet').value.trim();
   const ced   = document.getElementById('qCedula').value.trim();
-  // La búsqueda arranca con solo la cédula y Enter: lo más práctico. Los
-  // pacientes fallecidos ya no aparecen (los filtra el backend), así que no
-  // hace falta exigir el nombre de la mascota para evitar nombrarlos.
-  if (!owner && !pet && !ced) { showToast('Ingresa al menos un dato'); return; }
+  const term  = (ced + ' ' + pet + ' ' + owner).trim();
+  if (term.length < 2) { document.getElementById('results').innerHTML = ''; return; }
   document.getElementById('regArea').innerHTML = '';
-  document.getElementById('results').innerHTML = '<div class="spinner"></div>';
-  const url = API_URL + '?action=search&petName=' + encodeURIComponent(pet) +
-              '&ownerName=' + encodeURIComponent(owner) + '&cedula=' + encodeURIComponent(ced);
-  fetch(url).then(r=>r.json()).then(function(res){
-    // El botón "sin historia clínica" va SIEMPRE — con o sin coincidencias.
-    // Si la búsqueda no encontró nada, es la única salida. Y si encontró
-    // parecidos pero ninguno es el cliente, también hay que poder registrar
-    // uno nuevo, o recepción se queda trabada mirando homónimos.
-    var btnNuevo = '<button class="btn-nuevo" onclick="registrarNuevo()">+ No tiene historia clínica — registrar nuevo</button>';
-
-    if (!res || !res.ok || !res.results || !res.results.length) {
-      document.getElementById('results').innerHTML =
-        '<div class="res-note">No se encontró en Vetesoft.</div>' + btnNuevo;
-      return;
+  var mi = ++_busqTok;
+  function buscar(){
+    if (mi !== _busqTok) return;
+    var rows = window.VetIndex ? VetIndex.search(term, null, 20) : [];
+    _pintarResBusq(rows);
+    // Frescura: si hay cédula (número 6+ dígitos), pregunta en vivo a Vetesoft.
+    var num = ced.replace(/\D/g, '');
+    if (num.length >= 6) {
+      fetch(API_URL + '?action=search&cedula=' + encodeURIComponent(num) + '&cb=' + Date.now())
+        .then(r=>r.json()).then(function(res){
+          if (mi !== _busqTok) return;
+          var extra = ((res && res.results) || []).filter(function(x){ return !rows.some(function(y){ return String(y.id)===String(x.id); }); });
+          if (extra.length) { rows = extra.concat(rows); _pintarResBusq(rows); }
+        }).catch(function(){});
     }
-    let html = '';
-    res.results.forEach(function(r, i){
-      window['_r'+i] = r;
-      const hc = r.registro ? '<span class="res-hc">HC '+esc(r.registro)+'</span>' : '';
-      html += '<div class="res-item" onclick="pickResult(_r'+i+')"><div class="res-name">'+esc(r.petName||'')+hc+'</div>'+
-              '<div class="res-meta">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+' | 👤 '+esc(r.owner||'')+(r.documento?' · CC '+esc(r.documento):'')+'</div></div>';
-    });
-    // Al final de la lista: por si ninguno de los que aparecen es el cliente.
-    html += '<div class="res-ninguno">¿Ninguno es? ' + btnNuevo + '</div>';
-    document.getElementById('results').innerHTML = html;
-  }).catch(function(){
-    document.getElementById('results').innerHTML = '<div class="res-note">Error de conexión con Vetesoft.</div>';
-  });
+  }
+  if (window.VetIndex && VetIndex.listo()) { buscar(); }
+  else if (window.VetIndex) {
+    document.getElementById('results').innerHTML = '<div class="spinner"></div>';
+    VetIndex.load(API_URL).then(function(x){ if (mi!==_busqTok) return; if (x) buscar(); else _busqFallback(pet, owner, ced, mi); });
+  } else { _busqFallback(pet, owner, ced, mi); }
 }
+// Respaldo: la búsqueda vieja en vivo por campos (si el índice no cargó).
+function _busqFallback(pet, owner, ced, mi){
+  var url = API_URL + '?action=search&petName=' + encodeURIComponent(pet) +
+            '&ownerName=' + encodeURIComponent(owner) + '&cedula=' + encodeURIComponent(ced) + '&cb=' + Date.now();
+  fetch(url).then(r=>r.json()).then(function(res){
+    if (mi !== _busqTok) return;
+    _pintarResBusq((res && res.results) || []);
+  }).catch(function(){ document.getElementById('results').innerHTML = '<div class="res-note">Error de conexión.</div>'; });
+}
+// Búsqueda EN VIVO: a medida que se escribe (con un respiro de 200ms).
+var _busqDeb = null;
+function doSearchVivo(){ clearTimeout(_busqDeb); _busqDeb = setTimeout(doSearch, 200); }
 
 // Vetesoft nos devuelve el teléfono del propietario, pero puede ser un
 // fijo, un número viejo o el del vecino. Solo proponemos lo que parece un
