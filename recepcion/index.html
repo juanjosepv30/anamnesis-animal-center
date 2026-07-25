@@ -753,9 +753,18 @@ function buildSpecOptions() {
 
 // Médicos generales de turno AHORA (los que puede pedir el cliente). Salen de
 // la lista que recepción configuró (_turnosActuales).
-function buildMedGenOptions() {
+function buildMedGenOptions(svc) {
   var docs = _turnosActuales || [];
-  return '<option value="">— Cualquiera (por orden de llegada) —</option>' +
+  var esViaje = /viaje/i.test(svc || '');
+  // Certificado de viaje: vacío = general de turno (el primero disponible). Además
+  // se puede asignar al Dr. Freddy (el de certificados) aunque no esté de turno.
+  var vacio = esViaje ? '— General de turno (el primero disponible) —'
+                      : '— Cualquiera (por orden de llegada) —';
+  var extra = '';
+  if (esViaje && docs.indexOf('Dr. Freddy Vera') === -1) {
+    extra = '<option value="Dr. Freddy Vera">Dr. Freddy Vera (certificados)</option>';
+  }
+  return '<option value="">'+vacio+'</option>' + extra +
     docs.map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
 }
 
@@ -793,7 +802,7 @@ var SERVICIOS = [
   { v:'Inyectología',           doctor:'ninguno', agenda:false, desc:'Aplicar inyección' },
   { v:'Cirugía',                doctor:'ninguno', agenda:false, desc:'Cirugía · médico general' },
   { v:'Desparasitación',        doctor:'ninguno', agenda:false, desc:'Desparasitación · médico general' },
-  { v:'Viajero',                doctor:'auto', fijo:'Dr. Freddy Vera',   agenda:false, label:'Viajero / certificado', desc:'Certificado de viaje · Dr. Freddy' },
+  { v:'Viajero',                doctor:'ninguno', agenda:false, label:'Viajero / certificado', desc:'Certificado · Dr. Freddy o general de turno' },
   { v:'Rayos X y Ecografía',    doctor:'eligeDoc', fijo:'Dra. Angie Valero', agenda:false, desc:'Imágenes · normalmente Dra. Angie' },
   { v:'Ecocardiograma / Electrocardiograma', doctor:'eligeDoc', fijo:'Dr. Wilmer Páez', agenda:true, label:'Eco / Electrocardiograma', desc:'Cardiología · normalmente Dr. Wilmer' },
   { v:'Terapia física',         doctor:'elige', agenda:true, desc:'Fisioterapia · con especialista' }
@@ -903,11 +912,15 @@ function pintarServicio() {
   if (cfg.doctor === 'eligeDoc') document.getElementById('regRayosDoc').innerHTML = buildRayosDocOptions();
   if (cfg.doctor !== 'elige') document.getElementById('regSpec').value = '';
 
-  // ── Médico general pedido (solo consultas/controles generales) ──
-  var esGen = cfg.doctor === 'ninguno' && (/general/i.test(svc) || /cirug|desparasit/i.test(svc));
+  // ── Médico general / de turno (consultas/controles generales y certificado) ──
+  var esGen = cfg.doctor === 'ninguno' && (/general/i.test(svc) || /cirug|desparasit|viaje/i.test(svc));
   var boxMG = document.getElementById('boxMedGen');
   boxMG.style.display = esGen ? '' : 'none';
-  if (esGen) document.getElementById('regMedGen').innerHTML = buildMedGenOptions();
+  var lblMG = document.getElementById('lblMedGen');
+  if (lblMG) lblMG.innerHTML = /viaje/i.test(svc)
+    ? 'Médico <span class="lbl-tip">(Dr. Freddy o general de turno)</span>'
+    : 'Médico general <span class="lbl-tip">(opcional — si lo pidió)</span>';
+  if (esGen) document.getElementById('regMedGen').innerHTML = buildMedGenOptions(svc);
   else document.getElementById('regMedGen').value = '';
 
   // Los pacientes con cita ya no se registran acá (llegan por la agenda con
@@ -1229,7 +1242,7 @@ function abrirRegistro(r, esNuevo) {
         // Viajero y Rayos van con un doctor fijo: se muestra, no se elige.
         '<div id="boxAutoDoc" style="display:none"><label>Doctor asignado</label><div class="reg-auto">👨‍⚕️ <span id="autoDocName"></span></div></div>'+
         // Consulta general: el cliente puede pedir un general específico (opcional).
-        '<div id="boxMedGen" style="display:none"><label>Médico general <span class="lbl-tip">(opcional — si lo pidió)</span></label><select id="regMedGen">'+buildMedGenOptions()+'</select></div>'+
+        '<div id="boxMedGen" style="display:none"><label id="lblMedGen">Médico general <span class="lbl-tip">(opcional — si lo pidió)</span></label><select id="regMedGen">'+buildMedGenOptions()+'</select></div>'+
         // Rayos X: normalmente la Dra. Angie, pero si no está lo cubre otro.
         '<div id="boxRayosDoc" style="display:none"><label>Médico que lo hace <span class="lbl-tip">(si la Dra. Angie no está, elige otro)</span></label><select id="regRayosDoc">'+buildRayosDocOptions()+'</select></div>'+
         // Con teléfono, al cliente le llega el link y llena la ficha desde su
