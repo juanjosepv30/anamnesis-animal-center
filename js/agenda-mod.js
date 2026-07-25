@@ -141,7 +141,7 @@
     '.agm-ev.agm-drag{cursor:grab}',
     // Cita CANCELADA: gris, tachada, borde punteado. Se muestra para que no
     // parezca "borrada", pero no ocupa el horario ni se puede tocar para acciones.
-    '.agm-ev.agm-cancel{cursor:default;border-left-style:dashed!important;opacity:.9}',
+    '.agm-ev.agm-cancel{cursor:default;border-left-style:dashed!important;opacity:.85;z-index:1}',
     '.agm-ev.agm-cancel b{text-decoration:line-through;font-weight:600}',
     // Cita "levantada" con el long-press (móvil): se pone morada y crece un poco
     // para que se entienda que ya se puede mover.
@@ -184,7 +184,12 @@
     '.agm-modal .agm-chk{align-items:center}',
     '.agm-modal .agm-chk input[type=checkbox]{width:16px;height:16px;flex:0 0 auto;margin:0}',
     '.agm-mact{display:flex;gap:8px;margin-top:18px}',
-    '.agm-warn{background:#fff4e6;border:1.5px solid #fed7aa;color:#b45309;border-radius:10px;padding:10px 12px;font-size:.82rem;font-weight:700;margin-bottom:12px;line-height:1.4}'
+    '.agm-warn{background:#fff4e6;border:1.5px solid #fed7aa;color:#b45309;border-radius:10px;padding:10px 12px;font-size:.82rem;font-weight:700;margin-bottom:12px;line-height:1.4}',
+    // Pills EDITABLES del modal crear cita: se ven como .agm-wpill pero llevan un
+    // control adentro (fecha/hora/médico) para corregir un toque errado al vuelo.
+    '.agm-wsel{font-size:.82rem;color:var(--apd);font-weight:800;background:var(--apl);border:1.5px solid var(--abd);border-radius:9px;padding:5px 8px;display:inline-flex;align-items:center;gap:5px;cursor:pointer}',
+    '.agm-when .agm-wsel select,.agm-when .agm-wsel input{border:none;background:transparent;font-weight:800;color:var(--apd);font-size:.82rem;font-family:inherit;padding:2px 2px;margin:0;cursor:pointer;width:auto;min-width:0;box-sizing:content-box;-webkit-appearance:menulist;appearance:auto}',
+    '.agm-when .agm-wsel input[type=date]{min-width:120px}'
   ].join('\n');
 
   var cssInjected=false;
@@ -300,6 +305,12 @@
     else { cargarMedicos(pintar); }
 
     function medOpts(sel){ return S.medicos.map(function(n){return '<option value="'+esc(n)+'"'+(n===sel?' selected':'')+'>'+esc(n)+'</option>';}).join(''); }
+    // Igual que medOpts pero garantiza que el médico actual figure aunque no esté
+    // en la lista (p.ej. si la lista aún no cargó): así nunca queda sin seleccionar.
+    function medOpts2(sel){ var arr=S.medicos.slice(); if(sel && arr.indexOf(sel)<0) arr.unshift(sel); return arr.map(function(n){return '<option value="'+esc(n)+'"'+(n===sel?' selected':'')+'>'+esc(n)+'</option>';}).join(''); }
+    // Horas 06:00–21:30 cada 30 min. Si la hora actual cae fuera de la grilla
+    // (p.ej. una cita a las 10:15) se antepone para no perderla.
+    function horaOpts2(sel){ var h='',found=false; for(var m=6*60;m<=21*60+30;m+=30){ var v=min2hm(m); if(v===sel)found=true; h+='<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>'; } if(sel && !found){ h='<option value="'+esc(sel)+'" selected>'+esc(sel)+'</option>'+h; } return h; }
     function $(id){ return body.querySelector('#'+id); }
     function pintar(){ if(S.sub==='bloquear') pintarBloquear(); else if(S.sub==='interesados') pintarInteresados(); else pintarCal(); }
 
@@ -480,9 +491,14 @@
         }
         // citas de ese día
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
-          var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio); var alt=Math.max(dur*PXMIN-1,18);
-          var col=svcColor(c.servicio);
+          var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio);
           var cancelada=String(c.estado||'')==='cancelada';
+          // Cancelada: NO ocupa el bloque entero. Se dibuja como una tira fina y
+          // POR DETRÁS (z-index bajo). Así el horario se ve "libre" y no parece
+          // una cita duplicada montada sobre la activa. Si hay una cita activa
+          // encima, la tira queda tapada; si está sola, se ve delgada y apagada.
+          var alt=cancelada?15:Math.max(dur*PXMIN-1,18);
+          var col=svcColor(c.servicio);
           // Las citas ya llegadas o CANCELADAS no se arrastran ni estiran.
           var movible=!c.llego && !cancelada;
           var _mov=(S.reprog&&String(S.reprog.id)===String(c.id))?' agm-moving':'';
@@ -716,13 +732,14 @@
       S.crear={ fecha:iso, hora:hora, medico:med, forzar:!!forzar }; S.selCliente=null;
       try{ if(window.VetIndex) VetIndex.load(api); }catch(e){}   // precarga el índice
 
-      var d=mkFecha(iso);
       overlay(
         '<div class="agm-mh"><div class="agm-mt">Agendar cita</div><button class="agm-mx" id="mX">×</button></div>'+
+        // Pills EDITABLES: si el dedo tocó mal la hora/fecha/médico, se corrige acá
+        // mismo con un desplegable en vez de tener que cancelar y volver a empezar.
         '<div class="agm-when">'+
-          '<span class="agm-wpill">📅 '+esc(DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1))+'</span>'+
-          '<span class="agm-wpill">🕐 '+esc(hora)+'</span>'+
-          '<span class="agm-wpill">🩺 '+esc(med)+'</span>'+
+          '<label class="agm-wsel">📅 <input type="date" id="wFecha" value="'+esc(iso)+'"></label>'+
+          '<label class="agm-wsel">🕐 <select id="wHora">'+horaOpts2(hora)+'</select></label>'+
+          '<label class="agm-wsel">🩺 <select id="wMed">'+medOpts2(med)+'</select></label>'+
         '</div>'+
         (forzar?'<div class="agm-warn">⚠️ Este horario está bloqueado. Vas a agendar una cita igual, encima del bloqueo.</div>':'')+
         '<div class="agm-mlbl">Buscar paciente</div>'+
@@ -730,6 +747,10 @@
         '<div class="agm-res" id="mRes"></div><div id="mForm"></div>'
       );
       $ov('mX').onclick=cerrarOv;
+      // Corrección al vuelo: cada control actualiza el pendiente de creación.
+      var wf=$ov('wFecha'); if(wf) wf.onchange=function(){ if(wf.value) S.crear.fecha=wf.value; };
+      var wh=$ov('wHora');  if(wh) wh.onchange=function(){ S.crear.hora=wh.value; };
+      var wm=$ov('wMed');   if(wm) wm.onchange=function(){ S.crear.medico=wm.value; };
       var q=$ov('mQ');
       q.oninput=function(){ clearTimeout(S._deb); var v=q.value; S._deb=setTimeout(function(){ buscarModal(v); }, 350); };
       q.focus();
