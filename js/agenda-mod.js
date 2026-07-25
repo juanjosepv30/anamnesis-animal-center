@@ -138,7 +138,10 @@
     // Arrastrar/estirar citas. En táctil el scroll queda LIBRE (touch-action
     // auto): el arrastre se ARMA con una pulsación larga (~500ms), no con el
     // primer roce, para no mover citas sin querer al hacer scroll.
-    '.agm-ev.agm-drag{cursor:grab}',
+    // touch-action:none → tocar una cita arrastrable NUNCA hace scroll: el gesto
+    // es siempre para la cita (arrastrar = mover, tocar = detalle). El scroll del
+    // calendario se hace desde los huecos vacíos.
+    '.agm-ev.agm-drag{cursor:grab;touch-action:none}',
     '.agm-ev.agm-dragging{opacity:.35}',
     // Cita con el arrastre ARMADO tras la pulsación larga: se resalta para que
     // el dedo sepa que ya puede mover.
@@ -157,6 +160,10 @@
     '.agm-off{position:absolute;left:2px;right:2px;border-radius:4px;background:repeating-linear-gradient(45deg,rgba(148,163,184,.15),rgba(148,163,184,.15) 7px,rgba(148,163,184,.28) 7px,rgba(148,163,184,.28) 14px);color:#64748b;font-size:.6rem;font-weight:800;padding:2px 5px;overflow:hidden;pointer-events:none;z-index:1;letter-spacing:.4px}',
     // ── Modal ──
     '.agm-ov{position:fixed;inset:0;background:rgba(20,8,30,.45);display:flex;align-items:flex-start;justify-content:center;z-index:9999;padding:24px 12px;overflow-y:auto}',
+    // Variante centrada verticalmente: para los avisos de confirmación (chicos),
+    // que quedan en la mitad de la pantalla en vez de pegados arriba.
+    '.agm-ov.agm-ovc{align-items:center}',
+    '.agm-ov.agm-ovc .agm-modal{max-width:420px}',
     '.agm-modal{background:#fff;border-radius:16px;padding:20px;max-width:460px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}',
     '.agm-mh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px}',
     '.agm-mt{font-size:1.05rem;font-weight:800;color:var(--atx)}',
@@ -564,20 +571,19 @@
           if(ev.button&&ev.button!==0) return;
           var esTactil = ev.pointerType==='touch';
           var x0=ev.clientX, y0=ev.clientY, grab=y0-evEl.getBoundingClientRect().top;
-          var moviendo=false, tIso=c.fecha, tMin=hm2min(c.hora), ghost=null;
-          // En táctil el arrastre se ARMA con pulsación larga; hasta entonces el
-          // dedo puede hacer scroll libremente. En desktop arma de una (mouse).
-          var armado = !esTactil, pressT=null;
-          function armar(){ armado=true; evEl.classList.add('agm-armed');
-            try{ evEl.setPointerCapture(ev.pointerId); }catch(e){}
-            if(navigator.vibrate){ try{navigator.vibrate(25);}catch(e){} } }
-          if(esTactil){ pressT=setTimeout(armar, 500); }
+          var moviendo=false, tIso=c.fecha, tMin=hm2min(c.hora), ghost=null, pressT=null;
+          // La cita tiene touch-action:none, así que tocarla NO hace scroll: el
+          // gesto es SIEMPRE de la cita. Arrastrar (>6px) la mueve; soltar sin
+          // mover abre el detalle. Al empezar a mover capturamos el puntero y
+          // vibramos, para que se sienta que la "levantaste".
           function mv(e){ var dx=e.clientX-x0, dy=e.clientY-y0;
-            // Táctil aún no armado: si el dedo se desplaza, es SCROLL → cancelar
-            // el arme y soltar el gesto al navegador (no movemos la cita).
-            if(!armado){ if(esTactil && Math.abs(dx)+Math.abs(dy)>10){ clearTimeout(pressT); fin(); } return; }
+            if(!moviendo){
+              if(Math.abs(dx)+Math.abs(dy)<6) return;   // todavía es un toque, no un arrastre
+              moviendo=true; evEl.classList.add('agm-dragging');
+              try{ evEl.setPointerCapture(ev.pointerId); }catch(e2){}
+              if(navigator.vibrate){ try{navigator.vibrate(20);}catch(e3){} }
+            }
             if(esTactil) e.preventDefault();
-            if(!moviendo){ if(Math.abs(dx)+Math.abs(dy)<6) return; moviendo=true; evEl.classList.add('agm-dragging'); }
             var col=colBajoX(e.clientX)||evEl.closest('.agm-body2[data-iso]'); if(!col) return;
             tIso=col.getAttribute('data-iso'); tMin=minDesdeTop(col, e.clientY-grab);
             if(!ghost){ ghost=document.createElement('div'); ghost.className='agm-ghost'; ghost.innerHTML='<b></b>'; document.body.appendChild(ghost); }
@@ -641,7 +647,7 @@
     // del navegador). Crea su PROPIO overlay (z-index alto): se apila encima de
     // cualquier modal abierto sin destruirlo. Devuelve promesa: true=confirma.
     function _capa(html){
-      var ov=document.createElement('div'); ov.className='agm agm-ov'; ov.style.zIndex='10001';
+      var ov=document.createElement('div'); ov.className='agm agm-ov agm-ovc'; ov.style.zIndex='10001';
       ov.innerHTML='<div class="agm-modal">'+html+'</div>';
       document.body.appendChild(ov); return ov;
     }
