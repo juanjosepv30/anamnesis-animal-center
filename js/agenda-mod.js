@@ -139,6 +139,10 @@
     // auto): el arrastre se ARMA con una pulsación larga (~500ms), no con el
     // primer roce, para no mover citas sin querer al hacer scroll.
     '.agm-ev.agm-drag{cursor:grab}',
+    // Cita CANCELADA: gris, tachada, borde punteado. Se muestra para que no
+    // parezca "borrada", pero no ocupa el horario ni se puede tocar para acciones.
+    '.agm-ev.agm-cancel{cursor:default;border-left-style:dashed!important;opacity:.9}',
+    '.agm-ev.agm-cancel b{text-decoration:line-through;font-weight:600}',
     // Cita "levantada" con el long-press (móvil): se pone morada y crece un poco
     // para que se entienda que ya se puede mover.
     '.agm-ev.agm-picked{outline:3px solid #8e3f9e;outline-offset:1px;background:#8e3f9e!important;color:#fff!important;box-shadow:0 8px 22px rgba(142,63,158,.55);transform:scale(1.04);z-index:30}',
@@ -478,12 +482,13 @@
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
           var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio); var alt=Math.max(dur*PXMIN-1,18);
           var col=svcColor(c.servicio);
-          // Las citas ya llegadas NO se arrastran ni estiran (editarCita las bloquea).
-          var movible=!c.llego;
+          var cancelada=String(c.estado||'')==='cancelada';
+          // Las citas ya llegadas o CANCELADAS no se arrastran ni estiran.
+          var movible=!c.llego && !cancelada;
           var _mov=(S.reprog&&String(S.reprog.id)===String(c.id))?' agm-moving':'';
-          h+='<div class="agm-ev'+(c.llego?' lleg':'')+(movible?' agm-drag':'')+_mov+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+col+'22;border-left-color:'+col+';color:#1a0a2e">'+
-             '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(c.llego?' ✓':'')+(c.pagado?' 💵':'')+(c.comprobante?' 📎':'')+'</b>'+
-             (alt>28?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+
+          h+='<div class="agm-ev'+(c.llego?' lleg':'')+(cancelada?' agm-cancel':'')+(movible?' agm-drag':'')+_mov+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+(cancelada?'#f1eef5':col+'22')+';border-left-color:'+(cancelada?'#c9bdd6':col)+';color:'+(cancelada?'#9a8ba8':'#1a0a2e')+'">'+
+             '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(cancelada?' · cancelada':(c.llego?' ✓':'')+(c.pagado?' 💵':'')+(c.comprobante?' 📎':''))+'</b>'+
+             (alt>28&&!cancelada?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+
              (movible&&!_agmMovil?'<div class="agm-rz" title="Estirar para cambiar la duración"></div>':'')+'</div>';
         });
         h+='</div></div>';
@@ -546,6 +551,10 @@
         var id=evEl.getAttribute('data-id');
         var c=citas.filter(function(x){return String(x.id)===id;})[0];
         if(!c) return;
+        if(String(c.estado||'')==='cancelada'){   // cancelada: solo un aviso, sin acciones
+          evEl.addEventListener('click', function(ev){ ev.stopPropagation(); agmAlert('Esta cita fue CANCELADA. Queda registrada (en gris) para que se vea que existió, pero no ocupa ni bloquea el horario.', 'Cita cancelada'); });
+          return;
+        }
         if(!evEl.classList.contains('agm-drag')){   // llegada: solo abre detalle
           evEl.addEventListener('click', function(ev){ ev.stopPropagation(); abrirDetalle(c); });
           return;
