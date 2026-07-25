@@ -498,10 +498,24 @@
           var m=slotY(bodyEl,ev.clientY); hov.style.top=yOf(m)+'px'; hov.textContent=min2hm(m); hov.style.display='flex';
         });
         bodyEl.addEventListener('mouseleave', function(){ hov.style.display='none'; });
-        // click en hueco vacío → agendar (si cae sobre un bloqueo, avisa)
-        bodyEl.addEventListener('click', function(ev){
+        // Tap en hueco vacío → agendar / reprogramar. Usamos pointerdown+pointerup
+        // (NO 'click') porque en móvil, dentro de un contenedor con scroll táctil
+        // (-webkit-overflow-scrolling:touch), el 'click' sintetizado tras el toque
+        // a veces NO se dispara y el tap "no hacía nada" (bug clásico de iOS). Con
+        // pointer events el toque es confiable; el umbral de movimiento distingue
+        // el tap del scroll, y funciona igual con mouse en computador.
+        var _tap=null;
+        bodyEl.addEventListener('pointerdown', function(ev){
+          if(ev.target.closest('.agm-ev')||ev.target.closest('.agm-blk')){ _tap=null; return; }
+          _tap={ x:ev.clientX, y:ev.clientY, t:Date.now() };
+        });
+        bodyEl.addEventListener('pointercancel', function(){ _tap=null; });
+        bodyEl.addEventListener('pointerup', function(ev){
+          var s=_tap; _tap=null; if(!s) return;
           if(S._noClick) return;   // recién soltó un arrastre/estirón: no agendar
           if(ev.target.closest('.agm-ev')||ev.target.closest('.agm-blk')) return;
+          if(Math.abs(ev.clientX-s.x)+Math.abs(ev.clientY-s.y)>12) return;  // se movió → fue scroll, no tap
+          if(Date.now()-s.t>700) return;                                    // pulsación larga → no es tap
           var m=slotY(bodyEl,ev.clientY); var hm=min2hm(m);
           var b=bloqueoDe(bloqs,iso,hm), forz=false;
           if(b){ if(!confirm('Acá hay un bloqueo'+(b.motivo?' ('+b.motivo+')':'')+'. ¿'+(S.reprog?'Reprogramar':'Agendar una cita')+' igual en este horario?')) return; forz=true; }
@@ -1031,6 +1045,11 @@
         '<div class="agm-card"><div class="agm-t">📋 Interesados</div>'+
         '<div class="agm-sub">Gente que quería una cita y no había cupo. Cuando se libere un hueco, los contactás desde acá. La lista es <b>de cada médico</b>.</div>'+
         (medicoFijo?'':'<div style="margin-bottom:10px"><label>Médico</label><select id="iMed">'+medOpts(S.med)+'</select></div>')+
+        // Buscador de Vetesoft: si el cliente ya tiene historia, lo encontrás acá y
+        // se autocompleta el dueño y el teléfono. Si no aparece, se carga a mano abajo.
+        '<div style="margin-bottom:6px"><label>Buscar en Vetesoft <span style="font-weight:400">(cédula, nombre o dueño)</span></label>'+
+          '<input id="iBusca" type="text" autocomplete="off" placeholder="Escribí para buscar el cliente…"></div>'+
+        '<div id="iBuscRes" style="margin-bottom:8px"></div>'+
         '<div class="agm-row">'+
           '<div><label>Nombre del dueño</label><input id="iNom" type="text" placeholder="Nombre"></div>'+
           '<div><label>WhatsApp</label><input id="iTel" type="tel" inputmode="numeric" maxlength="10" placeholder="3001234567"></div>'+
@@ -1050,7 +1069,39 @@
       $('iVolver').onclick=function(){ S.sub='cal'; pintar(); };
       var im=$('iMed'); if(im) im.onchange=function(){ S.med=im.value; cargarInteres(); };
       $('iAdd').onclick=guardarInteres;
+      // Precarga el índice para que el buscador sea instantáneo.
+      try{ if(window.VetIndex) VetIndex.load(api); }catch(e){}
+      var ib=$('iBusca'); if(ib){ var deb=null; ib.oninput=function(){ clearTimeout(deb); deb=setTimeout(function(){ buscarVetInteres(ib.value.trim()); }, 200); }; }
       cargarInteres();
+    }
+    // Busca el cliente en el índice de Vetesoft para autocompletar dueño + teléfono.
+    function buscarVetInteres(term){
+      var R=$('iBuscRes'); if(!R) return;
+      if(term.length<2){ R.innerHTML=''; return; }
+      var rows = window.VetIndex ? VetIndex.search(term, null, 8) : [];
+      _pintarVetInteres(R, rows);
+      // Frescura: si no hay nada local y es una cédula completa, pregunta en vivo.
+      var num=term.replace(/\D/g,'');
+      if(rows.length===0 && num.length>=6){
+        fetch(api+'?action=search&cedula='+encodeURIComponent(num)+'&cb='+Date.now()).then(function(r){return r.json();}).then(function(res){
+          var found=(res&&res.results)||[]; if(found.length) _pintarVetInteres(R, found);
+        }).catch(function(){});
+      }
+    }
+    function _pintarVetInteres(R, rows){
+      if(!rows.length){ R.innerHTML='<div style="font-size:.75rem;color:var(--atm);padding:2px 1px">Sin coincidencias — cargalo a mano abajo.</div>'; return; }
+      R.innerHTML=rows.map(function(r){
+        return '<div class="agm-vres" style="border:1px solid var(--abd);border-radius:8px;padding:6px 9px;margin-bottom:4px;cursor:pointer;font-size:.78rem">'+
+          '<b>'+esc(r.owner||r.petName||'—')+'</b>'+(r.registro?' · HC '+esc(r.registro):'')+(r.documento?' · CC '+esc(r.documento):'')+(r.phone?' · 📞 '+esc(r.phone):'')+'</div>';
+      }).join('');
+      var items=R.querySelectorAll('.agm-vres');
+      rows.forEach(function(r,i){ if(items[i]) items[i].onclick=function(){ _pickVetInteres(r); }; });
+    }
+    function _pickVetInteres(r){
+      var n=$('iNom'); if(n) n.value=r.owner||'';
+      var t=$('iTel'); if(t) t.value=String(r.phone||'').replace(/\D/g,'').slice(-10);
+      var R=$('iBuscRes'); if(R) R.innerHTML='<div style="font-size:.76rem;color:#0d9488;font-weight:700;padding:2px 1px">✓ '+esc(r.owner||'(sin nombre)')+(r.registro?' · HC '+esc(r.registro):'')+'</div>';
+      var ib=$('iBusca'); if(ib) ib.value='';
     }
     function guardarInteres(){
       var err=$('iErr'); if(err) err.textContent='';
