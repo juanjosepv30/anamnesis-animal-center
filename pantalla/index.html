@@ -160,12 +160,17 @@ function cargarVoces(){
   try {
     var vs = speechSynthesis.getVoices();
     var es = vs.filter(function(v){ return /^es/i.test(v.lang); });
-    // Preferimos una voz FEMENINA en español latino (suena más aguda y clara
-    // que la grave por defecto). Nombres típicos de voces femeninas es-*.
-    var fem = /sabina|helena|laura|paulina|monica|mónica|elena|female|mujer|isabela|catalina|valentina/i;
-    vozES = es.filter(function(v){ return fem.test(v.name); })[0]
-         || es.filter(function(v){ return /^es-(co|mx|us|419)/i.test(v.lang); })[0]
-         || es[0] || null;
+    // Preferencia, de más humana a menos:
+    // 1) Voz NEURONAL/natural (Microsoft "…Online (Natural)", Google) → suena real.
+    // 2) Voz femenina latina (más aguda y clara que la grave por defecto).
+    // 3) Cualquier español latino. 4) Cualquier español.
+    var natural = /natural|neural|online|google/i;
+    var fem = /sabina|salome|salomé|helena|laura|paulina|monica|mónica|elena|female|mujer|isabela|catalina|valentina|dalia|renata/i;
+    var esFemNat = es.filter(function(v){ return natural.test(v.name) && fem.test(v.name); });
+    var esNat    = es.filter(function(v){ return natural.test(v.name); });
+    var esFem    = es.filter(function(v){ return fem.test(v.name); });
+    var esLat    = es.filter(function(v){ return /^es-(co|mx|us|419)/i.test(v.lang); });
+    vozES = esFemNat[0] || esNat[0] || esFem[0] || esLat[0] || es[0] || null;
   } catch(e){}
 }
 if ('speechSynthesis' in window) { cargarVoces(); speechSynthesis.onvoiceschanged = cargarVoces; }
@@ -207,13 +212,29 @@ function mascotasHabladas(r){
   return todas.slice(0, -1).join(', ') + ' y ' + todas[todas.length - 1];
 }
 
+// Primer nombre del cliente (para el saludo).
+function primerNombre(n){ return String(n||'').trim().split(/\s+/)[0] || ''; }
+// Trato "Señor"/"Señora" a partir del nombre. NO tenemos el género guardado, así
+// que se ADIVINA: termina en "a" → Señora, si no → Señor, con una lista de
+// excepciones comunes en Colombia (nombres femeninos que no terminan en "a").
+// No es infalible; recepción puede corregir con el tiempo.
+var NOMBRES_F = {beatriz:1,isabel:1,raquel:1,mercedes:1,dolores:1,pilar:1,carmen:1,rocio:1,consuelo:1,soledad:1,esther:1,ester:1,ruth:1,noemi:1,nohemi:1,ines:1,concepcion:1,asuncion:1,jazmin:1,jasmin:1,maribel:1,anabel:1,marisol:1,yaneth:1,yanet:1,mayerly:1,mayerli:1,luz:1,flor:1,sol:1,mar:1,damaris:1,leidy:1,deisy:1,yeimy:1,karen:1,jennifer:1,yenifer:1,lizeth:1,lizbeth:1,estefany:1,nayeli:1,abril:1,yamileth:1,edith:1,judith:1,elizabeth:1};
+function tratamiento(nombre){
+  var n = primerNombre(nombre).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  if(!n) return '';
+  if(NOMBRES_F[n]) return 'Señora';
+  return (n.charAt(n.length-1)==='a') ? 'Señora' : 'Señor';
+}
 function hablarTurno(r){
   if (!('speechSynthesis' in window)) return;
-  var turno = leerTurno(r.turno);
-  var room  = r.consultorio ? ('pase al consultorio ' + r.consultorio) : 'pase adelante';
-  var pet   = mascotasHabladas(r) ? (', con ' + mascotasHabladas(r)) : '';
-  // Ej: "Turno E 4, pase al consultorio Boom Boom, con Mila."
-  var frase = 'Turno ' + turno + ', ' + room + pet + '.';
+  var nombre  = primerNombre(r.ownerName);
+  var trato   = tratamiento(r.ownerName);
+  var mascota = mascotasHabladas(r);
+  var conMasc = mascota ? ('pase con ' + mascota) : 'pase adelante';
+  var room    = r.consultorio ? (' al consultorio ' + r.consultorio) : '';
+  var saludo  = nombre ? ((trato ? trato + ' ' : '') + nombre + ', por favor ') : 'Por favor, ';
+  // Ej: "Señora Sandra, por favor pase con Maxi al consultorio Boom Boom."
+  var frase = saludo + conMasc + room + '.';
   try {
     var u = new SpeechSynthesisUtterance(frase);
     u.lang = 'es-CO'; u.rate = 0.94; u.pitch = 1.3; u.volume = 1;   // pitch alto = voz más aguda
@@ -235,7 +256,8 @@ function serviceColor(s){
   s=(s||'').toLowerCase();
   // Control primero: "Control especializado" tiene las dos palabras y se
   // agrupa (azul) con los controles, no con la naranja de especializada.
-  if(s.indexOf('control')!==-1)   return'#2563eb'; // azul
+  if(s.indexOf('cardiograma')!==-1)return'#e11d48'; // ecocardio/electro rojo
+  if(s.indexOf('control')!==-1)   return(s.indexOf('especial')!==-1)?'#4f46e5':'#2563eb'; // ctrl esp índigo / gral azul
   if(s.indexOf('cirug')!==-1)     return'#7c3aed'; // morado
   if(s.indexOf('desparasit')!==-1)return'#6b7280'; // gris (como inyectología)
   if(s.indexOf('especial')!==-1)  return'#f97316'; // naranja

@@ -1083,7 +1083,8 @@ function serviceColor(s){
   s=(s||'').toLowerCase();
   // Control primero: "Control especializado" tiene las dos palabras, y como
   // control se agrupa (azul) con los demás controles, no con la naranja.
-  if(s.indexOf('control')!==-1)   return'#2563eb'; // azul
+  if(s.indexOf('cardiograma')!==-1)return'#e11d48'; // ecocardio/electro rojo
+  if(s.indexOf('control')!==-1)   return(s.indexOf('especial')!==-1)?'#4f46e5':'#2563eb'; // ctrl esp índigo / gral azul
   if(s.indexOf('cirug')!==-1)     return'#7c3aed'; // morado
   if(s.indexOf('desparasit')!==-1)return'#6b7280'; // gris (como inyectología)
   if(s.indexOf('especial')!==-1)  return'#f97316'; // naranja
@@ -1796,7 +1797,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
-<script src="/js/agenda-mod.js?v=20260725d"></script>
+<script src="/js/agenda-mod.js?v=20260725e"></script>
 <script>
 // Precarga el índice de Vetesoft ACÁ (no en iniciar), porque agenda-mod.js —que
 // define window.VetIndex— recién se carga en la línea de arriba. Con el índice

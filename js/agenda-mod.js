@@ -207,7 +207,8 @@
   // pantalla/index.html), para que la clínica maneje una sola paleta. Cirugía y
   // desparasitación no existen como turno, así que les damos un tono propio.
   function svcColor(s){ s=String(s||'').toLowerCase();
-    if(s.indexOf('control')!==-1)   return '#2563eb'; // azul
+    if(s.indexOf('cardiograma')!==-1) return '#e11d48'; // ecocardio/electro (rojo)
+    if(s.indexOf('control')!==-1)   return (s.indexOf('especial')!==-1) ? '#4f46e5' : '#2563eb'; // ctrl esp índigo / ctrl gral azul
     if(s.indexOf('cirug')!==-1)     return '#7c3aed'; // morado
     if(s.indexOf('desparasit')!==-1)return '#6b7280'; // gris (como inyectología)
     if(s.indexOf('especial')!==-1)  return '#f97316'; // naranja
