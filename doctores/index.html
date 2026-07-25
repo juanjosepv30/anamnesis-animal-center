@@ -675,9 +675,10 @@ function recordFila(r) {
   if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return 'especializados';
   // Cardiología y terapia física: servicios de especialista.
   if (s.indexOf('cardiograma') !== -1 || s.indexOf('terapia') !== -1 || s.indexOf('fisica') !== -1) return 'especializados';
-  // Certificado de viaje: solo el Dr. Freddy.
-  if (s.indexOf('viaje') !== -1) return 'especializados';
-  return 'generales';   // general, control general, vacunación, inyectología
+  // Certificado de viaje: un certificado básico lo hace cualquier general de
+  // turno, así que va a Generales. Si recepción se lo asigna al Dr. Freddy,
+  // igual le aparece a él por medicoPref (atiendo).
+  return 'generales';   // general, control general, vacunación, inyectología, viajero
 }
 
 // Normaliza la hora de la cita venga como "10:30" o como fecha de Sheets.
@@ -869,9 +870,13 @@ function destinatarios(r) {
   if (s.indexOf('control')  !== -1) return sp ? [sp] : ['general'];
   if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return ['rayos x y ecografia'];
   if (s.indexOf('cardiograma') !== -1) return ['cardiologia'];
-  if (s.indexOf('terapia') !== -1 || s.indexOf('fisica') !== -1) return ['fisioterapia'];
+  // Terapia física: 'terapia fisica' Y 'fisioterapia' (los médicos pueden estar
+  // con cualquiera de las dos). DEBE coincidir con destinatariosDe() del backend.
+  if (s.indexOf('terapia') !== -1 || s.indexOf('fisica') !== -1) return ['terapia fisica', 'fisioterapia'];
   if (s.indexOf('vacun') !== -1 || s.indexOf('inyect') !== -1) return ['vacunacion', 'general'];
-  if (s.indexOf('viaje')   !== -1) return ['viajero'];
+  // Certificado de viaje: general de turno por defecto (Fredy vía medicoPref si
+  // se lo asignan). Coincide con destinatariosDe() del backend.
+  if (s.indexOf('viaje')   !== -1) return ['general'];
   return ['general'];
 }
 
