@@ -1420,6 +1420,28 @@ function confirmarQuien(){
   if (cb) cb(m);
 }
 
+// Atiende con REINTENTO. El fallo típico es "sistema ocupado" (el lock del backend
+// no se consiguió en 8s) o un corte de red. Antes el click se perdía con un toast
+// fugaz y NO se reintentaba: el llamado recién sonaba cuando un intento posterior
+// agarraba el lock (los ~20 min reportados). Ahora reintenta con backoff hasta que
+// entra. atenderDirecto es IDEMPOTENTE: si ya quedó 'llamando' por el mismo médico
+// hace poco, no re-sella calledAt ni re-anuncia → un reintento no hace doble ding.
+function atenderRobusto(rowIndex, room, med, onOk, onFail, intento){
+  intento = intento || 1;
+  var MAX = 5;
+  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atenderDirecto', rowIndex: rowIndex, consultorio: room, medico: med }) })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (res && res.ok) { onOk(res); return; }
+      if (intento < MAX) { setTimeout(function(){ atenderRobusto(rowIndex, room, med, onOk, onFail, intento+1); }, 600*intento); return; }
+      onFail(res && res.error ? res.error : 'No se pudo iniciar la atención');
+    })
+    .catch(function(){
+      if (intento < MAX) { setTimeout(function(){ atenderRobusto(rowIndex, room, med, onOk, onFail, intento+1); }, 600*intento); return; }
+      onFail('Error de conexión');
+    });
+}
+
 // Atender un turno de la sección "Asignados a ti" (personal de apoyo). Usa el
 // mismo flujo del botón único (atenderDirecto: anuncia + gracia + lleva a la
 // pestaña Atendiendo). El consultorio sale de su propio selector.
@@ -1428,15 +1450,15 @@ function atenderAsignado(rowIndex) {
   var room = sel ? sel.value : '';
   if (!room) { showToast('Elige el consultorio primero'); return; }
   conMedico(function(med){
-    fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atenderDirecto', rowIndex: rowIndex, consultorio: room, medico: med }) })
-      .then(r => r.json()).then(function(res){
-        if (res && res.ok) {
-          var rec = allRecords.find(x => x.rowIndex === rowIndex);
-          if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; rec.calledBy = med; rec.calledAt = new Date().toISOString(); }
-          showToast('✓ Atendiendo a ' + room);
-          setView('atendiendo');
-        } else showToast('❌ Error al atender');
-      }).catch(function(){ showToast('❌ Error de conexión'); });
+    showToast('Llamando a ' + room + '…', 8000);
+    atenderRobusto(rowIndex, room, med, function(res){
+      var rec = allRecords.find(x => x.rowIndex === rowIndex);
+      if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; rec.calledBy = med; rec.calledAt = new Date().toISOString(); }
+      showToast('✓ Atendiendo a ' + room);
+      setView('atendiendo');
+    }, function(err){
+      showToast('❌ No se pudo iniciar la atención (' + err + '). Tocá "Atender" de nuevo.', 6500);
+    });
   });
 }
 
@@ -1450,21 +1472,21 @@ function callNext(rowIndex, filaKey) {
   // la red por si algo se escapa).
   if (!room) { showToast('Elige el consultorio primero'); return; }
   conMedico(function(med){
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atenderDirecto', rowIndex: rowIndex, consultorio: room, medico: med }) })
-    .then(r => r.json()).then(function(res){
-      if (res && res.ok) {
-        const rec = allRecords.find(x => x.rowIndex === rowIndex);
-        if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; rec.calledBy = med; rec.calledAt = new Date().toISOString(); }
-        // Cierro en memoria al paciente anterior de este médico (lo mismo que hizo el backend).
-        allRecords.forEach(function(x){ if (x.rowIndex !== rowIndex && (x.estadoTurno==='atendiendo'||x.estadoTurno==='llamando') && x.calledBy===med) { x.estadoTurno='atendido'; x.status='revisado'; } });
-        var wa = res.avisoEnviado === true ? ' · 📱 aviso enviado al cliente'
-               : res.avisoEnviado === false ? ' · ⚠️ no se pudo avisar al cliente (revisar número)'
-               : '';
-        showToast('✓ Atendiendo a ' + room + wa);
-        setView('atendiendo');   // llevo al médico a su pestaña con la tarjeta
-        updateCounts();
-      } else showToast('❌ Error al atender');
-    }).catch(function(){ showToast('❌ Error de conexión'); });
+    showToast('Llamando a ' + room + '…', 8000);
+    atenderRobusto(rowIndex, room, med, function(res){
+      const rec = allRecords.find(x => x.rowIndex === rowIndex);
+      if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; rec.calledBy = med; rec.calledAt = new Date().toISOString(); }
+      // Cierro en memoria al paciente anterior de este médico (lo mismo que hizo el backend).
+      allRecords.forEach(function(x){ if (x.rowIndex !== rowIndex && (x.estadoTurno==='atendiendo'||x.estadoTurno==='llamando') && x.calledBy===med) { x.estadoTurno='atendido'; x.status='revisado'; } });
+      var wa = res.avisoEnviado === true ? ' · 📱 aviso enviado al cliente'
+             : res.avisoEnviado === false ? ' · ⚠️ no se pudo avisar al cliente (revisar número)'
+             : '';
+      showToast('✓ Atendiendo a ' + room + wa);
+      setView('atendiendo');   // llevo al médico a su pestaña con la tarjeta
+      updateCounts();
+    }, function(err){
+      showToast('❌ No se pudo iniciar la atención (' + err + '). Tocá "Atender" de nuevo.', 6500);
+    });
   });
 }
 
@@ -1532,18 +1554,31 @@ function markAtendido(rowIndex) {
   conMedico(function(med){
   // Manda el médico: así, si el turno no tenía registrado quién lo atendió,
   // queda firmado con el que lo finaliza.
-  fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido', medico: med }) })
-    .then(r => r.json()).then(function(res){
-      if (res && res.ok) {
-        const rec = allRecords.find(x => x.rowIndex === rowIndex);
-        // Atendido cierra el caso: sale de la sala y de anamnesis,
-        // y aparece en Revisadas.
-        if (rec) { rec.estadoTurno = 'atendido'; rec.status = 'revisado'; }
-        renderAll();   // sirve para la sala Y para la lista de anamnesis
-        updateCounts();
-        showToast('✓ Finalizado · pasó a Finalizados');
-      } else showToast('❌ Error');
-    }).catch(function(){ showToast('❌ Error de conexión'); });
+  // Con REINTENTO: si el backend estaba ocupado (lock) el cierre se perdía con un
+  // toast fugaz y el paciente quedaba "en consulta" para siempre. Ahora reintenta.
+  showToast('Finalizando…', 8000);
+  (function intentar(intento){
+    intento = intento || 1; var MAX = 5;
+    fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido', medico: med }) })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (res && res.ok) {
+          const rec = allRecords.find(x => x.rowIndex === rowIndex);
+          // Atendido cierra el caso: sale de la sala y de anamnesis, y aparece en Revisadas.
+          if (rec) { rec.estadoTurno = 'atendido'; rec.status = 'revisado'; }
+          renderAll();   // sirve para la sala Y para la lista de anamnesis
+          updateCounts();
+          showToast('✓ Finalizado · pasó a Finalizados');
+          return;
+        }
+        if (intento < MAX) { setTimeout(function(){ intentar(intento+1); }, 600*intento); return; }
+        showToast('❌ No se pudo finalizar (' + (res && res.error ? res.error : 'reintentá') + '). Tocá Finalizar de nuevo.', 6500);
+      })
+      .catch(function(){
+        if (intento < MAX) { setTimeout(function(){ intentar(intento+1); }, 600*intento); return; }
+        showToast('❌ No se pudo finalizar (conexión). Tocá Finalizar de nuevo.', 6500);
+      });
+  })(1);
   });
 }
 
@@ -1770,17 +1805,24 @@ function renderConsultaBar() {
   if (!bar) return;
   if (!miMedico) { bar.innerHTML = ''; return; }
   const today = new Date();
+  // Apenas el médico llama a SU paciente (queda 'llamando'), la barra ya muestra
+  // Finalizar — NO esperamos a que un timer lo promueva a 'atendiendo'. Así el
+  // botón para cerrar la consulta está SIEMPRE disponible aunque el timer se
+  // congele (pestaña en segundo plano, página pausada por inactividad).
   const mios = allRecords.filter(r =>
-    (r.estadoTurno === 'atendiendo' ||
-     (r.estadoTurno === 'llamando' && minsDesde(r.calledAt||r.timestamp) >= GRACIA_MIN)) &&
+    (r.estadoTurno === 'atendiendo' || r.estadoTurno === 'llamando') &&
     r.calledBy === miMedico && isSameDay(r.timestamp, today));
   if (!mios.length) { bar.innerHTML = ''; return; }
   mios.sort((a,b) => new Date(a.calledAt||a.timestamp) - new Date(b.calledAt||b.timestamp));
   bar.innerHTML = mios.map(function(r){
     const ini = r.calledAt || r.timestamp;
-    const venc = minsDesde(ini) >= umbralRecordatorio(r.service);
+    // Durante la gracia (recién llamado) el cliente puede no haber entrado: la
+    // barra dice "Llamando", no "En consulta", para no dar por hecho la atención.
+    const enGracia = r.estadoTurno === 'llamando' && minsDesde(ini) < GRACIA_MIN;
+    const venc = !enGracia && minsDesde(ini) >= umbralRecordatorio(r.service);
+    const etiqueta = enGracia ? '🔔 Llamando · ' : (venc ? '🔔 ¿Ya terminaste? · ' : '🩺 En consulta · ');
     return '<div class="cbar'+(venc?' cbar-venc':'')+'" onclick="goToAnamnesis('+r.rowIndex+')">'+
-      '<div class="cbar-l">'+(venc?'🔔 ¿Ya terminaste? · ':'🩺 En consulta · ')+
+      '<div class="cbar-l">'+etiqueta+
         '<b>'+esc(r.turno||'')+' '+esc(nombreConMascotas(r))+'</b>'+
         (r.consultorio?' · '+esc(r.consultorio):'')+
         ' · <span data-inicio="'+esc(ini)+'">'+fmtConsulta(ini)+'</span></div>'+
@@ -1862,7 +1904,7 @@ function buildCard(r) {
       ${r.observaciones ? '<div class="rec-obs">📌 '+esc(r.observaciones)+'</div>' : ''}
     </div>
     ${enConsulta ? '<div class="rec-acts rec-acts-atender"><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente (no llegó)</button></div>' : ''}
-    ${grace ? '<div class="rec-acts"><button class="rec-aus" onclick="event.stopPropagation();llamarDeNuevo('+rowIdx+')" title="Volver a sonar en la sala">🔔 Llamar otra vez</button><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button></div>' : ''}
+    ${grace ? '<div class="rec-acts rec-acts-atender"><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button><button class="rec-aus" onclick="event.stopPropagation();llamarDeNuevo('+rowIdx+')" title="Volver a sonar en la sala">🔔 Llamar otra vez</button><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button></div>' : ''}
     <div class="rec-arrow">▼</div>
   </div>
   <div class="rec-body">
@@ -1993,11 +2035,12 @@ function copyRecord(rowIdx) {
 // falta, cada turno tiene su anamnesis a un toque en la tarjeta.)
 function updateCounts() {}
 
-function showToast(msg) {
+function showToast(msg, ms) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), ms || 2800);
 }
 
 function esc(str) {
@@ -2139,6 +2182,6 @@ loadRecords();              // refresca con el backend por detrás
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js, para que un refresco
      traiga el JS nuevo y no la versión cacheada por el navegador. -->
-<script src="/js/agenda-mod.js?v=20260725k"></script>
+<script src="/js/agenda-mod.js?v=20260725l"></script>
 </body>
 </html>

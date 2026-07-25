@@ -139,10 +139,6 @@
     // auto): el arrastre se ARMA con una pulsación larga (~500ms), no con el
     // primer roce, para no mover citas sin querer al hacer scroll.
     '.agm-ev.agm-drag{cursor:grab}',
-    // Cita CANCELADA: gris, tachada, borde punteado. Se muestra para que no
-    // parezca "borrada", pero no ocupa el horario ni se puede tocar para acciones.
-    '.agm-ev.agm-cancel{cursor:default;border-left-style:dashed!important;opacity:.85;z-index:1}',
-    '.agm-ev.agm-cancel b{text-decoration:line-through;font-weight:600}',
     // Cita "levantada" con el long-press (móvil): se pone morada y crece un poco
     // para que se entienda que ya se puede mover.
     '.agm-ev.agm-picked{outline:3px solid #8e3f9e;outline-offset:1px;background:#8e3f9e!important;color:#fff!important;box-shadow:0 8px 22px rgba(142,63,158,.55);transform:scale(1.04);z-index:30}',
@@ -305,9 +301,6 @@
     else { cargarMedicos(pintar); }
 
     function medOpts(sel){ return S.medicos.map(function(n){return '<option value="'+esc(n)+'"'+(n===sel?' selected':'')+'>'+esc(n)+'</option>';}).join(''); }
-    // Igual que medOpts pero garantiza que el médico actual figure aunque no esté
-    // en la lista (p.ej. si la lista aún no cargó): así nunca queda sin seleccionar.
-    function medOpts2(sel){ var arr=S.medicos.slice(); if(sel && arr.indexOf(sel)<0) arr.unshift(sel); return arr.map(function(n){return '<option value="'+esc(n)+'"'+(n===sel?' selected':'')+'>'+esc(n)+'</option>';}).join(''); }
     // Horas 06:00–21:30 cada 30 min. Si la hora actual cae fuera de la grilla
     // (p.ej. una cita a las 10:15) se antepone para no perderla.
     function horaOpts2(sel){ var h='',found=false; for(var m=6*60;m<=21*60+30;m+=30){ var v=min2hm(m); if(v===sel)found=true; h+='<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>'; } if(sel && !found){ h='<option value="'+esc(sel)+'" selected>'+esc(sel)+'</option>'+h; } return h; }
@@ -491,20 +484,13 @@
         }
         // citas de ese día
         citas.filter(function(c){return c.fecha===iso;}).forEach(function(c){
-          var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio);
-          var cancelada=String(c.estado||'')==='cancelada';
-          // Cancelada: NO ocupa el bloque entero. Se dibuja como una tira fina y
-          // POR DETRÁS (z-index bajo). Así el horario se ve "libre" y no parece
-          // una cita duplicada montada sobre la activa. Si hay una cita activa
-          // encima, la tira queda tapada; si está sola, se ve delgada y apagada.
-          var alt=cancelada?15:Math.max(dur*PXMIN-1,18);
+          var ini=hm2min(c.hora), dur=+c.duracion||durServicio(c.servicio); var alt=Math.max(dur*PXMIN-1,18);
           var col=svcColor(c.servicio);
-          // Las citas ya llegadas o CANCELADAS no se arrastran ni estiran.
-          var movible=!c.llego && !cancelada;
+          var movible=!c.llego;   // las ya llegadas no se arrastran ni estiran
           var _mov=(S.reprog&&String(S.reprog.id)===String(c.id))?' agm-moving':'';
-          h+='<div class="agm-ev'+(c.llego?' lleg':'')+(cancelada?' agm-cancel':'')+(movible?' agm-drag':'')+_mov+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+(cancelada?'#f1eef5':col+'22')+';border-left-color:'+(cancelada?'#c9bdd6':col)+';color:'+(cancelada?'#9a8ba8':'#1a0a2e')+'">'+
-             '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(cancelada?' · cancelada':(c.llego?' ✓':'')+(c.pagado?' 💵':'')+(c.comprobante?' 📎':''))+'</b>'+
-             (alt>28&&!cancelada?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+
+          h+='<div class="agm-ev'+(c.llego?' lleg':'')+(movible?' agm-drag':'')+_mov+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+col+'22;border-left-color:'+col+';color:#1a0a2e">'+
+             '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+((c.llego?' ✓':'')+(c.pagado?' 💵':'')+(c.comprobante?' 📎':''))+'</b>'+
+             (alt>28?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+
              (movible&&!_agmMovil?'<div class="agm-rz" title="Estirar para cambiar la duración"></div>':'')+'</div>';
         });
         h+='</div></div>';
@@ -567,14 +553,6 @@
         var id=evEl.getAttribute('data-id');
         var c=citas.filter(function(x){return String(x.id)===id;})[0];
         if(!c) return;
-        if(String(c.estado||'')==='cancelada'){   // cancelada: no bloquea; se puede reprogramar o agendar de nuevo en ese hueco
-          evEl.addEventListener('click', function(ev){ ev.stopPropagation();
-            if(S.reprog){ reprogramarA(c.fecha, c.hora, med, false); return; }
-            agmConfirm({ title:'Cita cancelada', msg:'Esta cita fue cancelada, así que el horario ('+esc(c.hora)+') está libre. ¿Querés agendar una cita nueva acá?', yes:'Sí, agendar acá', no:'Cerrar' })
-              .then(function(ok){ if(ok) abrirCrear(c.fecha, c.hora, med, false); });
-          });
-          return;
-        }
         if(!evEl.classList.contains('agm-drag')){   // llegada: solo abre detalle
           evEl.addEventListener('click', function(ev){ ev.stopPropagation(); abrirDetalle(c); });
           return;
@@ -734,12 +712,12 @@
 
       overlay(
         '<div class="agm-mh"><div class="agm-mt">Agendar cita</div><button class="agm-mx" id="mX">×</button></div>'+
-        // Pills EDITABLES: si el dedo tocó mal la hora/fecha/médico, se corrige acá
-        // mismo con un desplegable en vez de tener que cancelar y volver a empezar.
+        // Pills EDITABLES de fecha y hora: si el dedo tocó mal, se corrige acá
+        // mismo sin cancelar y volver a empezar. El médico NO se muestra ni se
+        // elige: ya se sabe de qué agenda es la que estás viendo.
         '<div class="agm-when">'+
           '<label class="agm-wsel">📅 <input type="date" id="wFecha" value="'+esc(iso)+'"></label>'+
           '<label class="agm-wsel">🕐 <select id="wHora">'+horaOpts2(hora)+'</select></label>'+
-          '<label class="agm-wsel">🩺 <select id="wMed">'+medOpts2(med)+'</select></label>'+
         '</div>'+
         (forzar?'<div class="agm-warn">⚠️ Este horario está bloqueado. Vas a agendar una cita igual, encima del bloqueo.</div>':'')+
         '<div class="agm-mlbl">Buscar paciente</div>'+
@@ -750,7 +728,6 @@
       // Corrección al vuelo: cada control actualiza el pendiente de creación.
       var wf=$ov('wFecha'); if(wf) wf.onchange=function(){ if(wf.value) S.crear.fecha=wf.value; };
       var wh=$ov('wHora');  if(wh) wh.onchange=function(){ S.crear.hora=wh.value; };
-      var wm=$ov('wMed');   if(wm) wm.onchange=function(){ S.crear.medico=wm.value; };
       var q=$ov('mQ');
       q.oninput=function(){ clearTimeout(S._deb); var v=q.value; S._deb=setTimeout(function(){ buscarModal(v); }, 350); };
       q.focus();
@@ -851,6 +828,10 @@
       if(S.selCliente){ data.petName=S.selCliente.petName; data.owner=S.selCliente.owner; data.cedula=S.selCliente.cedula; data.vetesoftId=S.selCliente.vetesoftId; data.vetesoftHc=S.selCliente.vetesoftHc; }
       else { data.petName=($ov('fPet')||{}).value||''; data.owner=($ov('fOwn')||{}).value||''; data.cedula=($ov('fCed')||{}).value||''; }
       if(!data.petName&&!data.owner){ err.textContent='Falta el paciente.'; return; }
+      // El médico viene de la agenda que estás viendo (no hay selector en el modal).
+      // Si por un fallo al cargar la lista quedó vacío, avisamos claro en vez de
+      // mandar una cita sin médico que el backend rechaza sin forma de corregir acá.
+      if(!String(data.medico||'').trim()){ err.textContent='No hay médico seleccionado. Elegí un médico en el calendario y volvé a tocar el horario.'; return; }
       $ov('fGuardar').textContent='Guardando…'; $ov('fGuardar').disabled=true;
       // Si hay comprobante (foto), lo comprimimos y lo mandamos con la cita.
       var fc=$ov('fComp'), file=fc&&fc.files&&fc.files[0];
