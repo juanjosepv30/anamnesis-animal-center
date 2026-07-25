@@ -948,8 +948,6 @@ function nearestHalfHour() {
 function iniciar() {
   loadWaitingRoom();
   cargarTurnos();       // ¿ya está configurada la jornada? si no, abre el pop-up
-  // Precarga el índice de Vetesoft en segundo plano para que el buscador sea instantáneo.
-  try { if (window.VetIndex) VetIndex.load(API_URL); } catch (e) {}
   // Se refresca sola, pero se pausa si recepción está registrando a alguien.
   // (No hay pausa por inactividad: recepción necesita la página siempre lista.)
   setInterval(function(){ if (!selected) loadWaitingRoom(true); }, 60000);
@@ -1795,5 +1793,11 @@ if ('serviceWorker' in navigator) {
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
 <script src="/js/agenda-mod.js?v=20260725b"></script>
+<script>
+// Precarga el índice de Vetesoft ACÁ (no en iniciar), porque agenda-mod.js —que
+// define window.VetIndex— recién se carga en la línea de arriba. Con el índice
+// cacheado queda listo en ~50ms y la búsqueda es instantánea.
+try { if (window.VetIndex) VetIndex.load(API_URL); } catch (e) {}
+</script>
 </body>
 </html>
