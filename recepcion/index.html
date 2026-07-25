@@ -753,19 +753,24 @@ function buildSpecOptions() {
 
 // Médicos generales de turno AHORA (los que puede pedir el cliente). Salen de
 // la lista que recepción configuró (_turnosActuales).
-function buildMedGenOptions(svc) {
+// Mismo selector para consulta/control general Y para los servicios con
+// especialista (rayos, ecocardio, terapia, viajero): "Cualquiera por orden de
+// llegada" + los generales de turno. Si el servicio trae `prio` (su especialista),
+// se lo agrega; con `prioDefault` queda pre-seleccionado.
+function buildMedGenOptions(cfg) {
+  cfg = cfg || {};
+  var norm = function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); };
   var docs = _turnosActuales || [];
-  var esViaje = /viaje/i.test(svc || '');
-  // Certificado de viaje: vacío = general de turno (el primero disponible). Además
-  // se puede asignar al Dr. Freddy (el de certificados) aunque no esté de turno.
-  var vacio = esViaje ? '— General de turno (el primero disponible) —'
-                      : '— Cualquiera (por orden de llegada) —';
-  var extra = '';
-  if (esViaje && docs.indexOf('Dr. Freddy Vera') === -1) {
-    extra = '<option value="Dr. Freddy Vera">Dr. Freddy Vera (certificados)</option>';
-  }
-  return '<option value="">'+vacio+'</option>' + extra +
-    docs.map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
+  var prio = cfg.prio || '';
+  // Nombre EXACTO del especialista como está en el directorio (para que el value
+  // case con la hoja de médicos, aunque el config venga sin tilde).
+  var prioExacto = prio ? (todosLosMedicos().filter(function(n){return norm(n)===norm(prio);})[0] || prio) : '';
+  var prioDef = !!cfg.prioDefault && !!prioExacto;
+  var cualquiera = '<option value=""'+(prioDef?'':' selected')+'>— Cualquiera (por orden de llegada) —</option>';
+  var prioOpt = prioExacto ? '<option value="'+esc(prioExacto)+'"'+(prioDef?' selected':'')+'>'+esc(prioExacto)+'</option>' : '';
+  var generales = docs.filter(function(n){ return norm(n)!==norm(prio); })
+    .map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
+  return prioDef ? (prioOpt + cualquiera + generales) : (cualquiera + prioOpt + generales);
 }
 
 // Todos los médicos de la clínica (especialistas + los de turno + Dra. Diana
@@ -809,10 +814,13 @@ var SERVICIOS = [
   { v:'Inyectología',           doctor:'ninguno', agenda:false, desc:'Aplicar inyección' },
   { v:'Cirugía',                doctor:'ninguno', agenda:false, desc:'Cirugía · médico general' },
   { v:'Desparasitación',        doctor:'ninguno', agenda:false, desc:'Desparasitación · médico general' },
-  { v:'Viajero',                doctor:'ninguno', agenda:false, label:'Viajero / certificado', desc:'Certificado · Dr. Freddy o general de turno' },
-  { v:'Rayos X y Ecografía',    doctor:'eligeDoc', fijo:'Dra. Angie Valero', agenda:false, desc:'Imágenes · normalmente Dra. Angie' },
-  { v:'Ecocardiograma / Electrocardiograma', doctor:'eligeDoc', fijo:'Dr. Wilmer Páez', agenda:true, label:'Eco / Electrocardiograma', desc:'Cardiología · normalmente Dr. Wilmer' },
-  { v:'Terapia física',         doctor:'eligeDoc', fijo:'Dra. Milena Lopez', agenda:true, desc:'Fisioterapia · normalmente Dra. Milena' }
+  // Estos 4 usan el MISMO selector que consulta general (Cualquiera por orden de
+  // llegada + generales de turno), más su especialista `prio`. Con `prioDefault`
+  // el especialista queda pre-seleccionado; sin él, arranca en "Cualquiera".
+  { v:'Viajero',                doctor:'ninguno', prio:'Dr. Freddy Vera',  agenda:false, label:'Viajero / certificado', desc:'Certificado de viaje' },
+  { v:'Rayos X y Ecografía',    doctor:'ninguno', prio:'Dra. Angie Valero', prioDefault:true, agenda:false, desc:'Imágenes · Dra. Angie' },
+  { v:'Ecocardiograma / Electrocardiograma', doctor:'ninguno', prio:'Dr. Wilmer Páez', prioDefault:true, agenda:true, label:'Eco / Electrocardiograma', desc:'Cardiología · Dr. Wilmer' },
+  { v:'Terapia física',         doctor:'ninguno', prio:'Dra. Milena López', prioDefault:true, agenda:true, desc:'Fisioterapia · Dra. Milena' }
 ];
 
 function servicioCfg(v) {
@@ -923,15 +931,13 @@ function pintarServicio() {
   }
   if (cfg.doctor !== 'elige') document.getElementById('regSpec').value = '';
 
-  // ── Médico general / de turno (consultas/controles generales y certificado) ──
-  var esGen = cfg.doctor === 'ninguno' && (/general/i.test(svc) || /cirug|desparasit|viaje/i.test(svc));
+  // ── Médico: MISMO selector para generales y para los servicios con especialista ──
+  var esGen = cfg.doctor === 'ninguno' && (cfg.prio || /general/i.test(svc) || /cirug|desparasit/i.test(svc));
   var boxMG = document.getElementById('boxMedGen');
   boxMG.style.display = esGen ? '' : 'none';
   var lblMG = document.getElementById('lblMedGen');
-  if (lblMG) lblMG.innerHTML = /viaje/i.test(svc)
-    ? 'Médico <span class="lbl-tip">(Dr. Freddy o general de turno)</span>'
-    : 'Médico general <span class="lbl-tip">(opcional — si lo pidió)</span>';
-  if (esGen) document.getElementById('regMedGen').innerHTML = buildMedGenOptions(svc);
+  if (lblMG) lblMG.textContent = 'Médico';
+  if (esGen) document.getElementById('regMedGen').innerHTML = buildMedGenOptions(cfg);
   else document.getElementById('regMedGen').value = '';
 
   // Los pacientes con cita ya no se registran acá (llegan por la agenda con
