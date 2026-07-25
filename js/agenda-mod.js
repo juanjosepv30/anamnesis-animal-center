@@ -287,7 +287,7 @@
 
     function medOpts(sel){ return S.medicos.map(function(n){return '<option value="'+esc(n)+'"'+(n===sel?' selected':'')+'>'+esc(n)+'</option>';}).join(''); }
     function $(id){ return body.querySelector('#'+id); }
-    function pintar(){ if(S.sub==='bloquear') pintarBloquear(); else pintarCal(); }
+    function pintar(){ if(S.sub==='bloquear') pintarBloquear(); else if(S.sub==='interesados') pintarInteresados(); else pintarCal(); }
 
     // ══════════ CALENDARIO ══════════
     function diasVista(){
@@ -325,8 +325,9 @@
             '</span>'+
             '<button class="agm-navb" id="cNext">›</button>'+
             '<button class="agm-navb" id="cHoy" style="font-size:.76rem">Hoy</button>'+
-            // Con vista fija (recepción) Bloqueos va acá, en el renglón de la fecha.
-            (vistaFija ? '<button class="agm-lnk" id="cBloq" style="margin-left:8px">🚫 Bloqueos</button>' : '')+
+            // Con vista fija (recepción) Bloqueos e Interesados van acá, en el renglón de la fecha.
+            (vistaFija ? '<button class="agm-lnk" id="cBloq" style="margin-left:8px">🚫 Bloqueos</button>'+
+                         '<button class="agm-lnk" id="cInteres" style="margin-left:8px">📋 Interesados</button>' : '')+
           '</div>'+
         '</div>'+
         // Toggle Día/Semana + Bloqueos: solo cuando NO hay vista fija (doctores).
@@ -338,7 +339,9 @@
               ? '<button id="cSem" class="'+(S.vista==='3dias'?'on':'')+'">3 días</button>'
               : '<button id="cSem" class="'+(S.vista==='semana'?'on':'')+'">Semana</button>')+
           '</div>'+
-          '<button class="agm-lnk" id="cBloq">🚫 Bloqueos</button>'+
+          // Bloqueos + Interesados: recargados a la derecha (margin-left:auto en el primero).
+          '<button class="agm-lnk" id="cBloq" style="margin-left:auto">🚫 Bloqueos</button>'+
+          '<button class="agm-lnk" id="cInteres">📋 Interesados</button>'+
         '</div>')+
         '<div class="agm-leg">'+
           '<span><i class="agm-dot" style="background:#16a34a22;border:1px solid #16a34a"></i>Consulta</span>'+
@@ -353,6 +356,7 @@
         '<div id="cWrap" class="agm-scroll'+(S.vista==='3dias'?' agm-hscroll':'')+'"><div class="agm-sp"></div></div>';
       var sel=$('cMed'); if(sel) sel.onchange=function(){ S.med=sel.value; cargarCal(); };
       $('cBloq').onclick=function(){ S.sub='bloquear'; pintar(); };
+      var ci=$('cInteres'); if(ci) ci.onclick=function(){ S.sub='interesados'; pintar(); };
       var rx=$('cReprogX'); if(rx) rx.onclick=function(){ S.reprog=null; pintarCal(); };
       $('cPrev').onclick=function(){ S.ancla=addDias(S.ancla, -pasoVista()); refrescarLbl(); cargarCal(); };
       $('cNext').onclick=function(){ S.ancla=addDias(S.ancla,  pasoVista()); refrescarLbl(); cargarCal(); };
@@ -1011,6 +1015,96 @@
     function cancelarBloqueo(id,btn){
       if(!confirm('¿Quitar este bloqueo? El horario vuelve a quedar disponible.')) return; btn.textContent='…';
       fetch(api,{method:'POST',body:JSON.stringify({action:'cancelarBloqueo',id:id})}).then(function(r){return r.json();}).then(function(){ cargarBloqueos(); }).catch(function(){ cargarBloqueos(); });
+    }
+
+    // ══════════ INTERESADOS (lista de espera POR MÉDICO) ══════════
+    // Cada médico ve solo los suyos. En recepción, el selector de médico del panel
+    // cambia la lista (igual que la agenda). Cada tarjeta muestra para cuándo quería
+    // la cita el cliente y desde cuándo está esperando.
+    function _intMedActual(){ return medicoFijo || (($('iMed')||{}).value) || S.med || ''; }
+    function _fechaCortaISO(iso){ try{ var d=mkFecha(iso); return DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1); }catch(e){ return iso; } }
+    function _fechaCreada(iso){ try{ var d=new Date(iso); if(isNaN(d)) return ''; return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear(); }catch(e){ return ''; } }
+    function _haceCuanto(iso){ try{ var t=new Date(iso).getTime(); if(isNaN(t)) return ''; var dias=Math.floor((Date.now()-t)/86400000); if(dias<=0) return 'hoy'; if(dias===1) return 'ayer'; return 'hace '+dias+' días'; }catch(e){ return ''; } }
+    function pintarInteresados(){
+      body.innerHTML=
+        '<button class="agm-lnk" id="iVolver" style="margin-bottom:12px;color:var(--apd)">‹ Volver a la agenda</button>'+
+        '<div class="agm-card"><div class="agm-t">📋 Interesados</div>'+
+        '<div class="agm-sub">Gente que quería una cita y no había cupo. Cuando se libere un hueco, los contactás desde acá. La lista es <b>de cada médico</b>.</div>'+
+        (medicoFijo?'':'<div style="margin-bottom:10px"><label>Médico</label><select id="iMed">'+medOpts(S.med)+'</select></div>')+
+        '<div class="agm-row">'+
+          '<div><label>Nombre del dueño</label><input id="iNom" type="text" placeholder="Nombre"></div>'+
+          '<div><label>WhatsApp</label><input id="iTel" type="tel" inputmode="numeric" maxlength="10" placeholder="3001234567"></div>'+
+        '</div>'+
+        '<div class="agm-row">'+
+          '<div><label>Servicio</label><select id="iSvc"><option value="">— Servicio —</option>'+SERVICIOS.map(function(s){return '<option value="'+esc(s)+'">'+esc(s)+'</option>';}).join('')+'</select></div>'+
+          '<div><label>¿Para cuándo la quería?</label><input type="date" id="iFec"></div>'+
+        '</div>'+
+        '<div class="agm-row">'+
+          '<div><label>Hora aproximada</label><select id="iPer"><option value="">—</option>'+['Mañana','Mediodía','Primera hora de la tarde','Tarde','Fin de tarde','Noche'].map(function(p){return '<option>'+esc(p)+'</option>';}).join('')+'</select></div>'+
+          '<div><label>Notas <span style="font-weight:400">(sugerido)</span></label><input id="iNot" type="text" placeholder="Ej: puede venir cualquier día que le avisen"></div>'+
+        '</div>'+
+        '<button class="agm-btn" style="margin-top:12px;background:#0d9488;color:#fff" id="iAdd">➕ Agregar a la lista</button>'+
+        '<div class="agm-err" id="iErr"></div>'+
+        '<div class="agm-t" style="margin-top:20px">En espera <span id="iMedLbl" style="font-weight:400;color:var(--atm);font-size:.8rem"></span></div>'+
+        '<div id="iList"><div class="agm-sp"></div></div></div>';
+      $('iVolver').onclick=function(){ S.sub='cal'; pintar(); };
+      var im=$('iMed'); if(im) im.onchange=function(){ S.med=im.value; cargarInteres(); };
+      $('iAdd').onclick=guardarInteres;
+      cargarInteres();
+    }
+    function guardarInteres(){
+      var err=$('iErr'); if(err) err.textContent='';
+      var med=_intMedActual();
+      if(!med){ if(err) err.textContent='Elegí el médico.'; return; }
+      var nom=(($('iNom')||{}).value||'').trim();
+      var tel=(($('iTel')||{}).value||'').trim();
+      if(!nom && !tel){ if(err) err.textContent='Poné al menos un nombre o un teléfono.'; return; }
+      var fec=(($('iFec')||{}).value||''); var per=(($('iPer')||{}).value||'');
+      var deseada=[fec?_fechaCortaISO(fec):'', per].filter(Boolean).join(' · ');
+      var data={ nombre:nom, tel:tel, medico:med, servicio:(($('iSvc')||{}).value||''),
+                 notas:(($('iNot')||{}).value||''), deseada:deseada };
+      var b=$('iAdd'); if(b){ b.textContent='Agregando…'; b.disabled=true; }
+      fetch(api,{method:'POST',body:JSON.stringify({action:'agregarInteresado',data:data})}).then(function(r){return r.json();}).then(function(res){
+        var g=$('iAdd'); if(g){ g.textContent='➕ Agregar a la lista'; g.disabled=false; }
+        if(res&&res.ok){ ['iNom','iTel','iFec','iNot'].forEach(function(id){var e=$(id); if(e)e.value='';}); var sv=$('iSvc'); if(sv)sv.value=''; var pe=$('iPer'); if(pe)pe.value=''; cargarInteres(); }
+        else { if(err) err.textContent=(res&&res.error)||'No se pudo agregar.'; }
+      }).catch(function(){ var g=$('iAdd'); if(g){ g.textContent='➕ Agregar a la lista'; g.disabled=false; } if(err) err.textContent='Error de conexión.'; });
+    }
+    function cargarInteres(){
+      var L=$('iList'); if(!L) return; L.innerHTML='<div class="agm-sp"></div>';
+      var med=_intMedActual();
+      var lbl=$('iMedLbl'); if(lbl) lbl.textContent=med?('· '+med):'';
+      if(!med){ L.innerHTML='<div class="agm-empty">Elegí un médico para ver sus interesados.</div>'; return; }
+      fetch(api+'?action=interesados&medico='+encodeURIComponent(med)+'&cb='+Date.now()).then(function(r){return r.json();}).then(function(res){
+        var xs=(res&&res.interesados)||[];
+        if(!xs.length){ L.innerHTML='<div class="agm-empty">Sin interesados en espera para este médico.</div>'; return; }
+        L.innerHTML=xs.map(intHtml).join('');
+        L.querySelectorAll('[data-iact]').forEach(function(b){ b.onclick=function(){ marcarInteres(b.getAttribute('data-id'), b.getAttribute('data-iact')); }; });
+      }).catch(function(){ L.innerHTML='<div class="agm-empty">Error de conexión.</div>'; });
+    }
+    function intHtml(it){
+      var tel=String(it.telefono||'').replace(/\D/g,'');
+      var wa=tel?'<a class="agm-lnk" style="color:#128c3e;text-decoration:none" target="_blank" href="https://wa.me/57'+tel+'">💬 WhatsApp</a>':'';
+      var badge=it.estado==='contactado'?'<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 7px;font-size:.68rem;font-weight:700;margin-left:6px">Contactado</span>':'';
+      var det=[];
+      if(it.servicio) det.push('🩺 '+esc(it.servicio));
+      if(it.deseada)  det.push('🗓️ Quería: '+esc(it.deseada));
+      var espera='⏳ Esperando desde '+esc(_fechaCreada(it.creada))+' ('+esc(_haceCuanto(it.creada))+')';
+      return '<div style="border:1px solid var(--abd);border-left:5px solid #0d9488;border-radius:11px;padding:10px 12px;margin-bottom:8px">'+
+        '<div style="font-weight:800;font-size:.9rem">'+esc(it.nombre||'(sin nombre)')+badge+'</div>'+
+        (tel?'<div style="font-size:.8rem;color:var(--atx)">📞 '+esc(it.telefono)+'</div>':'')+
+        (det.length?'<div style="font-size:.78rem;color:var(--atx);margin-top:2px">'+det.join(' · ')+'</div>':'')+
+        '<div style="font-size:.76rem;color:var(--apd);font-weight:600;margin-top:2px">'+espera+'</div>'+
+        (it.notas?'<div style="font-size:.75rem;color:var(--atm);margin-top:2px">📝 '+esc(it.notas)+'</div>':'')+
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;align-items:center">'+wa+
+          '<button class="agm-lnk" data-iact="contactado" data-id="'+esc(it.id)+'">✓ Contactado</button>'+
+          '<button class="agm-lnk" data-iact="agendo" data-id="'+esc(it.id)+'" style="color:#0d9488;font-weight:700">📅 Agendó</button>'+
+          '<button class="agm-lnk" data-iact="descartado" data-id="'+esc(it.id)+'" style="color:#c0392b">✕ Descartar</button>'+
+        '</div></div>';
+    }
+    function marcarInteres(id, estado){
+      if((estado==='agendo'||estado==='descartado') && !confirm(estado==='agendo'?'¿Marcar como agendó? Sale de la lista.':'¿Descartar? Sale de la lista.')) return;
+      fetch(api,{method:'POST',body:JSON.stringify({action:'actualizarInteresado',id:id,estado:estado})}).then(function(r){return r.json();}).then(function(){ cargarInteres(); }).catch(function(){ cargarInteres(); });
     }
   }
 
