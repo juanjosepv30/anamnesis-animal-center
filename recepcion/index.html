@@ -778,9 +778,12 @@ function todosLosMedicos() {
   set['Dra. Diana Arias'] = true;
   return Object.keys(set).sort();
 }
-// Selector de médico para Rayos X: todos, con la Dra. Angie por defecto.
-function buildRayosDocOptions() {
-  var def = 'Dra. Angie Valero';
+// Selector de médico (Rayos X, Ecocardio, Terapia física…): todos los médicos,
+// con el especialista principal del servicio por defecto (Angie para rayos,
+// Wilmer para ecocardio, Milena para terapia). Antes defaulteaba SIEMPRE a Angie
+// aunque el servicio fuera otro (por eso ecocardio no arrancaba en Wilmer).
+function buildRayosDocOptions(def) {
+  def = def || 'Dra. Angie Valero';
   return todosLosMedicos().map(function(n){
     return '<option value="'+esc(n)+'"'+(n===def?' selected':'')+'>'+esc(n)+'</option>';
   }).join('');
@@ -805,7 +808,7 @@ var SERVICIOS = [
   { v:'Viajero',                doctor:'ninguno', agenda:false, label:'Viajero / certificado', desc:'Certificado · Dr. Freddy o general de turno' },
   { v:'Rayos X y Ecografía',    doctor:'eligeDoc', fijo:'Dra. Angie Valero', agenda:false, desc:'Imágenes · normalmente Dra. Angie' },
   { v:'Ecocardiograma / Electrocardiograma', doctor:'eligeDoc', fijo:'Dr. Wilmer Páez', agenda:true, label:'Eco / Electrocardiograma', desc:'Cardiología · normalmente Dr. Wilmer' },
-  { v:'Terapia física',         doctor:'elige', agenda:true, desc:'Fisioterapia · con especialista' }
+  { v:'Terapia física',         doctor:'eligeDoc', fijo:'Dra. Milena Lopez', agenda:true, desc:'Fisioterapia · normalmente Dra. Milena' }
 ];
 
 function servicioCfg(v) {
@@ -909,7 +912,11 @@ function pintarServicio() {
   // 'eligeDoc' (Rayos X): selector de médico, con la Dra. Angie por defecto.
   var boxRD = document.getElementById('boxRayosDoc');
   boxRD.style.display = cfg.doctor === 'eligeDoc' ? '' : 'none';
-  if (cfg.doctor === 'eligeDoc') document.getElementById('regRayosDoc').innerHTML = buildRayosDocOptions();
+  if (cfg.doctor === 'eligeDoc') {
+    document.getElementById('regRayosDoc').innerHTML = buildRayosDocOptions(cfg.fijo);
+    var lblRD = document.getElementById('lblRayosDoc');
+    if (lblRD) lblRD.innerHTML = 'Médico que lo hace <span class="lbl-tip">(normalmente '+esc(cfg.fijo||'')+', elegí otro o un general de turno si no está)</span>';
+  }
   if (cfg.doctor !== 'elige') document.getElementById('regSpec').value = '';
 
   // ── Médico general / de turno (consultas/controles generales y certificado) ──
@@ -1244,7 +1251,7 @@ function abrirRegistro(r, esNuevo) {
         // Consulta general: el cliente puede pedir un general específico (opcional).
         '<div id="boxMedGen" style="display:none"><label id="lblMedGen">Médico general <span class="lbl-tip">(opcional — si lo pidió)</span></label><select id="regMedGen">'+buildMedGenOptions()+'</select></div>'+
         // Rayos X: normalmente la Dra. Angie, pero si no está lo cubre otro.
-        '<div id="boxRayosDoc" style="display:none"><label>Médico que lo hace <span class="lbl-tip">(si la Dra. Angie no está, elige otro)</span></label><select id="regRayosDoc">'+buildRayosDocOptions()+'</select></div>'+
+        '<div id="boxRayosDoc" style="display:none"><label id="lblRayosDoc">Médico que lo hace</label><select id="regRayosDoc">'+buildRayosDocOptions()+'</select></div>'+
         // Con teléfono, al cliente le llega el link y llena la ficha desde su
         // celular. Vacío, recepción se la llena a mano. Señores de 78,
         // celulares sin datos, gente que no quiere — ese camino no se toca.
@@ -1810,7 +1817,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
-<script src="/js/agenda-mod.js?v=20260725i"></script>
+<script src="/js/agenda-mod.js?v=20260725j"></script>
 <script>
 // Precarga el índice de Vetesoft ACÁ (no en iniciar), porque agenda-mod.js —que
 // define window.VetIndex— recién se carga en la línea de arriba. Con el índice

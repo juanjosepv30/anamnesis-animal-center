@@ -551,8 +551,12 @@
         var id=evEl.getAttribute('data-id');
         var c=citas.filter(function(x){return String(x.id)===id;})[0];
         if(!c) return;
-        if(String(c.estado||'')==='cancelada'){   // cancelada: solo un aviso, sin acciones
-          evEl.addEventListener('click', function(ev){ ev.stopPropagation(); agmAlert('Esta cita fue CANCELADA. Queda registrada (en gris) para que se vea que existió, pero no ocupa ni bloquea el horario.', 'Cita cancelada'); });
+        if(String(c.estado||'')==='cancelada'){   // cancelada: no bloquea; se puede reprogramar o agendar de nuevo en ese hueco
+          evEl.addEventListener('click', function(ev){ ev.stopPropagation();
+            if(S.reprog){ reprogramarA(c.fecha, c.hora, med, false); return; }
+            agmConfirm({ title:'Cita cancelada', msg:'Esta cita fue cancelada, así que el horario ('+esc(c.hora)+') está libre. ¿Querés agendar una cita nueva acá?', yes:'Sí, agendar acá', no:'Cerrar' })
+              .then(function(ok){ if(ok) abrirCrear(c.fecha, c.hora, med, false); });
+          });
           return;
         }
         if(!evEl.classList.contains('agm-drag')){   // llegada: solo abre detalle
