@@ -1036,21 +1036,35 @@
       for(var i=0;i<f.length;i++){ var r=f[i]; s[i]=_norm((r[P.pac]||'')+' '+(r[P.prop]||'')+' '+(r[P.doc]||'')+' '+(r[P.tel]||'')+' '+(r[P.reg]||'')); }
       return { v:data.v, P:P, f:f, s:s };
     }
+    // Caché PRIMERO: activa el índice al instante desde IndexedDB (~50ms) y recién
+    // después chequea si hay versión nueva, en segundo plano y sin bloquear. Apps
+    // Script serializa las llamadas del usuario, así que NO podemos esperar al
+    // chequeo de versión en el arranque: haría fila detrás de turnos/sala (10s+).
     function load(api){
       API=api||window.API_URL;
       if(_mem) return Promise.resolve(_mem);
       if(_loading) return _loading;
-      _loading = fetch(API+'?action=vetesoftIndexInfo&cb='+Date.now()).then(function(r){return r.json();}).catch(function(){return null;})
-        .then(function(info){ var ver=info&&info.version;
-          return _idbGet('vindex').then(function(cached){
-            if(cached && cached.v && (!ver || cached.v===ver)){ _mem=_prep(cached); return _mem; }
-            return fetch(API+'?action=vetesoftIndex&cb='+Date.now()).then(function(r){return r.json();}).then(function(data){
-              try{ _idbPut('vindex',data); }catch(e){}
-              _mem=_prep(data); return _mem;
-            }).catch(function(){ if(cached){ _mem=_prep(cached); return _mem; } return null; });
-          });
-        });
+      _loading = _idbGet('vindex').then(function(cached){
+        if(cached && cached.v){ _mem=_prep(cached); _verificarEnBg(cached.v); return _mem; }
+        return _bajarCompleto();   // primera vez: no hay caché, hay que bajarlo
+      }).catch(function(){ return _bajarCompleto(); });
       return _loading;
+    }
+    // Baja el índice completo del backend y lo persiste. Reemplaza _mem si llega.
+    function _bajarCompleto(){
+      return fetch(API+'?action=vetesoftIndex&cb='+Date.now()).then(function(r){return r.json();}).then(function(data){
+        if(data && data.f){ try{ _idbPut('vindex',data); }catch(e){} _mem=_prep(data); }
+        return _mem;
+      }).catch(function(){ return _mem; });
+    }
+    // Chequea si el rebuild nocturno dejó una versión más nueva. Se retrasa unos
+    // segundos para no competir con las llamadas críticas del arranque.
+    function _verificarEnBg(verActual){
+      setTimeout(function(){
+        fetch(API+'?action=vetesoftIndexInfo&cb='+Date.now()).then(function(r){return r.json();}).then(function(info){
+          if(info && info.version && info.version!==verActual){ _bajarCompleto(); }
+        }).catch(function(){});
+      }, 6000);
     }
     function _edad(nac){ try{ if(!nac)return''; var n=new Date(nac); if(isNaN(n))return''; var m=(new Date().getFullYear()-n.getFullYear())*12+(new Date().getMonth()-n.getMonth()); if(m<0)return''; if(m<1)return'Menos de 1 mes'; if(m<24)return m+(m===1?' mes':' meses'); var a=Math.floor(m/12),x=m%12; return a+' años'+(x?' y '+x+(x===1?' mes':' meses'):''); }catch(e){return'';} }
     function _map(r,P){ return { id:r[P.id], registro:r[P.reg]||(r[P.id]?String(r[P.id]):''), petName:r[P.pac]||'', owner:r[P.prop]||'', documento:r[P.doc]||'', phone:String(r[P.tel]||''), species:r[P.esp]||'', breed:r[P.raza]||'', sex:r[P.sexo]||'', age:_edad(r[P.nac]) }; }
