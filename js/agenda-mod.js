@@ -138,10 +138,12 @@
     // Arrastrar/estirar citas. En táctil el scroll queda LIBRE (touch-action
     // auto): el arrastre se ARMA con una pulsación larga (~500ms), no con el
     // primer roce, para no mover citas sin querer al hacer scroll.
-    // touch-action:none → tocar una cita arrastrable NUNCA hace scroll: el gesto
-    // es siempre para la cita (arrastrar = mover, tocar = detalle). El scroll del
-    // calendario se hace desde los huecos vacíos.
-    '.agm-ev.agm-drag{cursor:grab;touch-action:none}',
+    '.agm-ev.agm-drag{cursor:grab}',
+    // Cita "levantada" con el long-press (móvil): se pone morada y crece un poco
+    // para que se entienda que ya se puede mover.
+    '.agm-ev.agm-picked{outline:3px solid #8e3f9e;outline-offset:1px;background:#8e3f9e!important;color:#fff!important;box-shadow:0 8px 22px rgba(142,63,158,.55);transform:scale(1.04);z-index:30}',
+    // Cita que está en modo mover (mientras elegís el nuevo horario): morada tenue.
+    '.agm-ev.agm-moving{outline:2px dashed #8e3f9e;background:rgba(142,63,158,.16)!important;color:#5b2569!important}',
     '.agm-ev.agm-dragging{opacity:.35}',
     // Cita con el arrastre ARMADO tras la pulsación larga: se resalta para que
     // el dedo sepa que ya puede mover.
@@ -359,7 +361,7 @@
           '<span><i class="agm-dot" style="background:#fff;box-shadow:inset 0 0 0 2px #16a34a"></i>Llegó</span>'+
           '<span><i class="agm-dot" style="background:#F7C1C1;border:1px solid #A32D2D"></i>No disp.</span>'+
         '</div>'+
-        (S.reprog?'<div class="agm-reprog">🔁 Reprogramando a <b>'+esc(S.reprog.pet)+'</b> — toca el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
+        (S.reprog?'<div class="agm-reprog">🔁 Moviendo a <b>'+esc(S.reprog.pet)+'</b> — bajá o cambiá de día y tocá el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
         (S.vista==='3dias'?'<div class="agm-shint"><i>↔</i>Desliza para ver toda la semana</div>':'')+
         '<div id="cWrap" class="agm-scroll'+(S.vista==='3dias'?' agm-hscroll':'')+'"><div class="agm-sp"></div></div>';
       var sel=$('cMed'); if(sel) sel.onchange=function(){ S.med=sel.value; cargarCal(); };
@@ -478,7 +480,8 @@
           var col=svcColor(c.servicio);
           // Las citas ya llegadas NO se arrastran ni estiran (editarCita las bloquea).
           var movible=!c.llego;
-          h+='<div class="agm-ev'+(c.llego?' lleg':'')+(movible?' agm-drag':'')+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+col+'22;border-left-color:'+col+';color:#1a0a2e">'+
+          var _mov=(S.reprog&&String(S.reprog.id)===String(c.id))?' agm-moving':'';
+          h+='<div class="agm-ev'+(c.llego?' lleg':'')+(movible?' agm-drag':'')+_mov+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+col+'22;border-left-color:'+col+';color:#1a0a2e">'+
              '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(c.llego?' ✓':'')+(c.pagado?' 💵':'')+(c.comprobante?' 📎':'')+'</b>'+
              (alt>28?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+
              (movible&&!_agmMovil?'<div class="agm-rz" title="Estirar para cambiar la duración"></div>':'')+'</div>';
@@ -565,17 +568,33 @@
           }
           document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up);
         });
-        // ── Arrastrar el bloque: cambia día/hora ──
+        // ── Mover la cita ──
+        // MÓVIL: long-press (~400ms sin mover) "levanta" la cita → se pone MORADA,
+        // vibra y entra en modo mover. Soltás el dedo y el calendario queda libre
+        // para bajar o cambiar de día; después tocás el nuevo horario. Un toque
+        // simple abre el detalle; un desliz hace scroll normal (cancela el pickup).
+        // ESCRITORIO (mouse): arrastrar y soltar directo.
         evEl.addEventListener('pointerdown', function(ev){
           if(ev.target.closest('.agm-rz')) return;
           if(ev.button&&ev.button!==0) return;
           var esTactil = ev.pointerType==='touch';
+          if(esTactil){
+            var tx=ev.clientX, ty=ev.clientY, cancel=false;
+            var limpiar=function(){ document.removeEventListener('pointermove',tmv); document.removeEventListener('pointerup',tup); document.removeEventListener('pointercancel',tup); };
+            var lp=setTimeout(function(){
+              if(cancel) return;
+              evEl.classList.add('agm-picked');                 // flash morado: "levantada"
+              if(navigator.vibrate){ try{navigator.vibrate(30);}catch(e){} }
+              S.reprog={ id:c.id, pet:(c.petName||c.owner||'la cita') };
+              setTimeout(function(){ pintarCal(); }, 130);       // deja ver el morado y muestra el banner
+            }, 400);
+            var tmv=function(e){ if(Math.abs(e.clientX-tx)+Math.abs(e.clientY-ty)>10){ cancel=true; clearTimeout(lp); limpiar(); } };
+            var tup=function(e){ clearTimeout(lp); limpiar(); if(!cancel && !S.reprog) abrirDetalle(c); };
+            document.addEventListener('pointermove',tmv,{passive:true}); document.addEventListener('pointerup',tup); document.addEventListener('pointercancel',tup);
+            return;
+          }
           var x0=ev.clientX, y0=ev.clientY, grab=y0-evEl.getBoundingClientRect().top;
           var moviendo=false, tIso=c.fecha, tMin=hm2min(c.hora), ghost=null, pressT=null;
-          // La cita tiene touch-action:none, así que tocarla NO hace scroll: el
-          // gesto es SIEMPRE de la cita. Arrastrar (>6px) la mueve; soltar sin
-          // mover abre el detalle. Al empezar a mover capturamos el puntero y
-          // vibramos, para que se sienta que la "levantaste".
           function mv(e){ var dx=e.clientX-x0, dy=e.clientY-y0;
             if(!moviendo){
               if(Math.abs(dx)+Math.abs(dy)<6) return;   // todavía es un toque, no un arrastre
