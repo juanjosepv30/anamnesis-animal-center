@@ -624,6 +624,8 @@
 
     function abrirCrear(iso, hora, med, forzar){
       S.crear={ fecha:iso, hora:hora, medico:med, forzar:!!forzar }; S.selCliente=null;
+      try{ if(window.VetIndex) VetIndex.load(api); }catch(e){}   // precarga el índice
+
       var d=mkFecha(iso);
       overlay(
         '<div class="agm-mh"><div class="agm-mt">Agendar cita</div><button class="agm-mx" id="mX">×</button></div>'+
@@ -644,32 +646,44 @@
     }
     function $ov(id){ return S._ov ? S._ov.querySelector('#'+id) : null; }
 
-    // Búsqueda en vivo: a medida que se escribe. Si es número, va por cédula;
-    // si es texto, busca por mascota Y por dueño a la vez (une coincidencias),
-    // así "cualquier palabra" encuentra sea nombre de la mascota o del cliente.
+    // Pinta la lista de resultados y cablea el click de cada uno.
+    function _pintarRes(R, rows){
+      var html='';
+      rows.forEach(function(r,i){ S['_m'+i]=r;
+        html+='<div class="agm-r" data-i="'+i+'"><div class="agm-rn">'+esc(r.petName||'(sin nombre)')+' — '+esc(r.owner||'')+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
+          '<div class="agm-rm">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+(r.documento?' · CC '+esc(r.documento):'')+(r.phone?' · 📞 '+esc(r.phone):'')+'</div></div>';
+      });
+      if(!rows.length) html='<div class="agm-hint">Sin resultados. Probá con la cédula, o cargá cliente nuevo.</div>';
+      html+='<button class="agm-nuevo" id="mNuevo">+ Cliente nuevo (cargar a mano)</button>';
+      R.innerHTML=html;
+      R.querySelectorAll('.agm-r').forEach(function(dv){ dv.onclick=function(){ pickModal(+dv.getAttribute('data-i')); }; });
+      var mn=$ov('mNuevo'); if(mn) mn.onclick=nuevoModal;
+    }
+    // Búsqueda en vivo LOCAL (índice de Vetesoft): por dueño, mascota, HC, cédula
+    // o teléfono, parcial y multi-palabra, al instante. Además, si es número,
+    // pregunta EN VIVO por cédula a Vetesoft (frescura: un paciente recién creado
+    // aparece aunque el índice aún no lo tenga).
     function buscarModal(term){
       term=String(term||'').trim();
       var R=$ov('mRes'); if(!R) return;
-      if(term.length<3 && !/^\d{4,}$/.test(term)){ R.innerHTML=''; return; }
-      var esNum=/^\d+$/.test(term);
-      var url = esNum
-        ? api+'?action=search&cedula='+encodeURIComponent(term)
-        : api+'?action=search&q='+encodeURIComponent(term);
-      R.innerHTML='<div class="agm-sp"></div>'; $ov('mForm').innerHTML='';
-      var miTerm=term; S._term=term;
-      fetch(url).then(function(r){return r.json();}).then(function(res){
-        if(S._term!==miTerm) return;   // llegó viejo, lo ignoramos
-        var rows=(res&&res.results)||[]; var html='';
-        rows.forEach(function(r,i){ S['_m'+i]=r;
-          html+='<div class="agm-r" data-i="'+i+'"><div class="agm-rn">'+esc(r.petName||'(sin nombre)')+' — '+esc(r.owner||'')+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
-            '<div class="agm-rm">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+(r.phone?' · 📞 '+esc(r.phone):'')+'</div></div>';
-        });
-        if(!rows.length) html='<div class="agm-hint">Sin resultados. Probá con la cédula, o cargá cliente nuevo.</div>';
-        html+='<button class="agm-nuevo" id="mNuevo">+ Cliente nuevo (cargar a mano)</button>';
-        R.innerHTML=html;
-        R.querySelectorAll('.agm-r').forEach(function(dv){ dv.onclick=function(){ pickModal(+dv.getAttribute('data-i')); }; });
-        $ov('mNuevo').onclick=nuevoModal;
-      }).catch(function(){ R.innerHTML='<div class="agm-hint">Error de conexión.</div>'; });
+      if(term.length<2){ R.innerHTML=''; return; }
+      var miTerm=term; S._term=term; $ov('mForm').innerHTML='';
+      function mostrar(){
+        if(S._term!==miTerm) return;
+        var rows=VetIndex.search(term, null, 25);
+        _pintarRes(R, rows);
+        // Fallback en vivo por cédula (número de 6+ dígitos): trae lo más actual.
+        var num=term.replace(/\D/g,'');
+        if(num.length>=6){
+          fetch(api+'?action=search&cedula='+encodeURIComponent(num)+'&cb='+Date.now()).then(function(r){return r.json();}).then(function(res){
+            if(S._term!==miTerm) return;
+            var extra=((res&&res.results)||[]).filter(function(x){ return !rows.some(function(y){ return String(y.id)===String(x.id); }); });
+            if(extra.length){ rows=extra.concat(rows); _pintarRes(R, rows); }
+          }).catch(function(){});
+        }
+      }
+      if(VetIndex.listo()){ mostrar(); }
+      else { R.innerHTML='<div class="agm-hint">Cargando buscador…</div>'; VetIndex.load(api).then(function(x){ if(x) mostrar(); else { R.innerHTML='<div class="agm-hint">No se pudo cargar el buscador. Probá por cédula.</div>'; } }); }
     }
     function pickModal(i){ var r=S['_m'+i];
       var cedTerm=/^\d+$/.test(S._term||'')?S._term:'';
@@ -1001,4 +1015,68 @@
   }
 
   window.AgendaMod = { mount: mount };
+
+  // ── Índice local de pacientes de Vetesoft ───────────────────────────────
+  // Baja el índice UNA vez (lo cachea en IndexedDB por versión) y busca LOCAL:
+  // por dueño, mascota, HC, cédula o teléfono, parcial y multi-palabra, al
+  // instante. La API de Vetesoft no permite buscar por dueño/HC/parcial; esto sí.
+  window.VetIndex = (function(){
+    var API=null, _mem=null, _loading=null;
+    function _norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); }
+    // IndexedDB mínimo (clave-valor) para persistir el índice entre recargas.
+    function _idb(){ return new Promise(function(res,rej){ try{ var q=indexedDB.open('acvet',1);
+      q.onupgradeneeded=function(){ try{ q.result.createObjectStore('kv'); }catch(e){} };
+      q.onsuccess=function(){res(q.result);}; q.onerror=function(){rej(q.error);}; }catch(e){ rej(e); } }); }
+    function _idbGet(k){ return _idb().then(function(db){ return new Promise(function(res){ try{ var t=db.transaction('kv','readonly').objectStore('kv').get(k); t.onsuccess=function(){res(t.result||null);}; t.onerror=function(){res(null);}; }catch(e){res(null);} }); }).catch(function(){return null;}); }
+    function _idbPut(k,v){ return _idb().then(function(db){ return new Promise(function(res){ try{ var t=db.transaction('kv','readwrite').objectStore('kv').put(v,k); t.onsuccess=function(){res(true);}; t.onerror=function(){res(false);}; }catch(e){res(false);} }); }).catch(function(){return false;}); }
+    // Precalcula una cadena buscable normalizada por fila (mascota+dueño+doc+tel+HC).
+    function _prep(data){
+      var P={}; (data.campos||[]).forEach(function(c,i){P[c]=i;});
+      var f=data.f||[], s=new Array(f.length);
+      for(var i=0;i<f.length;i++){ var r=f[i]; s[i]=_norm((r[P.pac]||'')+' '+(r[P.prop]||'')+' '+(r[P.doc]||'')+' '+(r[P.tel]||'')+' '+(r[P.reg]||'')); }
+      return { v:data.v, P:P, f:f, s:s };
+    }
+    function load(api){
+      API=api||window.API_URL;
+      if(_mem) return Promise.resolve(_mem);
+      if(_loading) return _loading;
+      _loading = fetch(API+'?action=vetesoftIndexInfo&cb='+Date.now()).then(function(r){return r.json();}).catch(function(){return null;})
+        .then(function(info){ var ver=info&&info.version;
+          return _idbGet('vindex').then(function(cached){
+            if(cached && cached.v && (!ver || cached.v===ver)){ _mem=_prep(cached); return _mem; }
+            return fetch(API+'?action=vetesoftIndex&cb='+Date.now()).then(function(r){return r.json();}).then(function(data){
+              try{ _idbPut('vindex',data); }catch(e){}
+              _mem=_prep(data); return _mem;
+            }).catch(function(){ if(cached){ _mem=_prep(cached); return _mem; } return null; });
+          });
+        });
+      return _loading;
+    }
+    function _edad(nac){ try{ if(!nac)return''; var n=new Date(nac); if(isNaN(n))return''; var m=(new Date().getFullYear()-n.getFullYear())*12+(new Date().getMonth()-n.getMonth()); if(m<0)return''; if(m<1)return'Menos de 1 mes'; if(m<24)return m+(m===1?' mes':' meses'); var a=Math.floor(m/12),x=m%12; return a+' años'+(x?' y '+x+(x===1?' mes':' meses'):''); }catch(e){return'';} }
+    function _map(r,P){ return { id:r[P.id], registro:r[P.reg]||(r[P.id]?String(r[P.id]):''), petName:r[P.pac]||'', owner:r[P.prop]||'', documento:r[P.doc]||'', phone:String(r[P.tel]||''), species:r[P.esp]||'', breed:r[P.raza]||'', sex:r[P.sexo]||'', age:_edad(r[P.nac]) }; }
+    // Busca por texto libre. `campo` opcional ('prop','pac','doc','tel','reg') limita a ese campo.
+    function search(q, campo, limit){
+      limit=limit||25; if(!_mem) return [];
+      var toks=_norm(q).split(/\s+/).filter(function(t){return t.length>=2;});
+      if(!toks.length) return [];
+      var P=_mem.P, f=_mem.f, s=_mem.s, hits=[];
+      for(var i=0;i<f.length;i++){
+        var base;
+        if(campo){ base=_norm(f[i][P[campo]]); } else { base=s[i]; }
+        var ok=true; for(var t=0;t<toks.length;t++){ if(base.indexOf(toks[t])===-1){ok=false;break;} }
+        if(!ok) continue;
+        // Puntaje: mejor si TODAS las palabras están en el MISMO campo (dueño o mascota).
+        var prop=_norm(f[i][P.prop]), pac=_norm(f[i][P.pac]);
+        var enProp=toks.every(function(t){return prop.indexOf(t)!==-1;});
+        var enPac =toks.every(function(t){return pac.indexOf(t)!==-1;});
+        var sc=(enProp||enPac)?2:1;
+        if((enProp&&prop.indexOf(toks[0])===0)||(enPac&&pac.indexOf(toks[0])===0)) sc+=1;  // arranca con la 1a palabra
+        hits.push({ r:f[i], sc:sc });
+        if(hits.length>400) break;   // no barrer de más si hay muchísimos
+      }
+      hits.sort(function(a,b){ return b.sc-a.sc; });
+      return hits.slice(0,limit).map(function(h){ return _map(h.r,P); });
+    }
+    return { load:load, search:search, listo:function(){return !!_mem;} };
+  })();
 })();
