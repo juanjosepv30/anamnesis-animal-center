@@ -401,10 +401,10 @@
       fetch(api,{method:'POST',body:JSON.stringify({action:'editarCita', id:c.id, data:{fecha:fecha, hora:hora, duracion:duracion, servicio:c.servicio, forzar:!!forzar}})})
         .then(function(r){return r.json();}).then(function(res){
           if(res&&res.ok){ cargarCal(); return; }
-          if(res&&res.bloqueado){ if(confirm((res.error||'Hay un bloqueo en ese horario.')+' ¿Mover igual?')){ guardarMoverCita(c,fecha,hora,duracion,true); } else { cargarCal(); } return; }
-          if(res&&res.fueraTurno){ if(confirm((res.error||'Ese horario está fuera del turno del médico.')+' ¿Mover igual?')){ guardarMoverCita(c,fecha,hora,duracion,true); } else { cargarCal(); } return; }
-          alert((res&&res.error)||'No se pudo mover la cita.'); cargarCal();
-        }).catch(function(){ alert('Error de conexión.'); cargarCal(); });
+          if(res&&res.bloqueado){ agmConfirm({title:'Horario bloqueado', msg:(res.error||'Hay un bloqueo en ese horario.')+' ¿Mover igual?', yes:'Mover igual', danger:true}).then(function(ok){ ok?guardarMoverCita(c,fecha,hora,duracion,true):cargarCal(); }); return; }
+          if(res&&res.fueraTurno){ agmConfirm({title:'Fuera del turno', msg:(res.error||'Ese horario está fuera del turno del médico.')+' ¿Mover igual?', yes:'Mover igual', danger:true}).then(function(ok){ ok?guardarMoverCita(c,fecha,hora,duracion,true):cargarCal(); }); return; }
+          agmAlert((res&&res.error)||'No se pudo mover la cita.'); cargarCal();
+        }).catch(function(){ agmAlert('Error de conexión.'); cargarCal(); });
     }
 
     function pintarGrid(W, med, citas, bloqs){
@@ -474,7 +474,7 @@
           h+='<div class="agm-ev'+(c.llego?' lleg':'')+(movible?' agm-drag':'')+'" data-id="'+esc(c.id)+'" style="top:'+yOf(ini)+'px;height:'+alt+'px;background:'+col+'22;border-left-color:'+col+';color:#1a0a2e">'+
              '<b>'+esc(c.hora)+' '+esc(c.petName||c.owner||'—')+(c.llego?' ✓':'')+(c.pagado?' 💵':'')+(c.comprobante?' 📎':'')+'</b>'+
              (alt>28?'<span>'+esc((c.servicio||'').replace(/ (general|especializado|especializada)/i,''))+'</span>':'')+
-             (movible?'<div class="agm-rz" title="Estirar para cambiar la duración"></div>':'')+'</div>';
+             (movible&&!_agmMovil?'<div class="agm-rz" title="Estirar para cambiar la duración"></div>':'')+'</div>';
         });
         h+='</div></div>';
       });
@@ -518,10 +518,11 @@
           if(Math.abs(ev.clientX-s.x)+Math.abs(ev.clientY-s.y)>12) return;  // se movió → fue scroll, no tap
           if(Date.now()-s.t>700) return;                                    // pulsación larga → no es tap
           var m=slotY(bodyEl,ev.clientY); var hm=min2hm(m);
-          var b=bloqueoDe(bloqs,iso,hm), forz=false;
-          if(b){ if(!confirm('Acá hay un bloqueo'+(b.motivo?' ('+b.motivo+')':'')+'. ¿'+(S.reprog?'Reprogramar':'Agendar una cita')+' igual en este horario?')) return; forz=true; }
-          if(S.reprog) reprogramarA(iso,hm,med,forz);
-          else abrirCrear(iso,hm,med,forz);
+          var b=bloqueoDe(bloqs,iso,hm);
+          if(b){ agmConfirm({title:'Horario bloqueado', msg:'Acá hay un bloqueo'+(b.motivo?' ('+b.motivo+')':'')+'. ¿'+(S.reprog?'Reprogramar':'Agendar una cita')+' igual en este horario?', yes:'Sí, igual', danger:true})
+            .then(function(ok){ if(!ok) return; if(S.reprog) reprogramarA(iso,hm,med,true); else abrirCrear(iso,hm,med,true); }); return; }
+          if(S.reprog) reprogramarA(iso,hm,med,false);
+          else abrirCrear(iso,hm,med,false);
         });
       });
       // Columnas (para saber sobre qué DÍA se suelta al arrastrar entre días).
@@ -539,15 +540,10 @@
           evEl.addEventListener('click', function(ev){ ev.stopPropagation(); abrirDetalle(c); });
           return;
         }
-        // En CELULAR el arrastre es frágil (mueve citas sin querer y traba el
-        // scroll). Lo desactivamos: tocar la cita abre el detalle y desde ahí
-        // "🔁 Reprogramar" mueve el turno tocando el nuevo horario — flujo de
-        // toques, fácil y sin accidentes. El arrastre para mover/estirar queda
-        // solo en computador (mouse).
-        if(esMovil){
-          evEl.addEventListener('click', function(ev){ ev.stopPropagation(); abrirDetalle(c); });
-          return;
-        }
+        // En CELULAR el arrastre se ARMA con pulsación larga (~500ms): tocar y
+        // soltar abre el detalle; mantener presionado "levanta" la cita y la
+        // arrastrás a otro horario. Un desliz rápido hace scroll normal (no arma).
+        // Así se reprograma de una, sin trabar el scroll ni mover citas sin querer.
         var dur=+c.duracion||durServicio(c.servicio);
         // ── Estirar (handle inferior): cambia la duración ──
         var rz=evEl.querySelector('.agm-rz');
@@ -557,8 +553,8 @@
           function mv(e){ nueva=Math.max(30, Math.round((((dur0*PXMIN)+(e.clientY-y0))/PXMIN)/30)*30); evEl.style.height=Math.max(nueva*PXMIN-1,18)+'px'; }
           function up(){ document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up); evEl.classList.remove('agm-rzing'); S._noClick=true; setTimeout(function(){S._noClick=false;},350);
             if(nueva===dur0){ return; }
-            if(!confirm('¿Cambiar la duración de la cita de '+(c.petName||c.owner||'')+' a '+nueva+' min?')){ cargarCal(); return; }
-            guardarMoverCita(c, c.fecha, c.hora, nueva, false);
+            agmConfirm({title:'Cambiar duración', msg:'¿Cambiar la duración de la cita de '+(c.petName||c.owner||'')+' a '+nueva+' min?', yes:'Sí, cambiar'})
+              .then(function(ok){ ok?guardarMoverCita(c,c.fecha,c.hora,nueva,false):cargarCal(); });
           }
           document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up);
         });
@@ -605,8 +601,8 @@
             var nHora=min2hm(tMin);
             if(tIso===c.fecha && nHora===c.hora){ return; }
             var d=mkFecha(tIso);
-            if(!confirm('¿Mover la cita de '+(c.petName||c.owner||'')+' a '+DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+' a las '+nHora+'?')){ cargarCal(); return; }
-            guardarMoverCita(c, tIso, nHora, dur, false);
+            agmConfirm({title:'Mover cita', msg:'¿Mover la cita de '+(c.petName||c.owner||'')+' a '+DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+' a las '+nHora+'?', yes:'Sí, mover'})
+              .then(function(ok){ ok?guardarMoverCita(c,tIso,nHora,dur,false):cargarCal(); });
           }
           document.addEventListener('pointermove',mv,{passive:false}); document.addEventListener('pointerup',up); document.addEventListener('pointercancel',up);
         });
@@ -622,8 +618,8 @@
           var col=bk.closest('.agm-body2[data-iso]');
           var iso=col?col.getAttribute('data-iso'):b.desdeF;
           var hm=col?min2hm(slotY(col,ev.clientY)):(b.desdeH||'08:00');
-          if(!confirm('Recordá que este horario tiene un BLOQUEO'+(b.motivo?' ('+esc(b.motivo)+')':'')+'.\n¿Seguro que querés agendar una cita a las '+hm+'?')) return;
-          abrirCrear(iso, hm, med, true);
+          agmConfirm({title:'Horario bloqueado', msg:'Este horario tiene un BLOQUEO'+(b.motivo?' ('+b.motivo+')':'')+'. ¿Seguro que querés agendar una cita a las '+hm+'?', yes:'Sí, agendar', danger:true})
+            .then(function(ok){ if(ok) abrirCrear(iso, hm, med, true); });
         });
       });
     }
@@ -640,6 +636,43 @@
       document.body.appendChild(ov); S._ov=ov; return ov;
     }
     function cerrarOv(){ if(S._ov){ S._ov.remove(); S._ov=null; } S.selCliente=null; }
+
+    // Diálogo de confirmación con el estilo de la app (reemplaza el confirm() feo
+    // del navegador). Crea su PROPIO overlay (z-index alto): se apila encima de
+    // cualquier modal abierto sin destruirlo. Devuelve promesa: true=confirma.
+    function _capa(html){
+      var ov=document.createElement('div'); ov.className='agm agm-ov'; ov.style.zIndex='10001';
+      ov.innerHTML='<div class="agm-modal">'+html+'</div>';
+      document.body.appendChild(ov); return ov;
+    }
+    function agmConfirm(o){
+      o=o||{};
+      return new Promise(function(resolve){
+        var ov=_capa(
+          '<div class="agm-mh"><div class="agm-mt">'+esc(o.title||'¿Confirmás?')+'</div></div>'+
+          '<div style="font-size:.92rem;color:var(--atx);line-height:1.45;margin-bottom:18px">'+esc(o.msg||'')+'</div>'+
+          '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">'+
+            '<button class="agm-btn" id="cfNo" style="background:#fff;color:var(--atm);border:1.5px solid var(--abd)">'+esc(o.no||'Cancelar')+'</button>'+
+            '<button class="agm-btn" id="cfYes" style="'+(o.danger?'background:#c0392b':'background:var(--ap)')+';color:#fff;border:none">'+esc(o.yes||'Sí')+'</button>'+
+          '</div>'
+        );
+        var done=function(v){ if(ov.parentNode) ov.parentNode.removeChild(ov); resolve(v); };
+        ov.querySelector('#cfYes').onclick=function(){ done(true); };
+        ov.querySelector('#cfNo').onclick=function(){ done(false); };
+        ov.addEventListener('click', function(e){ if(e.target===ov) done(false); });  // fondo = cancelar
+      });
+    }
+    // Aviso simple con un solo botón (reemplaza alert()).
+    function agmAlert(msg, title){
+      var ov=_capa(
+        '<div class="agm-mh"><div class="agm-mt">'+esc(title||'Aviso')+'</div></div>'+
+        '<div style="font-size:.92rem;color:var(--atx);line-height:1.45;margin-bottom:18px">'+esc(msg||'')+'</div>'+
+        '<div style="display:flex;justify-content:flex-end">'+
+          '<button class="agm-btn" id="okB" style="background:var(--ap);color:#fff;border:none">Entendido</button>'+
+        '</div>'
+      );
+      ov.querySelector('#okB').onclick=function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); };
+    }
 
     function abrirCrear(iso, hora, med, forzar){
       S.crear={ fecha:iso, hora:hora, medico:med, forzar:!!forzar }; S.selCliente=null;
@@ -767,8 +800,9 @@
           if(res&&res.ok){ cerrarOv(); cargarCal(); return; }
           // Fuera del turno del médico: se puede agendar igual si recepción confirma.
           if(res&&res.fueraTurno&&!data.forzar){
-            if(confirm((res.error||'Ese horario está fuera del turno del médico.')+' ¿Agendar igual?')){ data.forzar=true; enviar(); return; }
-            var gg=$ov('fGuardar'); if(gg){gg.textContent='Agendar →';gg.disabled=false;} return;
+            agmConfirm({title:'Fuera del turno', msg:(res.error||'Ese horario está fuera del turno del médico.')+' ¿Agendar igual?', yes:'Agendar igual', danger:true})
+              .then(function(ok){ if(ok){ data.forzar=true; enviar(); } else { var gg=$ov('fGuardar'); if(gg){gg.textContent='Agendar →';gg.disabled=false;} } });
+            return;
           }
           var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent=(res&&res.error)||'No se pudo agendar.';
         }).catch(function(){ var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent='Error de conexión.'; });
@@ -844,7 +878,7 @@
           function done(){ el.classList.add('copiado'); if(cp)cp.textContent='✓ copiado'; setTimeout(function(){ el.classList.remove('copiado'); if(cp)cp.textContent='copiar'; },1200); }
           try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done,function(){_copiaFallback(t);done();}); } else { _copiaFallback(t); done(); } }catch(e){ _copiaFallback(t); done(); } };
       });
-      $ov('dCancel').onclick=function(){ if(!confirm('¿Cancelar esta cita?'))return; accionCita('cancelarCita',{id:c.id}); };
+      $ov('dCancel').onclick=function(){ agmConfirm({title:'Cancelar cita', msg:'¿Cancelar esta cita? El cliente pierde este horario.', yes:'Sí, cancelar', no:'No', danger:true}).then(function(ok){ if(ok) accionCita('cancelarCita',{id:c.id}); }); };
       var lb=$ov('dLlego'); if(lb) lb.onclick=function(){ accionCita('llegoCita',{id:c.id}); };
       var rb=$ov('dReprog'); if(rb) rb.onclick=function(){ S.reprog={ id:c.id, pet:(c.petName||c.owner||'la cita') }; cerrarOv(); pintarCal(); };
       var pc=$ov('dPago'); if(pc) pc.onchange=function(){ var b=$ov('dPagoBox'); if(b) b.style.display=this.checked?'':'none'; marcarCambio(); };
@@ -887,12 +921,15 @@
     function reprogramarA(iso, hm, med, forzar){
       var rp=S.reprog; if(!rp) return;
       var d=mkFecha(iso);
-      if(!confirm('¿Reprogramar a '+rp.pet+' para '+DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+' a las '+hm+' con '+med+'?')) return;
-      fetch(api,{method:'POST',body:JSON.stringify({action:'editarCita',id:rp.id,data:{fecha:iso,hora:hm,medico:med,forzar:!!forzar}})})
-        .then(function(r){return r.json();}).then(function(res){
-          if(res&&res.ok){ S.reprog=null; pintarCal(); }
-          else { alert((res&&res.error)||'No se pudo reprogramar.'); }
-        }).catch(function(){ alert('Error de conexión.'); });
+      agmConfirm({ title:'Reprogramar cita',
+        msg:'¿Reprogramar a '+rp.pet+' para '+DIAS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+' a las '+hm+' con '+med+'?',
+        yes:'Sí, reprogramar' }).then(function(ok){ if(!ok) return;
+        fetch(api,{method:'POST',body:JSON.stringify({action:'editarCita',id:rp.id,data:{fecha:iso,hora:hm,medico:med,forzar:!!forzar}})})
+          .then(function(r){return r.json();}).then(function(res){
+            if(res&&res.ok){ S.reprog=null; pintarCal(); }
+            else { agmAlert((res&&res.error)||'No se pudo reprogramar.'); }
+          }).catch(function(){ agmAlert('Error de conexión.'); });
+      });
     }
 
     // ══════════ MODAL: editar bloqueo (desde el calendario) ══════════
@@ -928,7 +965,7 @@
       $ov('eTodo').onchange=function(){ if(this.checked)$ov('eDiario').checked=false; syncH(); };
       syncH();
       $ov('eX').onclick=cerrarOv;
-      $ov('eQuitar').onclick=function(){ if(!confirm('¿Quitar este bloqueo? El horario vuelve a quedar disponible.'))return; accionBloqueo('cancelarBloqueo',{id:b.id}); };
+      $ov('eQuitar').onclick=function(){ agmConfirm({title:'Quitar bloqueo', msg:'¿Quitar este bloqueo? El horario vuelve a quedar disponible.', yes:'Sí, quitar', danger:true}).then(function(ok){ if(ok) accionBloqueo('cancelarBloqueo',{id:b.id}); }); };
       $ov('eAgendar').onclick=function(){ abrirCrear(isoClic||b.desdeF, hmClic||(b.todoDia?'08:00':b.desdeH), med||b.medico, true); };
       $ov('eGuardar').onclick=function(){
         var diario=$ov('eDiario').checked, todo=$ov('eTodo').checked&&!diario;
@@ -1028,8 +1065,9 @@
         '<button class="agm-cx" data-id="'+esc(b.id)+'" style="border:none;background:none;color:#c0392b;font-weight:800;cursor:pointer;font-size:.74rem;font-family:inherit">Quitar</button></div>';
     }
     function cancelarBloqueo(id,btn){
-      if(!confirm('¿Quitar este bloqueo? El horario vuelve a quedar disponible.')) return; btn.textContent='…';
-      fetch(api,{method:'POST',body:JSON.stringify({action:'cancelarBloqueo',id:id})}).then(function(r){return r.json();}).then(function(){ cargarBloqueos(); }).catch(function(){ cargarBloqueos(); });
+      agmConfirm({title:'Quitar bloqueo', msg:'¿Quitar este bloqueo? El horario vuelve a quedar disponible.', yes:'Sí, quitar', danger:true}).then(function(ok){ if(!ok) return; btn.textContent='…';
+        fetch(api,{method:'POST',body:JSON.stringify({action:'cancelarBloqueo',id:id})}).then(function(r){return r.json();}).then(function(){ cargarBloqueos(); }).catch(function(){ cargarBloqueos(); });
+      });
     }
 
     // ══════════ INTERESADOS (lista de espera POR MÉDICO) ══════════
@@ -1155,8 +1193,12 @@
         '</div></div>';
     }
     function marcarInteres(id, estado){
-      if((estado==='agendo'||estado==='descartado') && !confirm(estado==='agendo'?'¿Marcar como agendó? Sale de la lista.':'¿Descartar? Sale de la lista.')) return;
-      fetch(api,{method:'POST',body:JSON.stringify({action:'actualizarInteresado',id:id,estado:estado})}).then(function(r){return r.json();}).then(function(){ cargarInteres(); }).catch(function(){ cargarInteres(); });
+      var doIt=function(){ fetch(api,{method:'POST',body:JSON.stringify({action:'actualizarInteresado',id:id,estado:estado})}).then(function(r){return r.json();}).then(function(){ cargarInteres(); }).catch(function(){ cargarInteres(); }); };
+      if(estado==='agendo'||estado==='descartado'){
+        agmConfirm({ title: estado==='agendo'?'Marcar como agendó':'Descartar',
+          msg: estado==='agendo'?'¿Marcar como agendó? Sale de la lista de espera.':'¿Descartar de la lista de espera?',
+          yes: estado==='agendo'?'Sí, agendó':'Sí, descartar', danger: estado==='descartado' }).then(function(ok){ if(ok) doIt(); });
+      } else doIt();
     }
   }
 
