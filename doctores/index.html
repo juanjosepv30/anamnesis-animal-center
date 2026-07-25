@@ -1400,6 +1400,12 @@ function confirmarQuien(){
   if (!m) { showToast('Elegí quién atiende'); return; }
   document.getElementById('quienModal').style.display = 'none';
   var cb = _quienCb; _quienCb = null;
+  // "Elegir quién soy" = identificarme. Si venías en "Ver todo", quedás
+  // identificado como ese médico: así el resto del flujo funciona bien (la barra
+  // "En consulta", la promoción de la gracia y el filtro de Atendiendo usan tu
+  // nombre) y NO te vuelve a preguntar en cada acción. Para volver a "Ver todo",
+  // tocás el chip de arriba. setMiMedico re-renderiza, por eso va ANTES del cb.
+  if (!miMedico) setMiMedico(m);
   if (cb) cb(m);
 }
 
