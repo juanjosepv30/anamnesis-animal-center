@@ -784,8 +784,12 @@ function todosLosMedicos() {
 // aunque el servicio fuera otro (por eso ecocardio no arrancaba en Wilmer).
 function buildRayosDocOptions(def) {
   def = def || 'Dra. Angie Valero';
+  // Comparación insensible a tildes/mayúsculas: la lista trae "Dra. Milena López"
+  // (con tilde) y el default puede venir sin ella; sin esto no quedaba seleccionado.
+  var norm = function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); };
+  var nd = norm(def);
   return todosLosMedicos().map(function(n){
-    return '<option value="'+esc(n)+'"'+(n===def?' selected':'')+'>'+esc(n)+'</option>';
+    return '<option value="'+esc(n)+'"'+(norm(n)===nd?' selected':'')+'>'+esc(n)+'</option>';
   }).join('');
 }
 
