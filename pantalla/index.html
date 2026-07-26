@@ -237,29 +237,34 @@ function fraseTurno(r){
   return saludo + conMasc + room + '.';
 }
 
-// Anuncio con la VOZ DEL NAVEGADOR (fallback, y lo que se usa si no hay voz IA).
-function hablarNavegador(frase){
-  if (!('speechSynthesis' in window)) { duck(false); return; }
+// Garantiza que un callback se ejecute UNA sola vez (aunque lleguen 'end' y el
+// timeout de seguridad juntos): así la cola nunca avanza dos veces por un llamado.
+function unaVez(fn){ var hecho=false; return function(){ if(hecho)return; hecho=true; if(fn)fn(); }; }
+
+// Anuncio con la VOZ DEL NAVEGADOR (fallback). Llama onDone al terminar o fallar.
+// NO toca la música: el ducking lo maneja la cola (procesarCola).
+function hablarNavegador(frase, onDone){
+  var fin = unaVez(onDone);
+  if (!('speechSynthesis' in window)) { fin(); return; }
   try {
     var u = new SpeechSynthesisUtterance(frase);
     u.lang = 'es-CO'; u.rate = 0.94; u.pitch = 1.3; u.volume = 1;   // pitch alto = voz más aguda
+    u.onend = u.onerror = fin;
     if (vozES) u.voice = vozES;
-    // Al terminar (o si falla) sube la música de nuevo. La red de seguridad
-    // la sube igual a los 9s por si el evento 'end' no llega.
-    u.onend = u.onerror = function(){ duck(false); };
-    setTimeout(function(){ duck(false); }, 9000);
+    setTimeout(fin, 12000);   // red de seguridad por si 'end' no llega
     speechSynthesis.cancel();
     speechSynthesis.speak(u);
-  } catch(e){ duck(false); }
+  } catch(e){ fin(); }
 }
 
 // Voz IA (Google Cloud TTS por el backend): mucho más humana. Estado _vozIA:
 // null=sin probar, true=hay key y funciona, false=no hay key → usar navegador y
-// no reintentar (para no hacer un ida y vuelta perdido en cada llamado).
+// no reintentar. Llama onDone cuando termina el audio (o cae al navegador).
 var _vozIA = null;
-function vozIA(frase){
-  if (_vozIA === false) { hablarNavegador(frase); return; }
-  var seguro = setTimeout(function(){ duck(false); }, 12000);   // red de seguridad sube la música
+function vozIA(frase, onDone){
+  var fin = unaVez(onDone);
+  if (_vozIA === false) { hablarNavegador(frase, fin); return; }
+  var seguro = setTimeout(fin, 13000);   // red de seguridad
   try {
     fetch(API_URL + '?action=tts&texto=' + encodeURIComponent(frase) + '&cb=' + Date.now())
       .then(function(r){ return r.json(); })
@@ -267,23 +272,44 @@ function vozIA(frase){
         if (res && res.ok && res.audio){
           _vozIA = true;
           var audio = new Audio('data:audio/mp3;base64,' + res.audio);
-          audio.onended = audio.onerror = function(){ clearTimeout(seguro); duck(false); };
+          audio.onended = audio.onerror = function(){ clearTimeout(seguro); fin(); };
           var p = audio.play();
-          if (p && p.catch) p.catch(function(){ clearTimeout(seguro); hablarNavegador(frase); });
+          if (p && p.catch) p.catch(function(){ clearTimeout(seguro); hablarNavegador(frase, fin); });
         } else {
           _vozIA = false;   // sin key: de acá en más, directo a la voz del navegador
-          clearTimeout(seguro); hablarNavegador(frase);
+          clearTimeout(seguro); hablarNavegador(frase, fin);
         }
       })
-      .catch(function(){ clearTimeout(seguro); hablarNavegador(frase); });   // corte puntual: NO marca false
-  } catch(e){ clearTimeout(seguro); hablarNavegador(frase); }
+      .catch(function(){ clearTimeout(seguro); hablarNavegador(frase, fin); });   // corte puntual: NO marca false
+  } catch(e){ clearTimeout(seguro); hablarNavegador(frase, fin); }
 }
 
-// Anuncia el turno: intenta la voz IA (más humana) y cae solo a la del navegador.
-function hablarTurno(r){
+// Anuncia el turno (voz IA con fallback), y avisa cuando terminó vía onDone.
+function hablarTurno(r, onDone){
+  var fin = unaVez(onDone);
   var frase = fraseTurno(r);
-  if (!frase) { duck(false); return; }
-  vozIA(frase);
+  if (!frase) { fin(); return; }
+  vozIA(frase, fin);
+}
+
+// ── Cola de anuncios ─────────────────────────────────────────
+// Evita que dos llamados casi simultáneos (p.ej. un general y un especialista
+// tocando "atender" al mismo tiempo) se PISEN. Cada llamado nuevo se ENCOLA y se
+// reproducen de a uno: ding → voz → (al terminar) el siguiente. La música baja al
+// arrancar la tanda y vuelve a subir recién cuando la cola queda vacía.
+var colaAnuncios = [];
+var anunciando = false;
+function encolarAnuncio(r){ colaAnuncios.push(r); procesarCola(); }
+function procesarCola(){
+  if (anunciando) return;
+  if (!colaAnuncios.length) { duck(false); return; }   // tanda terminada → sube la música
+  anunciando = true;
+  duck(true);                                            // baja la música mientras suena
+  var r = colaAnuncios.shift();
+  ding();                                                 // ding() ya despierta el AudioContext
+  setTimeout(function(){
+    hablarTurno(r, function(){ anunciando = false; procesarCola(); });   // al terminar, el próximo
+  }, 850);
 }
 
 function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -396,7 +422,7 @@ function pintar(llamando, esperando){
       if (!r) return;
       var color = serviceColor(r.service);
       var clave = r.turno + '|' + (r.calledAt || '');
-      var nuevo = (i === 0) && !vistos[clave] && !primeraCarga;
+      var nuevo = (i === 0) && !vistos[clave] && !primeraCarga;   // solo para el resaltado visual
       html += '<div class="card'+(i===1?' prev':'')+(nuevo?' nuevo':'')+'" style="border-left-color:'+color+'">'+
         '<div>'+(i===1?'<div class="c-prev-lbl">Anterior</div>':'')+
         '<div class="c-turno" style="color:'+color+'">'+esc(r.turno||'—')+'</div>'+
@@ -404,17 +430,25 @@ function pintar(llamando, esperando){
         '<div><div class="c-room-lbl">Consultorio</div>'+
         '<div class="c-room" style="color:'+color+'">'+esc(r.consultorio||'—')+'</div></div>'+
       '</div>';
-      if (nuevo) {
-        duck(true); ding();
-        setTimeout((function(rec){ return function(){ hablarTurno(rec); }; })(r), 850);
-        confirmarAnuncio(r);   // le avisa al médico que SÍ sonó en la sala
-      }
     });
     cont.innerHTML = html;
   }
 
+  // ── Anuncios (con cola, sin pisarse) ──
+  // Encolamos TODO turno 'llamando' nuevo (no solo el actual), en el orden en que
+  // se llamaron (más viejo primero). La cola los reproduce de a uno: si un general
+  // y un especialista tocan atender casi juntos, suenan uno tras otro y ninguno
+  // queda mudo. En la primera carga no anunciamos lo que ya estaba.
+  if (!primeraCarga) {
+    llamando.slice().sort(function(a,b){ return new Date(a.calledAt||0) - new Date(b.calledAt||0); })
+      .forEach(function(r){
+        var clave = r.turno + '|' + (r.calledAt || '');
+        if (!vistos[clave]) { encolarAnuncio(r); confirmarAnuncio(r); }
+      });
+  }
+
   // La clave incluye la hora del llamado: si vuelven a llamar al MISMO
-  // turno, cambia la clave y la campanita suena de nuevo.
+  // turno, cambia la clave y vuelve a encolarse (suena de nuevo).
   var actuales = {};
   llamando.forEach(function(r){ actuales[r.turno + '|' + (r.calledAt || '')] = true; });
   vistos = actuales;
