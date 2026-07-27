@@ -760,17 +760,26 @@ function buildSpecOptions() {
 function buildMedGenOptions(cfg) {
   cfg = cfg || {};
   var norm = function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); };
-  var docs = _turnosActuales || [];
+  var docs = (_turnosActuales || []).filter(Boolean);
   var prio = cfg.prio || '';
+  // Directorio COMPLETO (todos los médicos) para poder mandar a cualquiera.
+  var dir = (_turnosMedicos || []).map(function(m){ return m.medico; }).filter(Boolean);
+  if (!dir.length) dir = todosLosMedicos();
   // Nombre EXACTO del especialista como está en el directorio (para que el value
   // case con la hoja de médicos, aunque el config venga sin tilde).
-  var prioExacto = prio ? (todosLosMedicos().filter(function(n){return norm(n)===norm(prio);})[0] || prio) : '';
+  var prioExacto = prio ? (dir.filter(function(n){return norm(n)===norm(prio);})[0] || prio) : '';
   var prioDef = !!cfg.prioDefault && !!prioExacto;
   var cualquiera = '<option value=""'+(prioDef?'':' selected')+'>— Cualquiera (por orden de llegada) —</option>';
   var prioOpt = prioExacto ? '<option value="'+esc(prioExacto)+'"'+(prioDef?' selected':'')+'>'+esc(prioExacto)+'</option>' : '';
   var generales = docs.filter(function(n){ return norm(n)!==norm(prio); })
     .map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
-  return prioDef ? (prioOpt + cualquiera + generales) : (cualquiera + prioOpt + generales);
+  // El RESTO del directorio va después de "Cualquiera" y los de turno: así una
+  // consulta/control general (o cualquier servicio) se puede mandar a CUALQUIER
+  // médico, incluido un especialista, no solo a los de turno.
+  var usados = {}; if (prio) usados[norm(prio)] = true; docs.forEach(function(n){ usados[norm(n)] = true; });
+  var resto = dir.filter(function(n){ return !usados[norm(n)]; }).sort()
+    .map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
+  return (prioDef ? (prioOpt + cualquiera) : (cualquiera + prioOpt)) + generales + resto;
 }
 
 // Todos los médicos de la clínica (especialistas + los de turno + Dra. Diana
@@ -799,21 +808,28 @@ function buildRayosDocOptions(def) {
 }
 
 // Lista para los desplegables de "paso con médico" (pedirAtender) y "asignar
-// médico" (pedirAsignar): TODO el directorio de médicos, con los generales de
-// turno AHORA primero (los que más se eligen), y después el resto en orden
-// alfabético. `sel` (el médico ya asignado) que no esté en el directorio se
-// agrega igual, arriba, para no perderlo.
-function medicosPasoPrimeroTurno(sel) {
+// médico" (pedirAsignar), ordenada así: (1) el especialista PROPIO del servicio
+// —Angie en Rayos X, Wilmer en ecocardio, Milena en terapia— porque es el que
+// normalmente lo atiende; (2) los generales de turno AHORA; (3) el resto del
+// directorio, alfabético. `sel` (el médico ya asignado) que no esté en el
+// directorio se agrega arriba de todo para no perderlo.
+function medicosPasoPrimeroTurno(sel, service) {
   var norm = function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); };
-  var deTurno = (_turnosActuales || []).filter(Boolean);
-  var enTurno = {}; deTurno.forEach(function(n){ enTurno[norm(n)] = true; });
+  var orden = [];
+  var cfg = service ? servicioCfg(service) : null;
+  if (cfg && cfg.prio) {
+    var prioEx = (_turnosMedicos || []).map(function(m){ return m.medico; })
+      .filter(function(n){ return norm(n) === norm(cfg.prio); })[0] || cfg.prio;
+    orden.push(prioEx);
+  }
+  (_turnosActuales || []).filter(Boolean).forEach(function(n){ orden.push(n); });
   var todos = (_turnosMedicos || []).map(function(m){ return m.medico; }).filter(Boolean);
   if (!todos.length) todos = todosLosMedicos();   // fallback si el directorio no cargó
-  var resto = todos.filter(function(n){ return !enTurno[norm(n)]; }).sort();
-  var lista = deTurno.concat(resto);
-  if (sel && !lista.some(function(n){ return norm(n) === norm(sel); })) lista.unshift(sel);
+  var yaEsta = {}; orden.forEach(function(n){ yaEsta[norm(n)] = true; });
+  todos.filter(function(n){ return !yaEsta[norm(n)]; }).sort().forEach(function(n){ orden.push(n); });
+  if (sel && !orden.some(function(n){ return norm(n) === norm(sel); })) orden.unshift(sel);
   var visto = {}, out = [];
-  lista.forEach(function(n){ var k = norm(n); if (n && !visto[k]) { visto[k] = true; out.push(n); } });
+  orden.forEach(function(n){ var k = norm(n); if (n && !visto[k]) { visto[k] = true; out.push(n); } });
   return out;
 }
 
@@ -1710,9 +1726,9 @@ function pedirAsignar(rowIndex, modo) {
     }).map(function(m){ return m.medico; });
     placeholder = '— Elige quién lo hace —';
   } else {
-    // Todos los médicos, generales de turno primero (antes solo los de turno):
-    // recepción puede mandar a cualquiera, incluido un especialista.
-    docs = medicosPasoPrimeroTurno(r.medicoPref);
+    // Todos los médicos: especialista del servicio primero, luego los de turno,
+    // luego el resto. Recepción puede mandar a cualquiera, incluido un especialista.
+    docs = medicosPasoPrimeroTurno(r.medicoPref, r.service);
     placeholder = '— Cualquiera (por orden de llegada) —';
   }
   document.getElementById('asignarSel').innerHTML =
@@ -1745,10 +1761,10 @@ function pedirAtender(rowIndex) {
   document.getElementById('atenderSub').textContent =
     (r.turno || '') + ' · ' + (r.petName || '') + ' — ' + (r.service || '');
 
-  // Todos los médicos, con los generales de turno AHORA primero (los que más se
-  // eligen); el asignado queda pre-seleccionado abajo con `selected`. Antes solo
-  // mostraba el asignado + los de turno, y no se podía mandar a otro especialista.
-  var docs = medicosPasoPrimeroTurno(r.medicoAsignado);
+  // Todos los médicos: el especialista del servicio primero (Angie en RX, etc.),
+  // luego los generales de turno, luego el resto. El asignado queda pre-seleccionado
+  // abajo con `selected`. Antes no se podía mandar a otro; ahora sí.
+  var docs = medicosPasoPrimeroTurno(r.medicoAsignado, r.service);
 
   document.getElementById('atenderMedico').innerHTML =
     '<option value="">— Elige el médico —</option>' +
