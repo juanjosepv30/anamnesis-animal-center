@@ -843,6 +843,9 @@ function toggleConsulta() { csAbierto = !csAbierto; renderSala(); }
 let medicos = [];
 let miMedico = '';
 try { miMedico = localStorage.getItem('ac_medico') || ''; } catch (e) {}
+// Deep-link de la agenda diaria por WhatsApp (…/doctores/?medico=Dra.%20X):
+// una sola vez por carga, para no re-aplicarlo en cada refresco.
+let yaAplicadoUrlMedico = false;
 
 function normEsp(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
@@ -1019,6 +1022,7 @@ function cargarMedicos() {
       document.getElementById('pruebaAviso').style.display = res.modoPrueba ? '' : 'none';
       pintarMedicoChip();   // el color depende del turno, que llega acá
       aplicarTabAgenda();   // ya con la lista, ocultamos agenda a los auxiliares
+      aplicarMedicoDesdeURL(); // si llegó por el link de su agenda (?medico=), la abrimos ya
     })
     .catch(function(){});
 }
@@ -1039,6 +1043,27 @@ function deducirMedico() {
     setMiMedico(cand[0].medico);
     showToast('Abriste como ' + cand[0].medico);
   }
+}
+
+// Deep-link de la agenda diaria (…/doctores/?medico=Dra.%20Milena%20López):
+// el WhatsApp de las 6am lleva al médico DIRECTO a su agenda, sin pasar por el
+// selector "¿Quién eres?". A diferencia de deducirMedico(?t=), el nombre viene
+// explícito en la URL, así que vale aunque ya hubiera un médico recordado en el
+// dispositivo. Se llama desde cargarMedicos() (con la lista ya cargada y AgendaMod
+// ya disponible), NO en el arranque: agenda-mod.js se carga después del boot.
+function aplicarMedicoDesdeURL() {
+  if (yaAplicadoUrlMedico) return true;
+  let raw = null;
+  try { raw = new URLSearchParams(location.search).get('medico'); } catch (e) { return false; }
+  if (!raw) return false;                       // no vino el parámetro
+  const wanted = normEsp(raw);                  // URLSearchParams ya decodifica; normEsp tolera acentos/mayúsculas
+  const match = medicos.find(m => normEsp(m.medico) === wanted);
+  if (!match) return false;                     // la lista aún no cargó, o el nombre no coincide
+  yaAplicadoUrlMedico = true;
+  setMiMedico(match.medico);                    // guardamos el string CANÓNICO del backend, no el texto crudo de la URL
+  setView('agenda');                            // la agenda NO es la vista por defecto: hay que forzarla
+  showToast('Tu agenda de hoy · ' + match.medico.replace(/^Dra?\.\s*/, ''));
+  return true;
 }
 
 
