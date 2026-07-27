@@ -769,7 +769,7 @@ function buildMedGenOptions(cfg) {
   // case con la hoja de médicos, aunque el config venga sin tilde).
   var prioExacto = prio ? (dir.filter(function(n){return norm(n)===norm(prio);})[0] || prio) : '';
   var prioDef = !!cfg.prioDefault && !!prioExacto;
-  var cualquiera = '<option value=""'+(prioDef?'':' selected')+'>— Cualquiera (por orden de llegada) —</option>';
+  var cualquiera = '<option value=""'+(prioDef?'':' selected')+'>— Cualquier médico de turno —</option>';
   var prioOpt = prioExacto ? '<option value="'+esc(prioExacto)+'"'+(prioDef?' selected':'')+'>'+esc(prioExacto)+'</option>' : '';
   var generales = docs.filter(function(n){ return norm(n)!==norm(prio); })
     .map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
@@ -1729,7 +1729,7 @@ function pedirAsignar(rowIndex, modo) {
     // Todos los médicos: especialista del servicio primero, luego los de turno,
     // luego el resto. Recepción puede mandar a cualquiera, incluido un especialista.
     docs = medicosPasoPrimeroTurno(r.medicoPref, r.service);
-    placeholder = '— Cualquiera (por orden de llegada) —';
+    placeholder = '— Cualquier médico de turno —';
   }
   document.getElementById('asignarSel').innerHTML =
     '<option value="">'+esc(placeholder)+'</option>' +

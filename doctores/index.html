@@ -897,7 +897,16 @@ function atiendo(r) {
   // especializada, que llega SIN 'specialty', no matchea por especialidad y no
   // le aparecía a nadie aunque el aviso sí saliera.
   if (r.medicoPref) return r.medicoPref === miMedico;
-  return destinatarios(r).some(t => t && mis.indexOf(t) !== -1);
+  const tg = destinatarios(r);
+  // "Cualquiera por orden de llegada": un servicio de especialista-por-servicio
+  // (Rayos X, eco, terapia) SIN médico asignado y SIN especialidad explícita lo
+  // toma el POOL GENERAL de turno, no el especialista del servicio. (Con
+  // especialidad explícita —Consulta especializada·X— sí va al especialista.)
+  // DEBE coincidir con la misma regla en medicosQueAvisar()/asignadoDe() del backend.
+  if (tg.indexOf('general') === -1 && !normEsp(r.specialty)) {
+    return mis.indexOf('general') !== -1;
+  }
+  return tg.some(t => t && mis.indexOf(t) !== -1);
 }
 
 // Qué filas puede llegar a tener este médico. Tiene que coincidir con
