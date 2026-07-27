@@ -678,6 +678,15 @@ function recordFila(r) {
   return 'sala';
 }
 
+// Servicios "rápidos": los que se resuelven en un par de minutos (una inyección,
+// una desparasitación). Un médico que YA está atendiendo a alguien puede tomar
+// UNO de estos en paralelo si es el próximo de la fila (ver DOBLE ATENCIÓN en
+// renderSala). Fácil de extender cuando exista el servicio "Servicio rápido".
+function esServicioRapido(r) {
+  var s = String((r && r.service) || '').toLowerCase();
+  return s.indexOf('inyect') !== -1 || s.indexOf('desparasit') !== -1;
+}
+
 // Normaliza la hora de la cita venga como "10:30" o como fecha de Sheets.
 function fmtHora(h) {
   if (!h) return '';
@@ -1229,6 +1238,12 @@ function renderSala() {
   const miPacienteAbierto = miMedico
     ? hoy.find(r => r.estadoTurno === 'llamando' && r.calledBy === miMedico)
     : null;
+  // DOBLE ATENCIÓN: si ya tengo un paciente EN CONSULTA ('atendiendo'), solo puedo
+  // empezar OTRO si el próximo de la fila es un servicio rápido (inyección/
+  // desparasitación). Un servicio normal espera a que cierre el actual.
+  const miAtendiendo = miMedico
+    ? hoy.find(r => r.estadoTurno === 'atendiendo' && r.calledBy === miMedico)
+    : null;
 
   filasVisibles.forEach(function(f) {
     const mine     = hoy.filter(r => recordFila(r) === f.key);
@@ -1273,6 +1288,11 @@ function renderSala() {
 
     // Siguiente a llamar — semi-desplegado, clickeable para ver la anamnesis
     if (next) {
+      // DOBLE ATENCIÓN: si ya estoy atendiendo a alguien, solo puedo llamar al
+      // próximo si es un servicio rápido (inyección/desparasitación); si no, el
+      // botón queda apagado hasta que cierre el actual.
+      const bloqueoDoble = !miPacienteAbierto && !!miAtendiendo && !esServicioRapido(next);
+      const llamarBloqueado = !!miPacienteAbierto || bloqueoDoble;
       const nc = serviceColor(next.service);
       const hora = fmtHora(next.horaCita);
       const citaB = next.agendado === 'si' ? '<span class="mini mini-cita">📅 Cita '+esc(hora)+'</span>' : '';
@@ -1314,13 +1334,16 @@ function renderSala() {
           '<div class="next-meta">'+esc(next.service||'')+(next.specialty?' · '+esc(next.specialty):'')+(espoB?' '+espoB:'')+'</div>'+
           (next.complaint ? '<div class="next-motivo">“'+esc(String(next.complaint).slice(0,90))+(String(next.complaint).length>90?'…':'')+'”</div>' : '')+
         '</div>'+
-        // Con un paciente sin cerrar, Llamar queda apagado. No hace falta
-        // explicarlo: su tarjeta está justo arriba con su propio ✓ Atendido.
+        // Llamar queda apagado si (a) dejaste uno 'llamando' sin cerrar, o (b) ya
+        // estás atendiendo a alguien y el próximo NO es un servicio rápido (doble
+        // atención). El title explica el motivo en cada caso.
         '<div class="next-ctrls">'+
-          '<select id="room-'+f.key+'"'+(miPacienteAbierto?' disabled':' onchange="toggleLlamar(\''+f.key+'\')"')+'>'+opts+'</select>'+
-          '<button id="call-'+f.key+'" class="btn-call'+((miPacienteAbierto||!pref)?' apagado':'')+'"'+
-            (miPacienteAbierto
-              ? ' disabled title="Cierra primero a '+esc(miPacienteAbierto.petName||miPacienteAbierto.turno)+'"'
+          '<select id="room-'+f.key+'"'+(llamarBloqueado?' disabled':' onchange="toggleLlamar(\''+f.key+'\')"')+'>'+opts+'</select>'+
+          '<button id="call-'+f.key+'" class="btn-call'+((llamarBloqueado||!pref)?' apagado':'')+'"'+
+            (llamarBloqueado
+              ? ' disabled title="'+esc(bloqueoDoble
+                  ? 'Estás atendiendo a '+(miAtendiendo.petName||miAtendiendo.turno)+'. Solo podés empezar otro si el próximo es un servicio rápido (inyección o desparasitación).'
+                  : 'Cerrá primero a '+(miPacienteAbierto.petName||miPacienteAbierto.turno))+'"'
               : ' style="background:'+nc+'"'+(pref?'':' disabled')+' onclick="callNext('+next.rowIndex+',\''+f.key+'\')"')+
           '>✓ Atender</button>'+
         '</div></div>';
