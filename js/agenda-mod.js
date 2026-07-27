@@ -124,6 +124,11 @@
     '.agm-shint{font-size:.7rem;color:var(--atm);opacity:.65;text-align:center;font-weight:600;letter-spacing:.2px;padding:5px 4px}',
     '.agm-shint i{font-style:normal;opacity:.8;margin:0 4px}',
     '.agm-grid{display:grid;min-width:520px}',
+    // Día/3 días (scroll horizontal, 15 columnas): el grid ocupa el ancho COMPLETO
+    // de las columnas. Sin esto el grid queda en min-width (520px) y el sticky de
+    // la columna de horas se SUELTA al pasar ese ancho (~día 5-6). Semana NO lleva
+    // esta clase (usa 1fr para llenar el ancho).
+    '.agm-grid-h{width:max-content;min-width:100%}',
     '.agm-grid.dia{min-width:auto}',
     '.agm-gcol{border-left:1px solid #e3d7ec;position:relative}',
     '.agm-gcol:first-child{border-left:none}',
@@ -443,7 +448,7 @@
         : (S.vista==='dia')
           ? '52px repeat('+dias.length+',calc(100vw - 84px))'   // 1 día a la vez; el ancho exacto lo ajusta el JS de abajo
           : '60px repeat('+dias.length+',minmax(90px,1fr))';
-      var h='<div class="agm-grid'+(S.vista==='dia'?' dia':'')+'" style="grid-template-columns:'+cols+'">';
+      var h='<div class="agm-grid'+(S.vista==='dia'?' dia':'')+((S.vista==='dia'||S.vista==='3dias')?' agm-grid-h':'')+'" style="grid-template-columns:'+cols+'">';
       // encabezados
       h+='<div class="agm-guth"></div>';
       dias.forEach(function(d){ var iso=isoDe(d);
