@@ -113,22 +113,27 @@
     '.agm-lnk:hover{background:#fff7ed}',
     '.agm-reprog{background:var(--apl);border:1.5px solid var(--ap);border-radius:10px;padding:9px 12px;font-size:.85rem;font-weight:700;color:var(--apd);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
     '.agm-dot{width:11px;height:11px;border-radius:3px;display:inline-block}',
-    '.agm-scroll{overflow:visible;border:1px solid var(--abd);border-radius:12px;background:#fff}',
+    // Scroll INTERNO del cuadro (antes scrolleaba la página): así los headers de
+    // días (arriba) y la columna de horas (izquierda) quedan FIJOS. max-height con
+    // fallback vh→dvh (dvh cubre la barra del navegador en celular).
+    '.agm-scroll{overflow:auto;max-height:calc(100vh - 210px);max-height:calc(100dvh - 210px);-webkit-overflow-scrolling:touch;border:1px solid var(--abd);border-radius:12px;background:#fff;position:relative}',
     // 3 días (celular): scroll HORIZONTAL dentro del cuadro. overflow-y:hidden
     // no recorta porque el alto del grid es exacto (ALTO), así la página sigue
     // scrolleando en vertical y solo lo horizontal queda dentro del cuadro.
-    '.agm-hscroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}',
+    '.agm-hscroll{-webkit-overflow-scrolling:touch}',
     '.agm-shint{font-size:.7rem;color:var(--atm);opacity:.65;text-align:center;font-weight:600;letter-spacing:.2px;padding:5px 4px}',
     '.agm-shint i{font-style:normal;opacity:.8;margin:0 4px}',
     '.agm-grid{display:grid;min-width:520px}',
     '.agm-grid.dia{min-width:auto}',
     '.agm-gcol{border-left:1px solid #e3d7ec;position:relative}',
     '.agm-gcol:first-child{border-left:none}',
-    '.agm-gh{text-align:center;padding:8px 2px;font-size:.8rem;font-weight:800;color:var(--atx);border-bottom:1.5px solid var(--abd);background:#fff}',
+    // Columna de horas (gutter): FIJA a la izquierda al scrollear horizontal.
+    '.agm-gcol-h{position:sticky;left:0;z-index:3;background:#fff;border-left:none}',
+    '.agm-gh{text-align:center;padding:8px 2px;font-size:.8rem;font-weight:800;color:var(--atx);border-bottom:1.5px solid var(--abd);background:#fff;position:sticky;top:0;z-index:4}',
     '.agm-gh small{display:block;font-weight:600;color:var(--atm);font-size:.68rem}',
     '.agm-gh.hoy{color:#fff;background:var(--ap)}',
     '.agm-gh.hoy small{color:#f3e7f7}',
-    '.agm-guth{border-bottom:1.5px solid var(--abd)}',
+    '.agm-guth{border-bottom:1.5px solid var(--abd);background:#fff;position:sticky;top:0;left:0;z-index:5}',
     '.agm-body2{position:relative}',
     '.agm-hl{position:absolute;left:0;right:0;border-top:1px dashed #efe6f5}',
     '.agm-hl.hr{border-top:1px solid #d9c9e6}',
@@ -439,8 +444,8 @@
         h+='<div class="agm-gh'+(iso===hoy?' hoy':'')+'">'+DIAS[d.getDay()]+' <small>'+d.getDate()+'</small></div>';
       });
       var yOf=function(mn){ return Y0+(mn-H_INI)*PXMIN; };   // px del minuto, con margen arriba
-      // columna de horas (gutter)
-      h+='<div class="agm-gcol"><div class="agm-body2" style="height:'+ALTO+'px">';
+      // columna de horas (gutter) — FIJA a la izquierda (agm-gcol-h)
+      h+='<div class="agm-gcol agm-gcol-h"><div class="agm-body2" style="height:'+ALTO+'px">';
       for(var m=H_INI;m<=H_FIN;m+=60){
         h+='<div class="agm-hlbl" style="top:'+yOf(m)+'px">'+min2hm(m)+'</div>';
       }
