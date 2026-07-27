@@ -968,13 +968,38 @@ function nearestHalfHour() {
   return String(Math.floor(r/60)).padStart(2,'0') + ':' + String(r%60).padStart(2,'0');
 }
 
+// Chequeo barato de versión (mismo patrón que doctores/pantalla): en vez de
+// bajar TODO el historial cada 60s, pregunta solo si cambió algo y recarga la
+// sala únicamente cuando hay novedad. Antes recepción sondeaba a ciegas el
+// endpoint pesado (action=records) cada 60s y encima se salteaba si había una
+// fila seleccionada, así que un paciente marcado "Llegó" tardaba hasta un
+// minuto (o más) en aparecer acá mientras el médico lo veía en ~3s.
+var _wrUltVersion = null;
+function chequearCambiosWR() {
+  fetch(API_URL + '?action=version&cb=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (!res || !res.ok) return;
+      if (_wrUltVersion === null) { _wrUltVersion = res.v; return; }  // baseline
+      if (res.v !== _wrUltVersion) {
+        if (selected) return;            // está registrando: reintenta en el próximo tick, sin perder el cambio
+        _wrUltVersion = res.v;
+        loadWaitingRoom(true);           // silencioso, sin spinner
+      }
+    })
+    .catch(function(){});
+}
+
 // Arranca directo, sin PIN.
 function iniciar() {
   loadWaitingRoom();
   cargarTurnos();       // ¿ya está configurada la jornada? si no, abre el pop-up
-  // Se refresca sola, pero se pausa si recepción está registrando a alguien.
-  // (No hay pausa por inactividad: recepción necesita la página siempre lista.)
-  setInterval(function(){ if (!selected) loadWaitingRoom(true); }, 60000);
+  // Sondeo barato de versión cada 3s (recarga solo cuando algo cambió), + una
+  // red de seguridad cada 120s. Baja la carga del backend y mata la demora del
+  // "Llegó" que antes tardaba hasta un minuto en verse acá.
+  chequearCambiosWR();
+  setInterval(chequearCambiosWR, 3000);
+  setInterval(function(){ if (!selected) loadWaitingRoom(true); }, 120000);
   setInterval(wrTickConsultas, 30000);   // el cronómetro de "en consulta" avanza solo
   // Cada 3 min re-chequea la jornada: cubre el cambio de las 2pm sin recargar.
   setInterval(function(){ if (!selected) cargarTurnos(); }, 180000);

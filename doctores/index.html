@@ -1196,10 +1196,18 @@ function renderSala() {
           const rc = serviceColor(r.service);
           const opts = '<option value="">— Elige el consultorio —</option>' +
             roomsFor('generales').map(function(rm){ return '<option value="'+rm+'">'+rm+'</option>'; }).join('');
+          // Mismo badge de cita + tiempo de espera que la cola normal (q-item):
+          // sin esto la tarjeta salía "rara" (sin hora de cita ni cuánto lleva
+          // esperando) porque este box usaba un template recortado.
+          const horaA = fmtHora(r.horaCita);
+          const agA = r.agendado === 'si'
+            ? '<span class="mini mini-cita">📅 Cita '+esc(horaA||'—')+'</span>'
+            : '<span class="mini mini-esp">🚶 Sin cita</span>';
           return '<div class="asig-item">'+
             '<div class="q-click" onclick="goToAnamnesis('+r.rowIndex+')">'+
-              '<div class="asig-t"><span class="turno-badge" style="background:'+rc+'">'+esc(r.turno||'')+'</span> '+esc(nombreConMascotas(r))+'</div>'+
-              '<div class="asig-m">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+'</div>'+
+              '<div class="asig-t"><span class="turno-badge" style="background:'+rc+'">'+esc(r.turno||'')+'</span> '+esc(nombreConMascotas(r))+' '+agA+'</div>'+
+              '<div class="asig-m">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+
+                ' <span class="espera'+claseEspera(r.timestamp)+'">· '+fmtEspera(r.timestamp)+'</span></div>'+
             '</div>'+
             '<div class="asig-ctrls">'+
               '<select id="asigroom-'+r.rowIndex+'">'+opts+'</select>'+
