@@ -315,11 +315,15 @@
     // ══════════ CALENDARIO ══════════
     function diasVista(){
       var base=new Date(S.ancla.getFullYear(),S.ancla.getMonth(),S.ancla.getDate());
-      if(S.vista==='dia') return [ base ];
+      // 'dia' (1 día a la vez): también arranca en el ancla y muestra 15 DÍAS,
+      // pero con columnas de ANCHO COMPLETO (se ve 1 a la vez y se desliza por los
+      // 15, sin clickear). Las flechas avanzan 1.
+      if(S.vista==='dia'){ var outd=[]; for(var id=0;id<15;id++) outd.push(addDias(base,id)); return outd; }
       // '3dias' (celular): arranca en el DÍA ANCLA (hoy por defecto) y va HACIA
-      // ADELANTE — los días que ya pasaron no importan. Muestra 6 días (se ven
-      // ~3 a la vez y se recorren con scroll horizontal); las flechas avanzan 3.
-      if(S.vista==='3dias'){ var out=[]; for(var i=0;i<6;i++) out.push(addDias(base,i)); return out; }
+      // ADELANTE — los días que ya pasaron no importan. Muestra 15 DÍAS (se ven
+      // ~3 a la vez y se DESLIZAN con scroll horizontal continuo, sin tener que
+      // clickear); las flechas avanzan 3 para ir más allá de 15 o volver atrás.
+      if(S.vista==='3dias'){ var out=[]; for(var i=0;i<15;i++) out.push(addDias(base,i)); return out; }
       // 'semana' (escritorio): Lun→Dom de la semana del ancla (domingo al final).
       var lun=lunesDe(S.ancla), outw=[]; for(var j=0;j<7;j++) outw.push(addDias(lun,j)); return outw;
     }
@@ -327,7 +331,7 @@
     function pasoVista(){ return S.vista==='dia'?1 : (S.vista==='3dias'?3:7); }
     function etiquetaRango(){
       var d=diasVista();
-      if(S.vista==='dia') return DIAS[d[0].getDay()]+' '+d[0].getDate()+'/'+(d[0].getMonth()+1);
+      // 'dia' y '3dias' muestran 15 días: la etiqueta es el rango (inicio – fin).
       var u=d[d.length-1];
       return d[0].getDate()+'/'+(d[0].getMonth()+1)+' – '+u.getDate()+'/'+(u.getMonth()+1);
     }
@@ -375,7 +379,7 @@
           '<span><i class="agm-dot" style="background:#F7C1C1;border:1px solid #A32D2D"></i>No disp.</span>'+
         '</div>'+
         (S.reprog?'<div class="agm-reprog">🔁 Moviendo a <b>'+esc(S.reprog.pet)+'</b> — bajá o cambiá de día y tocá el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
-        (S.vista==='3dias'?'<div class="agm-shint"><i>↔</i>Desliza para ver toda la semana</div>':'')+
+        ((S.vista==='3dias'||S.vista==='dia')?'<div class="agm-shint"><i>↔</i>Desliza para ver los próximos 15 días</div>':'')+
         '<div id="cWrap" class="agm-scroll'+(S.vista==='3dias'?' agm-hscroll':'')+'"><div class="agm-sp"></div></div>';
       var sel=$('cMed'); if(sel) sel.onchange=function(){ S.med=sel.value; cargarCal(); };
       $('cBloq').onclick=function(){ S.sub='bloquear'; pintar(); };
@@ -436,7 +440,9 @@
       // ancho; 'semana' (escritorio) reparte a lo ancho.
       var cols = (S.vista==='3dias')
         ? '48px repeat('+dias.length+',105px)'
-        : '60px repeat('+dias.length+',minmax(90px,1fr))';
+        : (S.vista==='dia')
+          ? '52px repeat('+dias.length+',calc(100vw - 84px))'   // 1 día a la vez; el ancho exacto lo ajusta el JS de abajo
+          : '60px repeat('+dias.length+',minmax(90px,1fr))';
       var h='<div class="agm-grid'+(S.vista==='dia'?' dia':'')+'" style="grid-template-columns:'+cols+'">';
       // encabezados
       h+='<div class="agm-guth"></div>';
@@ -502,9 +508,12 @@
       });
       h+='</div>';
       W.innerHTML=h;
+      // 'dia': cada columna = ancho del cuadro (1 día a la vez) y se desliza por
+      // los 15. Se mide el contenedor para que sea exacto en celular Y escritorio.
+      if(S.vista==='dia'){ var _bw=W.clientWidth-56; if(_bw>140){ var _gr=W.querySelector('.agm-grid'); if(_gr) _gr.style.gridTemplateColumns='52px repeat('+dias.length+','+_bw+'px)'; } }
       // Rebote de scroll UNA vez: muestra que el cuadro se desliza (los médicos
       // no sabían que había más días a la derecha).
-      if(S.vista==='3dias' && !S._hintDone){ S._hintDone=true;
+      if((S.vista==='3dias'||S.vista==='dia') && !S._hintDone){ S._hintDone=true;
         setTimeout(function(){ try{ W.scrollTo({left:90,behavior:'smooth'});
           setTimeout(function(){ try{ W.scrollTo({left:0,behavior:'smooth'}); }catch(e){} }, 550); }catch(e){} }, 450); }
       var slotY=function(bodyEl,clientY){ var rect=bodyEl.getBoundingClientRect(); var y=clientY-rect.top-Y0;
