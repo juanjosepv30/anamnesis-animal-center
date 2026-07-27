@@ -892,6 +892,9 @@ function destinatarios(r) {
 function atiendo(r) {
   const mis = misEspecialidades();
   if (!mis.length) return true;            // sin identidad, ve todo
+  // Si YO lo llamé/atiendo (ej. un especialista apoyando en la sala general), es
+  // mío aunque el ruteo por especialidad diga otra cosa: así no lo pierdo de vista.
+  if (r.calledBy && r.calledBy === miMedico) return true;
   // Turno asignado a un médico PUNTUAL (cita agendada, o general que el cliente
   // pidió por nombre): ese médico —y solo ese— lo ve. Sin esto una cita
   // especializada, que llega SIN 'specialty', no matchea por especialidad y no
@@ -1116,6 +1119,91 @@ function decidirEntreFilas(hoy, filasVisibles) {
 }
 
 // ── Render de la sala de espera ──────────────────────────────
+// ¿Es del POOL GENERAL de turno? (lo que ve/atiende un general de turno) = sin
+// médico puntual asignado y ruteado a 'general' (incluye "Cualquier médico de
+// turno" en un servicio de especialista, que ahora cae en el pool general).
+function esSalaGeneral(r) {
+  if (r.medicoPref) return false;
+  const tg = destinatarios(r);
+  if (tg.indexOf('general') !== -1) return true;
+  if (!normEsp(r.specialty)) return true;
+  return false;
+}
+
+// "Sala general (apoyo)": un especialista despliega el pool general de turno y
+// puede llamar desde ahí. Colapsada por defecto. Respeta la DOBLE ATENCIÓN: con
+// un paciente propio en consulta, solo deja llamar al próximo si es un servicio
+// rápido (inyección/desparasitación). Markup gemelo al de la fila normal, pero
+// sin la lógica de "cuál fila primero" (acá es una sola cola).
+function salaGeneralHTML(pool, ctx) {
+  const enEspera = e => e === 'esperando' || e === 'llenando' || !e;
+  const esperando = pool.filter(r => enEspera(r.estadoTurno));
+  const yaLlamados = pool.filter(r => r.estadoTurno === 'llamando' || r.estadoTurno === 'atendiendo' || r.estadoTurno === 'atendido');
+  const next = pickNext(esperando, 'salageneral', yaLlamados);
+  const isCol = !!collapsed['salageneral'];
+  const haciendoReg = esperando.filter(r => r.estadoTurno === 'llenando').length;
+  let body = '';
+  if (next) {
+    const bloqueoDoble = !ctx.miPacienteAbierto && !!ctx.miAtendiendo && !esServicioRapido(next);
+    const llamarBloqueado = !!ctx.miPacienteAbierto || bloqueoDoble;
+    const nc = serviceColor(next.service);
+    const hora = fmtHora(next.horaCita);
+    const citaB = next.agendado === 'si' ? '<span class="mini mini-cita">📅 Cita '+esc(hora)+'</span>' : '';
+    const espoB = next.agendado === 'si' ? '' : '<span class="mini mini-esp">🚶 Sin cita</span>';
+    const subC  = etiquetaRegistro(next) + citaB;
+    const pref = consultorioPreferido(next);
+    let opts = '<option value=""'+(pref?'':' selected')+'>— Elige el consultorio —</option>';
+    roomsFor('salageneral').forEach(function(rm){ opts += '<option value="'+rm+'"'+(rm===pref?' selected':'')+'>'+rm+'</option>'; });
+    body += '<div class="next-box">'+
+      '<div class="q-click" onclick="goToAnamnesis('+next.rowIndex+')">'+
+        '<div class="next-top">'+
+          '<div class="next-tp"><span class="next-turno" style="color:'+nc+'">'+esc(next.turno||'—')+'</span> '+
+            '<span class="next-pet">'+esc(next.petName||'Sin nombre')+'</span></div>'+
+          '<div class="next-espera-top'+claseEspera(next.timestamp)+'">Esperando '+fmtEspera(next.timestamp).replace(/^hace /,'')+'</div>'+
+        '</div>'+
+        (subC ? '<div class="next-sub">'+subC+'</div>' : '')+
+        '<div class="next-owner">👤 '+esc(next.ownerName||'—')+'</div>'+
+        '<div class="next-meta">'+esc(next.service||'')+(next.specialty?' · '+esc(next.specialty):'')+(espoB?' '+espoB:'')+'</div>'+
+        (next.complaint ? '<div class="next-motivo">“'+esc(String(next.complaint).slice(0,90))+(String(next.complaint).length>90?'…':'')+'”</div>' : '')+
+      '</div>'+
+      '<div class="next-ctrls">'+
+        '<select id="room-salageneral"'+(llamarBloqueado?' disabled':' onchange="toggleLlamar(\'salageneral\')"')+'>'+opts+'</select>'+
+        '<button id="call-salageneral" class="btn-call'+((llamarBloqueado||!pref)?' apagado':'')+'"'+
+          (llamarBloqueado
+            ? ' disabled title="'+esc(bloqueoDoble
+                ? 'Estás atendiendo a '+(ctx.miAtendiendo.petName||ctx.miAtendiendo.turno)+'. Solo podés apoyar con el próximo si es un servicio rápido (inyección o desparasitación).'
+                : 'Cerrá primero a '+(ctx.miPacienteAbierto.petName||ctx.miPacienteAbierto.turno))+'"'
+            : ' style="background:'+nc+'"'+(pref?'':' disabled')+' onclick="callNext('+next.rowIndex+',\'salageneral\')"')+
+        '>✓ Atender</button>'+
+      '</div></div>';
+  } else {
+    body += '<div class="q-empty">Nadie esperando en la sala general</div>';
+  }
+  const rest = esperando.filter(r => !next || r.rowIndex !== next.rowIndex).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+  rest.forEach(function(r) {
+    const rc = serviceColor(r.service);
+    const hora = fmtHora(r.horaCita);
+    const ag = r.agendado === 'si' ? '<span class="mini mini-cita">📅 Cita '+esc(hora||'—')+'</span>' : '<span class="mini mini-esp">🚶 Sin cita</span>';
+    const frio = estaCongelado(r) ? '<span class="mini mini-frio">⏸ hasta '+esc(fmtHora(r.esperarHasta))+'</span>' : '';
+    body += '<div class="q-item q-click'+(estaCongelado(r)?' q-frio':'')+'" onclick="goToAnamnesis('+r.rowIndex+')">'+
+      '<div class="q-turno" style="color:'+rc+'">'+esc(r.turno||'—')+'</div>'+
+      '<div class="q-info"><div class="q-pet">'+esc(nombreConMascotas(r))+' '+ag+frio+'</div>'+
+        '<div class="q-meta">👤 '+esc(r.ownerName||'—')+' · '+esc(r.service||'')+'</div></div>'+
+      '<div class="q-side"><div class="q-reg">'+etiquetaRegistro(r)+'</div>'+
+        '<div class="espera'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</div></div></div>';
+  });
+  return '<div class="fila sala-gen" style="margin-top:14px;border-top:2px dashed rgba(127,127,127,.35)">'+
+      '<div class="fila-hd" onclick="toggleFila(\'salageneral\')">'+
+        '<span class="fila-t">🩺 Sala general <span style="font-weight:400;opacity:.65">· apoyo</span></span>'+
+        '<span class="fila-hd-r">'+
+          '<span class="fila-n">'+esperando.length+' en espera</span>'+
+          (haciendoReg ? '<span class="fila-n">✍️ '+haciendoReg+'</span>' : '')+
+          '<span class="fila-cv">'+(isCol ? '▸' : '▾')+'</span>'+
+        '</span></div>'+
+      (isCol ? '' : '<div class="fila-bd">'+body+'</div>')+
+    '</div>';
+}
+
 function renderSala() {
   const today = new Date();
   // Solo los pacientes que le corresponden a este médico.
@@ -1390,6 +1478,19 @@ function renderSala() {
     if (!isCol) html += '<div class="fila-bd">' + body + '</div>';
     html += '</div>';
   });
+
+  // ── SALA GENERAL (apoyo) ──────────────────────────────────────
+  // Un especialista puede DESPLEGAR el pool general de turno y apoyar desde su
+  // propio perfil (sin ir a "ver todo sin identificarme"). Arranca COMPRIMIDA.
+  // Solo aparece si el médico NO es general de turno (si lo es, ya ve ese pool en
+  // su lista) y hay pacientes en el pool.
+  if (miMedico && misEspecialidades().indexOf('general') === -1) {
+    const poolGeneral = allRecords.filter(r => isSameDay(r.timestamp, today) && !atiendo(r) && esSalaGeneral(r));
+    if (poolGeneral.length) {
+      if (collapsed['salageneral'] === undefined) collapsed['salageneral'] = true;  // colapsada por defecto
+      html += salaGeneralHTML(poolGeneral, { miPacienteAbierto: miPacienteAbierto, miAtendiendo: miAtendiendo });
+    }
+  }
 
   html += '</div>';
   document.getElementById('mainCnt').innerHTML = html;
