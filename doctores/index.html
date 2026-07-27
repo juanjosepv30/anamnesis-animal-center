@@ -1694,13 +1694,8 @@ function atender(rowIndex) {
       if (res && res.ok) {
         const rec = allRecords.find(x => x.rowIndex === rowIndex);
         if (rec) rec.estadoTurno = 'atendiendo';
-        // El anterior que ese médico atendía ya lo cerró el backend: lo reflejo
-        // local para que la vista sea consistente hasta el próximo refresco.
-        allRecords.forEach(function(x){
-          if (x.rowIndex !== rowIndex && x.estadoTurno === 'atendiendo' && x.calledBy === med) {
-            x.estadoTurno = 'atendido'; x.status = 'revisado';
-          }
-        });
+        // Ya NO cerramos al anterior: el médico puede atender más de uno (doble
+        // atención). Cada paciente se cierra a mano con "Finalizar".
         renderSala();
         updateCounts();
         showToast('✓ Atendiendo · turno liberado');
