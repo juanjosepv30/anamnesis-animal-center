@@ -658,27 +658,24 @@ function consultorioPreferido(r) {
 // generales, vacunación e inyectología. El especialista, lo suyo.
 // Las filas NO llevan color: el color identifica al SERVICIO, y dentro de
 // cada fila conviven varios servicios. Pintar la fila solo confundiría.
+// UNA sola lista: se eliminaron las categorías Generales/Especialistas. Lo que
+// cada médico ve lo decide atiendo(r) —su especialidad + lo que recepción le
+// asignó por medicoPref—, y el ORDEN dentro de la cola lo deciden las
+// condicionales de pickNext (citas en ventana primero, después el que más
+// espera). Tener dos categorías le escondía al especialista los turnos
+// generales que recepción le asignaba y generaba el bug de la tarjeta en
+// "Asignados a ti" (ej. Wilmer Páez con una consulta general asignada).
 const FILAS = [
-  {key:'generales',      label:'Generales'},
-  {key:'especializados', label:'Especialistas'}
+  {key:'sala', label:'En sala'}
 ];
 
-// A qué fila pertenece cada paciente.
-// Va a Especialistas todo lo que solo puede resolver una persona puntual:
-// si cae en Generales, aparece en la cola de médicos que no lo pueden
-// atender y ensucia la fila de los que sí.
+// Con UNA sola lista ya no separamos por categoría: todos los turnos que un
+// médico ve caen en la misma cola. QUIÉN ve cada turno lo decide atiendo(r)
+// (especialidad + medicoPref); el ORDEN lo da pickNext (citas primero, luego el
+// que más espera). Antes esto mandaba a "Especialistas" o "Generales", y esa
+// división escondía turnos asignados y causó el bug de la CON-08.
 function recordFila(r) {
-  const s = (r.service || '').toLowerCase();
-  if (s.indexOf('especial') !== -1) return 'especializados';
-  if (s.indexOf('control') !== -1 && (r.specialty || r.agendado === 'si')) return 'especializados';
-  // Rayos X y ecografía los hace la Dra. Angie.
-  if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return 'especializados';
-  // Cardiología y terapia física: servicios de especialista.
-  if (s.indexOf('cardiograma') !== -1 || s.indexOf('terapia') !== -1 || s.indexOf('fisica') !== -1) return 'especializados';
-  // Certificado de viaje: un certificado básico lo hace cualquier general de
-  // turno, así que va a Generales. Si recepción se lo asigna al Dr. Freddy,
-  // igual le aparece a él por medicoPref (atiendo).
-  return 'generales';   // general, control general, vacunación, inyectología, viajero
+  return 'sala';
 }
 
 // Normaliza la hora de la cita venga como "10:30" o como fecha de Sheets.
@@ -898,15 +895,11 @@ function atiendo(r) {
 // recordFila: si una manda el certificado de viaje a Especialistas y la
 // otra cree que es de Generales, Freddy no lo ve en ninguna.
 // Freddy hace Nutrición y Viajero (especialistas) Y General: ve las dos.
+// Una sola lista para todos: ya no se le esconde ninguna "fila" a nadie. Lo que
+// cada médico ve lo filtra atiendo(r), no esto. Se mantiene la función porque
+// renderSala la usa para armar las filas visibles (ahora siempre una).
 function misFilas() {
-  const mis = misEspecialidades();
-  if (!mis.length) return FILAS.map(f => f.key);
-  const set = {};
-  mis.forEach(function(e){
-    if (e === 'general' || e === 'vacunacion') set.generales = 1;
-    else set.especializados = 1;   // incluye viajero, rayos x y las demás
-  });
-  return FILAS.map(f => f.key).filter(k => set[k]);
+  return FILAS.map(f => f.key);   // ['sala']
 }
 
 function setMiMedico(v) {
@@ -2215,6 +2208,6 @@ loadRecords();              // refresca con el backend por detrás
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js, para que un refresco
      traiga el JS nuevo y no la versión cacheada por el navegador. -->
-<script src="/js/agenda-mod.js?v=20260725l"></script>
+<script src="/js/agenda-mod.js?v=20260727a"></script>
 </body>
 </html>

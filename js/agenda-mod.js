@@ -783,9 +783,9 @@
       var cab = manual
         ? '<div class="agm-row"><div><label>Mascota</label><input id="fPet"></div><div><label>Dueño</label><input id="fOwn"></div>'+
           '<div><label>Cédula <span style="font-weight:400">(opcional)</span></label><input id="fCed" inputmode="numeric"></div>'+
-          '<div><label>WhatsApp</label><input id="fTel" inputmode="numeric" placeholder="3001234567"></div></div>'
+          '<div><label>WhatsApp <span style="font-weight:400">(obligatorio)</span></label><input id="fTel" inputmode="numeric" placeholder="3001234567"></div></div>'
         : '<div class="agm-sel">✅ '+esc(S.selCliente.petName||'')+' — '+esc(S.selCliente.owner||'')+(S.selCliente.vetesoftHc?' · HC '+esc(S.selCliente.vetesoftHc):'')+'<button id="fReset">Cambiar</button></div>'+
-          '<div style="margin-top:10px"><label>WhatsApp <span style="font-weight:400">(recordatorios)</span></label><input id="fTel" inputmode="numeric" value="'+esc(S.selCliente.phone||'')+'" placeholder="3001234567"></div>';
+          '<div style="margin-top:10px"><label>WhatsApp <span style="font-weight:400">(obligatorio)</span></label><input id="fTel" inputmode="numeric" value="'+esc(S.selCliente.phone||'')+'" placeholder="3001234567"></div>';
       $ov('mForm').innerHTML=
         cab+
         '<div class="agm-mlbl">Servicio — toca el color</div>'+
@@ -795,7 +795,7 @@
         '</div>'+
         '<input type="hidden" id="fSvc" value="Consulta general">'+
         '<div id="fDurWrap" style="margin-top:12px"><label>Duración</label><select id="fDur"></select></div>'+
-        '<div style="margin-top:12px"><label>Notas <span style="font-weight:400">(opcional)</span></label><textarea id="fNot" rows="2" placeholder="Motivo, indicaciones…"></textarea></div>'+
+        '<div style="margin-top:12px"><label>Nota del caso <span style="font-weight:400">(motivo · obligatoria)</span></label><textarea id="fNot" rows="2" placeholder="Motivo, indicaciones…"></textarea></div>'+
         // Solo al forzar sobre un bloqueo: comprobante (foto de aprobación del Dr.).
         (S.crear.forzar
           ? '<div style="margin-top:12px"><label>📎 Comprobante <span style="font-weight:400">(foto de la aprobación del Dr.)</span></label>'+
@@ -827,7 +827,13 @@
         notas:($ov('fNot')||{}).value?$ov('fNot').value.trim():'', phone:($ov('fTel')||{}).value||'' };
       if(S.selCliente){ data.petName=S.selCliente.petName; data.owner=S.selCliente.owner; data.cedula=S.selCliente.cedula; data.vetesoftId=S.selCliente.vetesoftId; data.vetesoftHc=S.selCliente.vetesoftHc; }
       else { data.petName=($ov('fPet')||{}).value||''; data.owner=($ov('fOwn')||{}).value||''; data.cedula=($ov('fCed')||{}).value||''; }
-      if(!data.petName&&!data.owner){ err.textContent='Falta el paciente.'; return; }
+      // Política de la clínica: la cita debe estar COMPLETA. Sin datos a medias
+      // no se agenda (esto evita, entre otras, la tarjeta "Sin nombre" en sala).
+      if(!String(data.petName||'').trim()){ err.textContent='Falta el nombre de la mascota.'; return; }
+      var _tel=String(data.phone||'').replace(/\D/g,'');
+      if(_tel.length<10){ err.textContent='Falta el WhatsApp del cliente (número válido de 10 dígitos).'; return; }
+      if(!String(data.servicio||'').trim()){ err.textContent='Elegí el servicio.'; return; }
+      if(!String(data.notas||'').trim()){ err.textContent='Agregá una nota (motivo o indicaciones).'; return; }
       // El médico viene de la agenda que estás viendo (no hay selector en el modal).
       // Si por un fallo al cargar la lista quedó vacío, avisamos claro en vez de
       // mandar una cita sin médico que el backend rechaza sin forma de corregir acá.
