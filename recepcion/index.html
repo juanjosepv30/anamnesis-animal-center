@@ -798,6 +798,25 @@ function buildRayosDocOptions(def) {
   }).join('');
 }
 
+// Lista para los desplegables de "paso con médico" (pedirAtender) y "asignar
+// médico" (pedirAsignar): TODO el directorio de médicos, con los generales de
+// turno AHORA primero (los que más se eligen), y después el resto en orden
+// alfabético. `sel` (el médico ya asignado) que no esté en el directorio se
+// agrega igual, arriba, para no perderlo.
+function medicosPasoPrimeroTurno(sel) {
+  var norm = function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); };
+  var deTurno = (_turnosActuales || []).filter(Boolean);
+  var enTurno = {}; deTurno.forEach(function(n){ enTurno[norm(n)] = true; });
+  var todos = (_turnosMedicos || []).map(function(m){ return m.medico; }).filter(Boolean);
+  if (!todos.length) todos = todosLosMedicos();   // fallback si el directorio no cargó
+  var resto = todos.filter(function(n){ return !enTurno[norm(n)]; }).sort();
+  var lista = deTurno.concat(resto);
+  if (sel && !lista.some(function(n){ return norm(n) === norm(sel); })) lista.unshift(sel);
+  var visto = {}, out = [];
+  lista.forEach(function(n){ var k = norm(n); if (n && !visto[k]) { visto[k] = true; out.push(n); } });
+  return out;
+}
+
 // ── El servicio manda ────────────────────────────────────────
 // Una sola tabla decide, por servicio, si recepción elige doctor y si hay
 // agenda. Es la regla del dueño hecha config: agregar o cambiar un servicio
@@ -1691,7 +1710,9 @@ function pedirAsignar(rowIndex, modo) {
     }).map(function(m){ return m.medico; });
     placeholder = '— Elige quién lo hace —';
   } else {
-    docs = _turnosActuales || [];
+    // Todos los médicos, generales de turno primero (antes solo los de turno):
+    // recepción puede mandar a cualquiera, incluido un especialista.
+    docs = medicosPasoPrimeroTurno(r.medicoPref);
     placeholder = '— Cualquiera (por orden de llegada) —';
   }
   document.getElementById('asignarSel').innerHTML =
@@ -1724,12 +1745,10 @@ function pedirAtender(rowIndex) {
   document.getElementById('atenderSub').textContent =
     (r.turno || '') + ' · ' + (r.petName || '') + ' — ' + (r.service || '');
 
-  // Médicos candidatos: el especialista asignado (si es especializada) + los
-  // generales de turno. Si no hay ninguno, ofrecemos todo el directorio.
-  var docs = [];
-  if (r.medicoAsignado) docs.push(r.medicoAsignado);
-  (_turnosActuales || []).forEach(function(n){ if (docs.indexOf(n) === -1) docs.push(n); });
-  if (!docs.length) docs = (_turnosMedicos || []).map(function(m){ return m.medico; });
+  // Todos los médicos, con los generales de turno AHORA primero (los que más se
+  // eligen); el asignado queda pre-seleccionado abajo con `selected`. Antes solo
+  // mostraba el asignado + los de turno, y no se podía mandar a otro especialista.
+  var docs = medicosPasoPrimeroTurno(r.medicoAsignado);
 
   document.getElementById('atenderMedico').innerHTML =
     '<option value="">— Elige el médico —</option>' +
