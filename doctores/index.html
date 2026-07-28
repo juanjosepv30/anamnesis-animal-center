@@ -1798,12 +1798,6 @@ function renderSala() {
   const miPacienteAbierto = miMedico
     ? hoy.find(r => r.estadoTurno === 'llamando' && r.calledBy === miMedico)
     : null;
-  // DOBLE ATENCIÓN: si ya tengo un paciente EN CONSULTA ('atendiendo'), solo puedo
-  // empezar OTRO si el próximo de la fila es un servicio rápido (inyección/
-  // desparasitación). Un servicio normal espera a que cierre el actual.
-  const miAtendiendo = miMedico
-    ? hoy.find(r => r.estadoTurno === 'atendiendo' && r.calledBy === miMedico)
-    : null;
 
   filasVisibles.forEach(function(f) {
     const mine     = hoy.filter(r => recordFila(r) === f.key);
@@ -1948,7 +1942,7 @@ function renderSala() {
     const poolGeneral = allRecords.filter(r => isSameDay(r.timestamp, today) && !atiendo(r) && esSalaGeneral(r));
     if (poolGeneral.length) {
       if (collapsed['salageneral'] === undefined) collapsed['salageneral'] = true;  // colapsada por defecto
-      html += salaGeneralHTML(poolGeneral, { miPacienteAbierto: miPacienteAbierto, miAtendiendo: miAtendiendo });
+      html += salaGeneralHTML(poolGeneral, { miPacienteAbierto: miPacienteAbierto });
     }
   }
 
