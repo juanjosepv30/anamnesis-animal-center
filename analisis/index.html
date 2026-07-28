@@ -66,6 +66,19 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .spinner{width:30px;height:30px;border:2.5px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin:30px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
 .note{font-size:.72rem;color:var(--ts);margin-top:10px}
+
+/* ── Comisiones (admin) ── */
+.com-lockrow{display:flex;gap:8px;align-items:center;margin-top:8px}
+.com-pin-in{flex:0 0 130px;border:1.5px solid var(--bd);border-radius:9px;padding:10px 12px;font-family:inherit;font-size:1.15rem;font-weight:700;text-align:center;letter-spacing:.35em;color:var(--tx);background:var(--wh);outline:none}
+.com-pin-in:focus{border-color:var(--p)}
+.com-btn-p{border:none;border-radius:9px;padding:10px 18px;background:var(--p);color:#fff;font-weight:700;font-size:.86rem;font-family:inherit;cursor:pointer}
+.com-btn-g{border:1.5px solid var(--bd);border-radius:9px;padding:9px 14px;background:var(--wh);color:var(--tm);font-weight:700;font-size:.8rem;font-family:inherit;cursor:pointer}
+.com-err{font-size:.78rem;color:var(--warn);min-height:1em;margin-top:6px}
+.com-toolbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+.com-toolbar .filtro{flex:1 1 150px}
+.com-badge{display:inline-block;background:var(--p);color:#fff;border-radius:6px;padding:1px 7px;font-size:.66rem;font-weight:800;margin-left:5px;vertical-align:middle}
+.com-svc{font-size:.74rem;color:var(--ts);font-weight:600;margin-top:3px;white-space:normal;line-height:1.35}
+.com-sub-t{font-size:.9rem;font-weight:800;margin-bottom:6px}
 </style>
 </head>
 <body>
@@ -78,13 +91,19 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 </div>
 
 <div class="wrap">
+  <!-- Comisiones (admin) — protegido con clave -->
+  <div class="card" id="comAdminCard">
+    <div class="card-t">💰 Comisiones <span style="font-weight:600;color:var(--tm);font-size:.78rem">· administración</span></div>
+    <div id="comAdminBody"><div class="spinner"></div></div>
+  </div>
+
   <!-- 1. Reseñas primero -->
   <div id="resenas"><div class="card"><div class="spinner"></div></div></div>
 
   <!-- 2. Filtros -->
   <div class="card">
     <div class="card-t">🎛️ Filtros</div>
-    <div class="card-sub">Elegí médico, servicio y período. Todo lo de abajo se recalcula solo.</div>
+    <div class="card-sub">Elija médico, servicio y período. Todo lo de abajo se recalcula solo.</div>
     <div class="filtros">
       <div class="filtro"><label>Médico</label><select id="fMed" onchange="render()"></select></div>
       <div class="filtro"><label>Servicio</label><select id="fSvc" onchange="render()"></select></div>
@@ -111,7 +130,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbx61iNPH-W-UJLzDX4rC1_N
 
 var STATS = [];   // datos crudos del backend (cada uno con _d = Date y _svc = servicio normalizado)
 
-function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 // ── Normalización de nombres de servicio ─────────────────────
 // La data histórica tiene variantes del mismo servicio ("Control" suelto vs
@@ -217,7 +236,7 @@ function prom(arr, campo){
 
 function render(){
   if(!STATS.length){
-    document.getElementById('contenido').innerHTML='<div class="card"><div class="empty">Todavía no hay datos para analizar.<br>A medida que registres pacientes vas a ver acá cómo se mueve la clínica.</div></div>';
+    document.getElementById('contenido').innerHTML='<div class="card"><div class="empty">Todavía no hay datos para analizar.<br>A medida que registre pacientes va a ver acá cómo se mueve la clínica.</div></div>';
     return;
   }
   var rows=filtrados();
@@ -274,7 +293,7 @@ function tablaPeriodoHtml(rows, gran){
   }).join('');
 
   return '<div class="card"><div class="card-t">📅 Por '+etiquetaGran(gran)+'</div>'+
-    '<div class="card-sub">Atendidos por período, con espera y consulta promedio. Tocá los filtros de arriba para ver un médico o servicio puntual.</div>'+
+    '<div class="card-sub">Atendidos por período, con espera y consulta promedio. Toque los filtros de arriba para ver un médico o servicio puntual.</div>'+
     '<div class="tbl-wrap"><table class="tbl"><thead><tr>'+
       '<th>'+etiquetaGran(gran)+'</th><th>Atendidos</th><th>Espera</th><th>Consulta</th><th>Ausentes</th>'+
     '</tr></thead><tbody>'+body+'</tbody>'+
@@ -381,6 +400,250 @@ function pintarComentarios(){
 
 cargar();
 cargarResenas();
+
+// ============================================================
+//  COMISIONES — perfil administrativo (ve TODO, con clave admin)
+//  Reusa el backend seguro: comLogin(rol=admin) + comListar(rol=admin).
+//  El token viaja en sessionStorage (por-pestaña); sin clave no sale nada.
+// ============================================================
+var COM_ADMIN = null;      // { token, ts }
+var COM_ENTRIES = [];      // todos los registros que devuelve el backend
+var comFiltroMed = '', comFiltroRango = '0';
+try { COM_ADMIN = JSON.parse(sessionStorage.getItem('ac_com_admin') || 'null'); } catch (e) {}
+
+function comAdminSet(s){ COM_ADMIN = s || null; try { s ? sessionStorage.setItem('ac_com_admin', JSON.stringify(s)) : sessionStorage.removeItem('ac_com_admin'); } catch (e) {} }
+function comPost(body){ return fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) }).then(function(r){return r.json();}); }
+function comFmt(n){ return '$' + (Math.round(n) || 0).toLocaleString('es-CO'); }
+
+function comAdminInit(){ if (COM_ADMIN && COM_ADMIN.token) comAdminCargar(); else comAdminLockUI(); }
+
+function comAdminLockUI(msg){
+  document.getElementById('comAdminBody').innerHTML =
+    '<div class="card-sub" style="margin-bottom:2px">Ingrese su clave de administrador para ver las comisiones de todos los médicos.</div>'+
+    '<div class="com-lockrow">'+
+      '<input class="com-pin-in" id="comAdminPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off" oninput="this.value=this.value.replace(/\\D/g,\'\').slice(0,4)" onkeydown="if(event.key===\'Enter\')comAdminLogin()">'+
+      '<button class="com-btn-p" onclick="comAdminLogin()">Entrar</button>'+
+    '</div>'+
+    '<div class="com-err" id="comAdminErr">'+(msg?esc(msg):'')+'</div>';
+  setTimeout(function(){ try { document.getElementById('comAdminPin').focus(); } catch (e) {} }, 50);
+}
+function comAdminLogin(){
+  var el = document.getElementById('comAdminPin');
+  var pass = ((el && el.value) || '').replace(/\D/g, '');
+  var err = document.getElementById('comAdminErr');
+  if (pass.length < 4) { err.textContent = 'La clave es de 4 dígitos.'; return; }
+  err.textContent = 'Verificando…';
+  comPost({ action:'comLogin', rol:'admin', pass:pass }).then(function(res){
+    if (!res || !res.ok) { err.textContent = (res && res.error) || 'No se pudo.'; if (el) el.value = ''; return; }
+    comAdminSet({ token:res.token, ts:Date.now() });
+    comAdminCargar();
+  }).catch(function(){ err.textContent = 'Error de conexión.'; });
+}
+function comAdminSalir(){ comAdminSet(null); COM_ENTRIES = []; comAdminLockUI(); }
+
+function comAdminCargar(){
+  document.getElementById('comAdminBody').innerHTML = '<div class="spinner"></div>';
+  comPost({ action:'comListar', rol:'admin', doctorId:'', token:COM_ADMIN.token }).then(function(res){
+    if (res && res.needLogin) { comAdminSet(null); comAdminLockUI('Sesión vencida, vuelva a entrar.'); return; }
+    if (!res || !res.ok) { document.getElementById('comAdminBody').innerHTML = '<div class="empty">No se pudo cargar.</div>'; return; }
+    COM_ENTRIES = res.entries || [];
+    comAdminSet({ token:COM_ADMIN.token, ts:Date.now() });
+    comAdminDash();
+  }).catch(function(){ document.getElementById('comAdminBody').innerHTML = '<div class="empty">Error de conexión.</div>'; });
+}
+
+function comSetFiltro(campo, val){ if (campo === 'med') comFiltroMed = val; else comFiltroRango = val; comAdminDash(); }
+function comAdminFiltradas(){
+  var dias = +(comFiltroRango || '0'), lim = null;
+  if (dias) { lim = new Date(); lim.setHours(0,0,0,0); lim.setDate(lim.getDate() - dias); }
+  return COM_ENTRIES.filter(function(e){
+    if (comFiltroMed && e.doctorId !== comFiltroMed) return false;
+    if (lim) { var d = new Date(e.date || e.creada); if (isNaN(d) || d < lim) return false; }
+    return true;
+  });
+}
+
+function comAdminDash(){
+  var rows = comAdminFiltradas();
+  // Opciones de médico (de TODOS los registros, no de los filtrados).
+  var medMap = {}; COM_ENTRIES.forEach(function(e){ if (e.doctorId) medMap[e.doctorId] = e.doctorName || e.doctorId; });
+  var medOpts = '<option value="">Todos los médicos</option>' + Object.keys(medMap).map(function(id){ return '<option value="'+esc(id)+'"'+(comFiltroMed===id?' selected':'')+'>'+esc(medMap[id])+'</option>'; }).join('');
+  var rangos = [['0','Todo'],['7','Últimos 7 días'],['30','Últimos 30 días'],['90','Últimos 3 meses'],['365','Últimos 12 meses']];
+  var rangoOpts = rangos.map(function(r){ return '<option value="'+r[0]+'"'+(comFiltroRango===r[0]?' selected':'')+'>'+r[1]+'</option>'; }).join('');
+  var toolbar = '<div class="com-toolbar">'+
+    '<div class="filtro"><label>Médico</label><select onchange="comSetFiltro(\'med\',this.value)">'+medOpts+'</select></div>'+
+    '<div class="filtro"><label>Período</label><select onchange="comSetFiltro(\'rango\',this.value)">'+rangoOpts+'</select></div>'+
+    '<button class="com-btn-g" onclick="comAdminCargar()" title="Actualizar">↻</button>'+
+    '<button class="com-btn-g" onclick="comAdminMedicos()">⚙️ Médicos</button>'+
+    '<button class="com-btn-g" onclick="comAdminSalir()">🔒 Bloquear</button>'+
+  '</div>';
+
+  var tv = 0, tc = 0, porMed = {}, porCat = {};
+  rows.forEach(function(e){
+    tv += e.totalVal || 0; tc += e.totalCom || 0;
+    var m = e.doctorName || e.doctorId || '—';
+    if (!porMed[m]) porMed[m] = { val:0, com:0, n:0 };
+    porMed[m].val += e.totalVal || 0; porMed[m].com += e.totalCom || 0; porMed[m].n++;
+    (e.items || []).forEach(function(it){ var c = it.cat || '—'; if (!porCat[c]) porCat[c] = { val:0, com:0, n:0 }; porCat[c].val += Number(it.val) || 0; porCat[c].com += Number(it.com) || 0; porCat[c].n++; });
+  });
+
+  var kpis = '<div class="kpis" style="margin-bottom:14px">'+
+    '<div class="kpi"><div class="kpi-n">'+rows.length+'</div><div class="kpi-l">registros</div></div>'+
+    '<div class="kpi"><div class="kpi-n">'+comFmt(tv)+'</div><div class="kpi-l">valor total</div></div>'+
+    '<div class="kpi"><div class="kpi-n">'+comFmt(tc)+'</div><div class="kpi-l">comisión total</div></div>'+
+  '</div>';
+
+  var medLst = Object.keys(porMed).sort(function(a,b){ return porMed[b].com - porMed[a].com; }).map(function(m,i){
+    return '<div class="lst-item"><span class="lst-dot" style="background:'+medColor(i)+'"></span><span class="lst-name">'+esc(m)+'</span><span class="lst-val">'+comFmt(porMed[m].com)+'</span><span class="lst-sub">'+porMed[m].n+' · '+comFmt(porMed[m].val)+'</span></div>';
+  }).join('') || '<div class="empty">Sin registros.</div>';
+  var catLst = Object.keys(porCat).sort(function(a,b){ return porCat[b].com - porCat[a].com; }).map(function(c){
+    return '<div class="lst-item"><span class="lst-name">'+esc(c)+'</span><span class="lst-val">'+comFmt(porCat[c].com)+'</span><span class="lst-sub">'+porCat[c].n+' · '+comFmt(porCat[c].val)+'</span></div>';
+  }).join('') || '<div class="empty">Sin servicios.</div>';
+  var resumen = '<div class="dos-col" style="margin-bottom:14px">'+
+    '<div><div class="com-sub-t">Por médico</div>'+medLst+'</div>'+
+    '<div><div class="com-sub-t">Por categoría</div>'+catLst+'</div>'+
+  '</div>';
+
+  var ordenados = rows.slice().sort(function(a,b){ return String(b.creada || b.date).localeCompare(String(a.creada || a.date)); });
+  var filas = ordenados.map(function(e){
+    var svcs = (e.items || []).map(function(it){ return esc(it.desc || it.cat) + ' (' + comFmt(it.val) + ')'; }).join(' · ');
+    return '<tr><td>'+esc(e.date || '')+'</td>'+
+      '<td style="text-align:left">'+esc(e.doctorName || e.doctorId || '—')+'</td>'+
+      '<td style="text-align:left">'+esc(e.patient || '—')+(e.turno?'<span class="com-badge">'+esc(e.turno)+'</span>':'')+(e.fact?' <span class="mut" style="font-weight:600">F '+esc(e.fact)+'</span>':'')+(svcs?'<div class="com-svc">'+svcs+'</div>':'')+'</td>'+
+      '<td>'+comFmt(e.totalVal)+'</td>'+
+      '<td class="big">'+comFmt(e.totalCom)+'</td></tr>';
+  }).join('');
+  var tabla = ordenados.length
+    ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th style="text-align:left">Médico</th><th style="text-align:left">Paciente</th><th>Valor</th><th>Comisión</th></tr></thead><tbody>'+filas+'</tbody>'+
+      '<tfoot class="tbl-foot"><tr><td>Total ('+ordenados.length+')</td><td colspan="2" class="mut" style="text-align:left"></td><td>'+comFmt(tv)+'</td><td class="big">'+comFmt(tc)+'</td></tr></tfoot></table></div>'
+    : '<div class="empty">No hay registros con estos filtros.</div>';
+
+  document.getElementById('comAdminBody').innerHTML = toolbar + kpis + resumen + tabla;
+}
+
+// ══════════ Gestión de médicos (admin) ══════════
+var COM_MEDS = [], COM_CATSDEF = [], comMedCats = [], comMedI = -1, comMedEnc = false;
+function comAdminMedicos(){
+  document.getElementById('comAdminBody').innerHTML = '<div class="spinner"></div>';
+  comPost({ action:'medAdminListar', token:COM_ADMIN.token }).then(function(res){
+    if (res && res.needLogin) { comAdminSet(null); comAdminLockUI('Sesión vencida, vuelva a entrar.'); return; }
+    if (!res || !res.ok) { document.getElementById('comAdminBody').innerHTML = '<div class="empty">No se pudo cargar.</div>'; return; }
+    COM_MEDS = res.medicos || []; COM_CATSDEF = res.catsDefault || [];
+    comMedRender();
+  }).catch(function(){ document.getElementById('comAdminBody').innerHTML = '<div class="empty">Error de conexión.</div>'; });
+}
+function comMedRender(){
+  var top = '<div class="com-toolbar">'+
+    '<button class="com-btn-g" onclick="comAdminCargar()">← Comisiones</button>'+
+    '<button class="com-btn-p" onclick="comMedFormNuevo()">＋ Agregar médico</button>'+
+    '<button class="com-btn-g" onclick="comAdminMedicos()" title="Actualizar">↻</button>'+
+  '</div><div id="comMedForm"></div>';
+  var lst = COM_MEDS.map(function(m,i){
+    var tags = (m.activo?'':'<span class="com-badge" style="background:#9ca3af">inactivo</span> ')+
+      (m.comision?'<span class="com-badge">comisión'+(m.tieneClave?'':' · sin clave')+'</span>':'');
+    return '<div class="lst-item" style="flex-wrap:wrap;align-items:flex-start">'+
+      '<div style="flex:1;min-width:0"><div class="lst-name" style="white-space:normal">'+esc(m.medico)+' '+tags+'</div>'+
+        '<div style="font-size:.72rem;color:var(--ts)">'+esc((m.especialidades||[]).join(', '))+'</div></div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+        '<button class="com-btn-g" onclick="comMedToggleComision('+i+')">'+(m.comision?'Quitar comisión':'Poner comisión')+'</button>'+
+        (m.comision?'<button class="com-btn-g" onclick="comMedEditar('+i+',false)">✏️ Categorías/clave</button>':'')+
+        '<button class="com-btn-g" onclick="comMedActivo('+i+','+(m.activo?'false':'true')+')">'+(m.activo?'🚫 Inactivar':'✓ Reactivar')+'</button>'+
+      '</div>'+
+      '<div id="comMedEdit'+i+'" style="flex:1 1 100%"></div>'+
+    '</div>';
+  }).join('') || '<div class="empty">No hay médicos.</div>';
+  document.getElementById('comAdminBody').innerHTML = top + '<div class="com-sub-t" style="margin-top:6px">Médicos ('+COM_MEDS.length+')</div>' + lst;
+}
+function comMedFormNuevo(){
+  var c = document.getElementById('comMedForm'); if (!c) return;
+  var st = 'width:100%;margin-bottom:6px;border:1.5px solid var(--bd);border-radius:9px;padding:9px;font-family:inherit';
+  c.innerHTML = '<div class="card" style="margin:8px 0;padding:12px;background:var(--pl)">'+
+    '<div class="com-sub-t">Agregar médico</div>'+
+    '<input id="mnNombre" placeholder="Nombre (ej. Dra. Juana Pérez)" style="'+st+'">'+
+    '<input id="mnEsp" placeholder="Especialidad (ej. Dermatología)" style="'+st+'">'+
+    '<input id="mnTel" inputmode="numeric" placeholder="WhatsApp 57..." style="'+st+'">'+
+    '<div style="display:flex;gap:8px"><button class="com-btn-g" onclick="document.getElementById(\'comMedForm\').innerHTML=\'\'">Cancelar</button><button class="com-btn-p" onclick="comMedGuardarNuevo()">Guardar</button></div>'+
+    '<div class="com-err" id="mnErr"></div></div>';
+}
+function comMedGuardarNuevo(){
+  var nombre = (document.getElementById('mnNombre')||{}).value || '';
+  var esp = (document.getElementById('mnEsp')||{}).value || '';
+  var tel = (document.getElementById('mnTel')||{}).value || '';
+  var err = document.getElementById('mnErr');
+  if (!nombre.trim() || !esp.trim()) { err.textContent = 'Nombre y especialidad son obligatorios.'; return; }
+  err.textContent = 'Guardando…';
+  comPost({ action:'medAdminGuardar', token:COM_ADMIN.token, nombre:nombre, especialidad:esp, telefono:tel }).then(function(r){
+    if (r && r.needLogin) { comAdminSet(null); comAdminLockUI('Sesión vencida.'); return; }
+    if (!r || !r.ok) { err.textContent = (r && r.error) || 'No se pudo.'; return; }
+    comAdminMedicos();
+  }).catch(function(){ err.textContent = 'Error de conexión.'; });
+}
+function comMedActivo(i, activar){
+  var m = COM_MEDS[i]; if (!m) return;
+  if (!activar && !confirm('¿Inactivar a ' + m.medico + '? Se saca de la app pero se conserva su historial. Es reversible.')) return;
+  comPost({ action:'medAdminActivo', token:COM_ADMIN.token, nombre:m.medico, activo:activar?'si':'no' }).then(function(r){
+    if (r && r.needLogin) { comAdminSet(null); comAdminLockUI('Sesión vencida.'); return; }
+    comAdminMedicos();
+  });
+}
+function comMedToggleComision(i){
+  var m = COM_MEDS[i]; if (!m) return;
+  if (!m.comision) { comMedEditar(i, true); return; }   // al ENCENDER, abre el editor
+  if (!confirm('¿Quitarle la comisión a ' + m.medico + '? No podrá entrar a su perfil de comisiones.')) return;
+  comPost({ action:'medAdminComision', token:COM_ADMIN.token, nombre:m.medico, comision:'no' }).then(function(r){
+    if (r && r.needLogin) { comAdminSet(null); comAdminLockUI('Sesión vencida.'); return; }
+    comAdminMedicos();
+  });
+}
+function comMedEditar(i, encender){
+  var m = COM_MEDS[i]; if (!m) return;
+  comMedI = i; comMedEnc = !!encender;
+  var base = (m.cats && m.cats.length) ? m.cats : COM_CATSDEF;
+  comMedCats = base.map(function(c){ return { key:c.key||'', label:c.label||'', pct:Number(c.pct)||0 }; });
+  comMedEditRender();
+}
+function comMedEditRender(){
+  var cont = document.getElementById('comMedEdit'+comMedI); if (!cont) return;
+  var st = 'border:1.5px solid var(--bd);border-radius:8px;padding:7px;font-family:inherit';
+  var rows = comMedCats.map(function(c,j){
+    return '<div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">'+
+      '<input value="'+esc(c.label||'')+'" placeholder="Categoría" oninput="comMedCatUpd('+j+',\'label\',this.value)" style="flex:1;min-width:0;'+st+'">'+
+      '<input type="number" inputmode="numeric" value="'+(c.pct||0)+'" oninput="comMedCatUpd('+j+',\'pct\',this.value)" style="width:64px;'+st+'"><span style="font-weight:700">%</span>'+
+      '<button class="com-btn-g" onclick="comMedCatDel('+j+')">✕</button></div>';
+  }).join('');
+  var m = COM_MEDS[comMedI];
+  var pideClave = comMedEnc || !m.tieneClave;
+  cont.innerHTML = '<div class="card" style="margin:6px 0;padding:12px;background:var(--pl)">'+
+    '<div class="com-sub-t">Categorías y % de '+esc(m.medico)+'</div>'+ rows +
+    '<button class="com-btn-g" onclick="comMedCatAdd()" style="width:100%;margin:4px 0">＋ Agregar categoría</button>'+
+    (pideClave?'<div style="margin-top:8px"><label style="font-size:.72rem;color:var(--tm);font-weight:700">Clave temporal (4 díg'+(m.tieneClave?', opcional':'')+')</label>'+
+      '<input id="comMedClave'+comMedI+'" inputmode="numeric" maxlength="4" placeholder="••••" oninput="this.value=this.value.replace(/\\D/g,\'\').slice(0,4)" style="width:100%;'+st+';text-align:center;letter-spacing:.3em;font-size:1.1rem"></div>':'')+
+    '<div style="display:flex;gap:8px;margin-top:10px"><button class="com-btn-g" onclick="document.getElementById(\'comMedEdit'+comMedI+'\').innerHTML=\'\'">Cancelar</button><button class="com-btn-p" onclick="comMedGuardarComision()">Guardar</button></div>'+
+    '<div class="com-err" id="comMedErr'+comMedI+'"></div></div>';
+}
+function comMedCatUpd(j,f,v){ if (!comMedCats[j]) return; comMedCats[j][f] = (f==='pct') ? (Number(v)||0) : v; }
+function comMedCatDel(j){ comMedCats.splice(j,1); comMedEditRender(); }
+function comMedCatAdd(){ comMedCats.push({ key:'', label:'', pct:0 }); comMedEditRender(); }
+function comMedGuardarComision(){
+  var m = COM_MEDS[comMedI]; if (!m) return;
+  var err = document.getElementById('comMedErr'+comMedI);
+  var cats = comMedCats.filter(function(c){ return String(c.label||'').trim(); })
+    .map(function(c){ return { key:c.key||'', label:String(c.label).trim(), pct:Number(c.pct)||0 }; });
+  if (!cats.length) { if (err) err.textContent = 'Agregue al menos una categoría.'; return; }
+  var clEl = document.getElementById('comMedClave'+comMedI);
+  var clave = clEl ? String(clEl.value||'').replace(/\D/g,'') : '';
+  if (!m.tieneClave && clave.length !== 4) { if (err) err.textContent = 'Ponga una clave temporal de 4 dígitos para este médico.'; return; }
+  var payload = { action:'medAdminComision', token:COM_ADMIN.token, nombre:m.medico, comision:'si', cats:cats };
+  if (clave.length === 4) payload.clave = clave;
+  if (err) err.textContent = 'Guardando…';
+  comPost(payload).then(function(r){
+    if (r && r.needLogin) { comAdminSet(null); comAdminLockUI('Sesión vencida.'); return; }
+    if (!r || !r.ok) { if (err) err.textContent = (r && r.error) || 'No se pudo.'; return; }
+    comAdminMedicos();
+  }).catch(function(){ if (err) err.textContent = 'Error de conexión.'; });
+}
+
+comAdminInit();
 </script>
 <script>
 if ('serviceWorker' in navigator) {

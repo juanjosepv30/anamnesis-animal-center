@@ -1219,8 +1219,13 @@ function comDesbloqueado(nombre) {
   const d = comDoctorDe(nombre);
   return !!(d && comSesion && comSesion.rol === 'medico' && comSesion.doctorId === d.id);
 }
+// Categorías del médico logueado (vienen en su login). Si no hay, el default.
+function comCats() {
+  if (comSesion && comSesion.categorias && comSesion.categorias.length) return comSesion.categorias;
+  return (COM_CFG && COM_CFG.categorias) || [];
+}
 function comCatPct(key) {
-  const c = COM_CFG && (COM_CFG.categorias || []).find(x => x.key === key);
+  const c = comCats().find(x => x.key === key);
   return c ? c.pct : 0;
 }
 function comFmt(n) { return '$' + (Math.round(n) || 0).toLocaleString('es-CO'); }
@@ -1268,7 +1273,7 @@ function comEnviarLogin() {
       document.getElementById('comLoginPass').value = '';
       return;
     }
-    comSetSesion({ rol: 'medico', doctorId: res.doctorId, doctorName: res.doctorName, token: res.token, ts: Date.now() });
+    comSetSesion({ rol: 'medico', doctorId: res.doctorId, doctorName: res.doctorName, categorias: res.categorias || [], token: res.token, ts: Date.now() });
     document.getElementById('comLoginModal').style.display = 'none';
     // Aseguramos la identidad del médico (los turnos filtran por calledBy).
     if (miMedico !== doctorName) setMiMedico(doctorName);
@@ -1316,7 +1321,7 @@ function comAbrirRegistro(rowIdx) {
   document.getElementById('comRegModal').style.display = 'flex';
 }
 function comRegNuevoItem() {
-  const c0 = COM_CFG && COM_CFG.categorias && COM_CFG.categorias[0];
+  const c0 = comCats()[0];
   return { desc: '', cat: c0 ? c0.key : '', val: 0, pct: c0 ? c0.pct : 0 };
 }
 function comRegAddItem() { comRegItems.push(comRegNuevoItem()); comRegRender(); }
@@ -1329,7 +1334,7 @@ function comRegUpd(i, field, val) {
   else comRegItems[i][field] = val;
 }
 function comRegRender() {
-  const cats = (COM_CFG && COM_CFG.categorias) || [];
+  const cats = comCats();
   const cont = document.getElementById('comRegItems');
   cont.innerHTML = comRegItems.map((it, i) => {
     const opts = cats.map(c => '<option value="' + c.key + '"' + (c.key === it.cat ? ' selected' : '') + '>' + esc(c.label) + ' (' + c.pct + '%)</option>').join('');
@@ -1459,7 +1464,7 @@ function comEnviarCambio() {
       if (!res || !res.ok) { err.textContent = (res && res.error) || 'No se pudo.'; return; }
       // El backend rota el token al cambiar la clave (invalida sesiones robadas):
       // actualizamos el nuestro para no caernos.
-      if (res.token) comSetSesion({ rol: comSesion.rol, doctorId: comSesion.doctorId, doctorName: comSesion.doctorName, token: res.token, ts: Date.now() });
+      if (res.token) comSetSesion({ rol: comSesion.rol, doctorId: comSesion.doctorId, doctorName: comSesion.doctorName, categorias: comSesion.categorias, token: res.token, ts: Date.now() });
       comCerrarCambio();
       showToast('✓ Clave cambiada');
     }).catch(() => { comChgBusy = false; err.textContent = 'Error de conexión.'; });
