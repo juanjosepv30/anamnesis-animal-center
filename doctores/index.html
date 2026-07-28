@@ -76,6 +76,54 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .idm-cerrar{margin:6px 18px 18px;background:var(--bg2);border:none;border-radius:12px;padding:13px;font-size:.9rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:'DM Sans',sans-serif}
 .idm-cerrar:hover{background:var(--bd)}
 
+/* ── Comisiones (perfil privado con clave: Wilmer Rodríguez, Milena) ── */
+.com-topbar{display:flex;gap:8px;margin-bottom:12px}
+.com-mis-btn{flex:1;background:#6d28d9;color:#fff;border:none;border-radius:11px;padding:11px;font-size:.86rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.com-lock-btn{flex:0 0 auto;background:var(--bg2);color:var(--tm);border:none;border-radius:11px;padding:11px 14px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.com-pin{text-align:center;letter-spacing:.4em;font-size:1.3rem;font-weight:700}
+.com-cardbar{padding:9px 12px 0}
+.com-reg-btn{width:100%;background:#f5f3ff;border:1.5px solid #ddd6fe;color:#6d28d9;border-radius:10px;padding:9px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.com-reg-btn:hover{background:#ede9fe}
+.com-reg-btn.done{background:#f0fdf4;border-color:#86efac;color:#15803d}
+.com-modal{position:fixed;inset:0;background:rgba(20,10,35,.5);z-index:700;display:none;align-items:center;justify-content:center;padding:16px}
+.com-modal .com-box{background:var(--wh);border-radius:18px;width:100%;max-width:440px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.com-h{font-size:1.05rem;font-weight:700;color:var(--tx);padding:18px 20px 2px}
+.com-sub{font-size:.8rem;color:var(--tm);padding:0 20px 12px;line-height:1.4}
+.com-body{overflow-y:auto;padding:4px 20px;flex:1}
+.com-foot{display:flex;gap:8px;padding:14px 20px 18px}
+.com-btn{flex:1;border:none;border-radius:11px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.com-btn-primary{background:#6d28d9;color:#fff}
+.com-btn-ghost{background:var(--bg2);color:var(--tm)}
+.com-btn-danger{background:#fef2f2;color:#b91c1c;border:1.5px solid #fecaca}
+.com-inp{width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:11px 13px;font-size:.9rem;outline:none;color:var(--tx);font-family:'DM Sans',sans-serif;background:var(--bg);margin-bottom:8px}
+.com-inp:focus{border-color:#a78bfa}
+.com-err{font-size:.8rem;color:#b91c1c;min-height:1.1em;padding:2px 2px 6px}
+.com-lbl{font-size:.72rem;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.3px;margin:6px 0 4px}
+.com-item{border:1.5px solid var(--bd);border-radius:11px;padding:9px;margin-bottom:8px;background:var(--bg)}
+.com-in-desc{width:100%;border:none;background:transparent;font-size:.88rem;font-weight:600;color:var(--tx);outline:none;font-family:'DM Sans',sans-serif;margin-bottom:6px}
+.com-item-row{display:flex;gap:6px;align-items:center}
+.com-in-cat{flex:1 1 auto;min-width:0;border:1.5px solid var(--bd);border-radius:8px;padding:7px;font-size:.8rem;background:var(--wh);font-family:'DM Sans',sans-serif}
+.com-in-val{flex:0 0 92px;border:1.5px solid var(--bd);border-radius:8px;padding:7px;font-size:.8rem;font-family:'DM Sans',sans-serif}
+.com-item-com{flex:0 0 auto;font-size:.78rem;font-weight:700;color:#15803d;white-space:nowrap}
+.com-item-del{flex:0 0 auto;background:transparent;border:none;color:var(--tm);font-size:.95rem;cursor:pointer;padding:4px}
+.com-add{width:100%;background:transparent;border:1.5px dashed var(--bd);border-radius:10px;padding:9px;font-size:.82rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:8px}
+.com-regtot{background:#f5f3ff;border-radius:10px;padding:10px 12px;font-size:.85rem;font-weight:700;color:#6d28d9;text-align:right;margin-top:2px}
+.com-panel-tot{display:flex;gap:8px;margin-bottom:10px}
+.com-panel-tot > div{flex:1;background:var(--bg2);border-radius:11px;padding:10px;text-align:center}
+.com-panel-tot span{display:block;font-size:.68rem;color:var(--tm);text-transform:uppercase;letter-spacing:.3px;font-weight:700}
+.com-panel-tot b{font-size:1rem;color:var(--tx)}
+.com-panel-tot .com-hl{background:#f5f3ff}
+.com-panel-tot .com-hl b{color:#6d28d9}
+.com-empty{text-align:center;color:var(--tm);font-size:.85rem;padding:24px 10px;line-height:1.5}
+.com-entry{border:1px solid var(--bd);border-radius:11px;padding:10px 12px;margin-bottom:8px}
+.com-entry-h{display:flex;align-items:center;gap:6px;font-size:.9rem;color:var(--tx)}
+.com-entry-com{margin-left:auto;font-weight:800;color:#15803d}
+.com-badge{font-size:.66rem;background:var(--p);color:#fff;border-radius:5px;padding:1px 6px;font-weight:800}
+.com-entry-m{font-size:.73rem;color:var(--tm);margin-top:2px}
+.com-entry-items{font-size:.75rem;color:var(--tx);margin-top:4px;opacity:.85}
+.com-chg-btn{width:100%;background:transparent;border:1.5px solid var(--bd);color:var(--tm);border-radius:11px;padding:10px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:10px}
+.com-chg-btn:hover{background:var(--bg2)}
+
 /* ── Search bar ── */
 .srch{background:var(--wh);border-bottom:1px solid var(--bd);padding:10px 24px;position:sticky;top:60px;z-index:99}
 .srch-inner{max-width:900px;margin:0 auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -457,6 +505,87 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
   </div>
 </div>
 
+<!-- Comisiones: ingreso con clave (perfil privado del médico) -->
+<div class="com-modal" id="comLoginModal" onclick="if(event.target===this)comCerrarLogin()">
+  <div class="com-box">
+    <div class="com-h" id="comLoginTitle">Comisiones</div>
+    <div class="com-sub">Ingresá tu clave de 4 dígitos. Adentro están tus pacientes finalizados y tus comisiones. Nadie más las ve.</div>
+    <div class="com-body">
+      <input class="com-inp com-pin" id="comLoginPass" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+             placeholder="••••" autocomplete="off"
+             oninput="this.value=this.value.replace(/\D/g,'').slice(0,4); if(this.value.length===4) comEnviarLogin();"
+             onkeydown="if(event.key==='Enter')comEnviarLogin()">
+      <div class="com-err" id="comLoginErr"></div>
+    </div>
+    <div class="com-foot">
+      <button class="com-btn com-btn-ghost" onclick="comCerrarLogin()">Cancelar</button>
+      <button class="com-btn com-btn-primary" onclick="comEnviarLogin()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Comisiones: registrar los servicios de un turno finalizado -->
+<div class="com-modal" id="comRegModal" onclick="if(event.target===this)comCerrarRegistro()">
+  <div class="com-box">
+    <div class="com-h">Registrar servicios</div>
+    <div class="com-sub"><b id="comRegPet">—</b> · <span id="comRegSub"></span></div>
+    <div class="com-body">
+      <div class="com-lbl">Servicios realizados</div>
+      <div id="comRegItems"></div>
+      <button class="com-add" onclick="comRegAddItem()">+ Agregar servicio</button>
+      <div class="com-lbl">Factura (opcional)</div>
+      <input class="com-inp" id="comRegFact" placeholder="N° de factura" autocomplete="off">
+      <div class="com-lbl">Notas (opcional)</div>
+      <input class="com-inp" id="comRegNotas" placeholder="Observaciones" autocomplete="off">
+      <div class="com-regtot" id="comRegTot"></div>
+      <div class="com-err" id="comRegErr"></div>
+    </div>
+    <div class="com-foot">
+      <button class="com-btn com-btn-danger" id="comDelBtn" style="display:none;flex:0 0 auto" onclick="comBorrarRegistro()">Borrar</button>
+      <button class="com-btn com-btn-ghost" onclick="comCerrarRegistro()">Cancelar</button>
+      <button class="com-btn com-btn-primary" onclick="comGuardarRegistro()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Comisiones: panel privado (resumen del médico) -->
+<div class="com-modal" id="comPanelModal" onclick="if(event.target===this)comCerrarPanel()">
+  <div class="com-box">
+    <div class="com-h">💰 Mis comisiones — <span id="comPanelName"></span></div>
+    <div class="com-sub">Resumen privado de tus registros. Solo vos lo ves.</div>
+    <div class="com-body" id="comPanelBody"></div>
+    <div class="com-foot">
+      <button class="com-btn com-btn-ghost" onclick="comSalir()">Bloquear</button>
+      <button class="com-btn com-btn-primary" onclick="comCerrarPanel()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Comisiones: cambiar la clave (el médico, con su clave actual) -->
+<div class="com-modal" id="comChangeModal" onclick="if(event.target===this)comCerrarCambio()">
+  <div class="com-box">
+    <div class="com-h">Cambiar mi clave</div>
+    <div class="com-sub">Ingresá tu clave actual y la nueva (dos veces). Nadie más la sabe.</div>
+    <div class="com-body">
+      <div class="com-lbl">Clave actual</div>
+      <input class="com-inp com-pin" id="comChgActual" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+             placeholder="••••" autocomplete="off" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)">
+      <div class="com-lbl">Clave nueva</div>
+      <input class="com-inp com-pin" id="comChgNueva" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+             placeholder="••••" autocomplete="off" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)">
+      <div class="com-lbl">Repetí la nueva</div>
+      <input class="com-inp com-pin" id="comChgConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+             placeholder="••••" autocomplete="off" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)"
+             onkeydown="if(event.key==='Enter')comEnviarCambio()">
+      <div class="com-err" id="comChgErr"></div>
+    </div>
+    <div class="com-foot">
+      <button class="com-btn com-btn-ghost" onclick="comCerrarCambio()">Cancelar</button>
+      <button class="com-btn com-btn-primary" onclick="comEnviarCambio()">Cambiar</button>
+    </div>
+  </div>
+</div>
+
 <div class="prueba-aviso" id="pruebaAviso" style="display:none">
   🧪 MODO PRUEBA ENCENDIDO — los médicos NO están recibiendo avisos por WhatsApp
 </div>
@@ -799,6 +928,30 @@ function setView(v) {
   ['sala','atendiendo','reviewed','agenda'].forEach(id =>
     document.getElementById('f-'+id).classList.toggle('active', id === v));
   document.getElementById('dateFilterWrap').style.display = (v === 'reviewed') ? 'flex' : 'none';
+  // Antes de decidir el gate necesitamos saber quién gana comisión. Si la
+  // config aún no cargó, esperamos (cierra la ventana en que un médico de
+  // comisión podría ver su Finalizados sin clave en el primer arranque).
+  if (v === 'reviewed' && !COM_CFG) {
+    document.getElementById('dateFilterWrap').style.display = 'none';
+    document.getElementById('mainCnt').innerHTML =
+      '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-title">Un momento…</div></div>';
+    renderConsultaBar();
+    comCargarConfig().then(function(){ if (activeView === 'reviewed') setView('reviewed'); });
+    return;
+  }
+  // Gate de comisiones (discreto): si un médico de comisión entra a Finalizados
+  // y todavía no desbloqueó, se le pide la clave. Adentro va su panel privado.
+  // El resto de los médicos no ve ninguna diferencia.
+  if (v === 'reviewed' && comDoctorDe(miMedico) && !comDesbloqueado(miMedico)) {
+    document.getElementById('dateFilterWrap').style.display = 'none';
+    document.getElementById('mainCnt').innerHTML =
+      '<div class="empty"><div class="empty-icon">🔒</div>'+
+      '<div class="empty-title">Finalizados protegido</div>'+
+      '<div class="empty-sub">Ingresá tu clave para ver tus pacientes finalizados y registrar tus comisiones.</div></div>';
+    renderConsultaBar();
+    comCandado(comDoctorDe(miMedico).id);
+    return;
+  }
   // Agenda: es SIEMPRE la del médico logueado. Si nadie está identificado
   // (modo "ver todo"), no mostramos el desplegable de médicos: abrimos el
   // pop-up "Elige tu nombre" para que el médico se identifique y su agenda se
@@ -933,6 +1086,7 @@ function setMiMedico(v) {
   // Atendiendo los suyos, etc. aplicarTabAgenda ya te saca de Agenda si el
   // nuevo es auxiliar (no agenda).
   if (activeView === 'agenda') setView('agenda');
+  else if (activeView === 'reviewed') setView('reviewed');   // re-evalúa el gate de comisiones
   else renderAll();
   updateCounts();
 }
@@ -1000,6 +1154,316 @@ function elegirIdentidad(v) {
   if (v) showToast('Abriste como ' + v.replace(/^Dra?\.\s*/, ''));
 }
 
+// ============================================================
+//  COMISIONES (perfil privado con clave) — Wilmer Rodríguez, Milena
+//  TODO pasa por el backend con clave validada en el servidor. El
+//  navegador solo guarda un "pase del día" (token), nunca la clave.
+// ============================================================
+let COM_CFG = null;          // {categorias:[{key,label,pct}], doctores:[{id,name}]}
+let comSesion = null;        // {rol,doctorId,doctorName,token}
+let comMisEntries = [];      // registros del médico logueado (para marcar tarjetas)
+let comRegItems = [];        // ítems en edición dentro del modal de registro
+let comRegRowIdx = null;     // rowIndex del turno que se está registrando
+try { comSesion = JSON.parse(sessionStorage.getItem('ac_com_ses') || 'null'); } catch (e) {}
+
+function comSetSesion(s) {
+  comSesion = s || null;
+  try { s ? sessionStorage.setItem('ac_com_ses', JSON.stringify(s)) : sessionStorage.removeItem('ac_com_ses'); } catch (e) {}
+}
+// Auto-bloqueo por inactividad (equipo compartido en el consultorio): si el
+// médico desbloquea y se va sin apretar "Bloquear", la sesión se cierra sola
+// tras 4 min sin actividad de comisiones. La marca (ts) viaja en la sesión →
+// sobrevive a un reload, así que recargar no reinicia el reloj.
+// A PROPÓSITO la actividad se refresca SOLO con acciones de comisión (abrir el
+// panel/registro, tipear en el form, guardar), NO con el mouse global: en un
+// equipo compartido, la actividad del próximo que se siente NO debe mantener
+// viva la sesión de otro médico. Dejar el panel abierto y alejarse tampoco la
+// mantiene viva. (Costo aceptado: leer la lista >4 min sin tocar nada pide la
+// clave de nuevo.)
+const COM_IDLE_MS = 4 * 60 * 1000;   // 4 minutos
+function comActividad() {
+  if (!comSesion) return;
+  var now = Date.now();
+  if (now - (comSesion.ts || 0) < 15000) return;   // throttle: 1 escritura cada 15s máx
+  comSesion.ts = now; comSetSesion(comSesion);
+}
+function comChequeoIdle() {
+  if (!comSesion) return;
+  if (Date.now() - (comSesion.ts || 0) > COM_IDLE_MS) {
+    comSetSesion(null); comMisEntries = [];
+    // Cerramos cualquier modal de comisiones abierto para no dejar datos a la vista.
+    ['comRegModal','comPanelModal','comLoginModal'].forEach(function(id){ var m = document.getElementById(id); if (m) m.style.display = 'none'; });
+    if (activeView === 'reviewed') setView('sala');
+    showToast('🔒 Comisiones bloqueadas por inactividad');
+  }
+}
+function comCargarConfig() {
+  if (COM_CFG && COM_CFG.ok) return Promise.resolve(COM_CFG);   // ya cargada bien
+  // Si falla o el backend responde ok:false, dejamos un centinela (no-ok) para
+  // que COM_CFG deje de ser null: así el gate de Finalizados NO reintenta en
+  // loop ni bloquea la vista para TODOS los médicos. Falla hacia "mostrar
+  // Finalizados normal" (el dinero igual está protegido por el token del backend).
+  // Mientras sea centinela, próximas llamadas reintentan y pueden mejorarlo a ok.
+  return fetch(API_URL + '?action=comConfig').then(r => r.json())
+    .then(c => { if (c && c.ok) COM_CFG = c; else if (!COM_CFG) COM_CFG = { ok:false, doctores:[], categorias:[] }; return COM_CFG; })
+    .catch(() => { if (!COM_CFG) COM_CFG = { ok:false, doctores:[], categorias:[] }; return COM_CFG; });
+}
+// ¿El médico con este nombre canónico gana comisión? → {id,name} o null
+function comDoctorDe(nombre) {
+  if (!COM_CFG || !nombre) return null;
+  return (COM_CFG.doctores || []).find(d => d.name === nombre) || null;
+}
+// ¿La sesión actual está desbloqueada para ese médico?
+function comDesbloqueado(nombre) {
+  const d = comDoctorDe(nombre);
+  return !!(d && comSesion && comSesion.rol === 'medico' && comSesion.doctorId === d.id);
+}
+function comCatPct(key) {
+  const c = COM_CFG && (COM_CFG.categorias || []).find(x => x.key === key);
+  return c ? c.pct : 0;
+}
+function comFmt(n) { return '$' + (Math.round(n) || 0).toLocaleString('es-CO'); }
+// POST a comisiones: text/plain para no disparar preflight CORS.
+function comPost(body) {
+  return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
+    .then(r => r.json());
+}
+
+// ── Gate de comisiones: pide la clave (4 díg) y desbloquea Finalizados ──
+let comLoginBusy = false;
+function comCandado(doctorId) {
+  const doc = COM_CFG && (COM_CFG.doctores || []).find(d => d.id === doctorId);
+  if (!doc) return;
+  // Ya desbloqueado ese mismo médico → no hay nada que pedir.
+  if (comSesion && comSesion.rol === 'medico' && comSesion.doctorId === doctorId) { renderAll(); return; }
+  const modal = document.getElementById('comLoginModal');
+  document.getElementById('comLoginTitle').textContent = 'Finalizados de ' + doc.name.replace(/^Dra?\.\s*/, '');
+  document.getElementById('comLoginPass').value = '';
+  document.getElementById('comLoginErr').textContent = '';
+  modal.dataset.doctorId = doctorId;
+  modal.dataset.doctorName = doc.name;
+  modal.style.display = 'flex';
+  setTimeout(() => { try { document.getElementById('comLoginPass').focus(); } catch (e) {} }, 60);
+}
+function comCerrarLogin() {
+  document.getElementById('comLoginModal').style.display = 'none';
+  // Si canceló el gate de Finalizados sin desbloquear, lo sacamos de esa vista.
+  if (activeView === 'reviewed' && comDoctorDe(miMedico) && !comDesbloqueado(miMedico)) setView('sala');
+}
+function comEnviarLogin() {
+  if (comLoginBusy) return;
+  const modal = document.getElementById('comLoginModal');
+  const doctorId = modal.dataset.doctorId;
+  const doctorName = modal.dataset.doctorName;
+  const pass = (document.getElementById('comLoginPass').value || '').replace(/\D/g, '');
+  const err = document.getElementById('comLoginErr');
+  if (pass.length < 4) { err.textContent = 'La clave es de 4 dígitos.'; return; }
+  comLoginBusy = true;
+  err.textContent = 'Verificando…';
+  comPost({ action: 'comLogin', rol: 'medico', doctorId: doctorId, pass: pass }).then(res => {
+    comLoginBusy = false;
+    if (!res || !res.ok) {
+      err.textContent = (res && res.error) || 'No se pudo.';
+      document.getElementById('comLoginPass').value = '';
+      return;
+    }
+    comSetSesion({ rol: 'medico', doctorId: res.doctorId, doctorName: res.doctorName, token: res.token, ts: Date.now() });
+    document.getElementById('comLoginModal').style.display = 'none';
+    // Aseguramos la identidad del médico (los turnos filtran por calledBy).
+    if (miMedico !== doctorName) setMiMedico(doctorName);
+    comCargarMisEntries().then(() => {
+      if (activeView === 'agenda') return;
+      if (activeView !== 'reviewed') setView('reviewed'); else renderAll();
+    });
+  }).catch(() => { comLoginBusy = false; err.textContent = 'Error de conexión.'; });
+}
+
+// ── Registros del médico logueado (para marcar tarjetas y el panel) ──
+function comCargarMisEntries() {
+  if (!comSesion) { comMisEntries = []; return Promise.resolve([]); }
+  return comPost({ action: 'comListar', rol: comSesion.rol, doctorId: comSesion.doctorId, token: comSesion.token })
+    .then(res => {
+      if (res && res.needLogin) { comSetSesion(null); comMisEntries = []; return []; }
+      comMisEntries = (res && res.entries) || [];
+      return comMisEntries;
+    }).catch(() => comMisEntries);
+}
+function comEntryDeRow(rowIdx) {
+  return comMisEntries.find(e => String(e.rowIndex) === String(rowIdx)) || null;
+}
+
+// ── Registro de servicios de un turno (botón en la tarjeta Finalizados) ──
+function comAbrirRegistro(rowIdx) {
+  if (!comSesion || comSesion.rol !== 'medico') { showToast('Entrá a Finalizados con tu clave primero.'); return; }
+  const r = allRecords.find(x => x.rowIndex === rowIdx);
+  if (!r) return;
+  comActividad();
+  comRegRowIdx = rowIdx;
+  const prev = comEntryDeRow(rowIdx);
+  document.getElementById('comRegPet').textContent = r.petName || '—';
+  document.getElementById('comRegSub').textContent = (r.turno ? r.turno + ' · ' : '') + (r.ownerName || '');
+  document.getElementById('comRegFact').value = prev ? (prev.fact || '') : '';
+  document.getElementById('comRegNotas').value = prev ? (prev.notes || '') : '';
+  document.getElementById('comRegErr').textContent = '';
+  document.getElementById('comRegModal').dataset.entryId = prev ? prev.id : '';
+  comRegItems = (prev && prev.items && prev.items.length)
+    ? prev.items.map(it => ({ desc: it.desc, cat: it.cat, val: it.val, pct: it.pct }))
+    : [];
+  if (!comRegItems.length) comRegItems.push(comRegNuevoItem());
+  comRegRender();
+  document.getElementById('comDelBtn').style.display = prev ? '' : 'none';
+  document.getElementById('comRegModal').style.display = 'flex';
+}
+function comRegNuevoItem() {
+  const c0 = COM_CFG && COM_CFG.categorias && COM_CFG.categorias[0];
+  return { desc: '', cat: c0 ? c0.key : '', val: 0, pct: c0 ? c0.pct : 0 };
+}
+function comRegAddItem() { comRegItems.push(comRegNuevoItem()); comRegRender(); }
+function comRegDelItem(i) { comRegItems.splice(i, 1); if (!comRegItems.length) comRegItems.push(comRegNuevoItem()); comRegRender(); }
+function comRegUpd(i, field, val) {
+  if (!comRegItems[i]) return;
+  comActividad();   // tipear en el formulario cuenta como actividad (no cortar la sesión)
+  if (field === 'val') { comRegItems[i].val = Number(val) || 0; comRegTotales(); }
+  else if (field === 'cat') { comRegItems[i].cat = val; comRegItems[i].pct = comCatPct(val); comRegRender(); }
+  else comRegItems[i][field] = val;
+}
+function comRegRender() {
+  const cats = (COM_CFG && COM_CFG.categorias) || [];
+  const cont = document.getElementById('comRegItems');
+  cont.innerHTML = comRegItems.map((it, i) => {
+    const opts = cats.map(c => '<option value="' + c.key + '"' + (c.key === it.cat ? ' selected' : '') + '>' + esc(c.label) + ' (' + c.pct + '%)</option>').join('');
+    return '<div class="com-item">' +
+      '<input class="com-in-desc" placeholder="Servicio / descripción" value="' + esc(it.desc || '') + '" oninput="comRegUpd(' + i + ',\'desc\',this.value)">' +
+      '<div class="com-item-row">' +
+        '<select class="com-in-cat" onchange="comRegUpd(' + i + ',\'cat\',this.value)">' + opts + '</select>' +
+        '<input class="com-in-val" type="number" inputmode="numeric" placeholder="Valor" value="' + (it.val || '') + '" oninput="comRegUpd(' + i + ',\'val\',this.value)">' +
+        '<span class="com-item-com" id="comItemCom' + i + '"></span>' +
+        '<button class="com-item-del" onclick="comRegDelItem(' + i + ')" title="Quitar">✕</button>' +
+      '</div></div>';
+  }).join('');
+  comRegTotales();
+}
+function comRegTotales() {
+  let tv = 0, tc = 0;
+  comRegItems.forEach((it, i) => {
+    const com = Math.round((Number(it.val) || 0) * (Number(it.pct) || 0)) / 100;
+    tv += Number(it.val) || 0; tc += com;
+    const el = document.getElementById('comItemCom' + i);
+    if (el) el.textContent = com ? ('→ ' + comFmt(com)) : '';
+  });
+  document.getElementById('comRegTot').textContent = 'Valor: ' + comFmt(tv) + '   ·   Comisión: ' + comFmt(tc);
+}
+function comCerrarRegistro() { document.getElementById('comRegModal').style.display = 'none'; }
+function comGuardarRegistro() {
+  if (!comSesion) return;
+  comActividad();
+  const err = document.getElementById('comRegErr');
+  const r = allRecords.find(x => x.rowIndex === comRegRowIdx);
+  const items = comRegItems.filter(it => (it.desc || '').trim() || Number(it.val) > 0);
+  if (!items.length) { err.textContent = 'Agregá al menos un servicio con valor.'; return; }
+  const entry = {
+    id: document.getElementById('comRegModal').dataset.entryId || '',
+    turno: r ? (r.turno || '') : '', rowIndex: comRegRowIdx,
+    patient: r ? (r.petName || '') : '', owner: r ? (r.ownerName || '') : '',
+    fact: document.getElementById('comRegFact').value,
+    notes: document.getElementById('comRegNotas').value,
+    items: items
+  };
+  err.textContent = 'Guardando…';
+  comPost({ action: 'comGuardar', rol: comSesion.rol, doctorId: comSesion.doctorId, token: comSesion.token, entry: entry })
+    .then(res => {
+      if (res && res.needLogin) { err.textContent = 'Sesión vencida, volvé a entrar con tu clave.'; comSetSesion(null); return; }
+      if (!res || !res.ok) { err.textContent = (res && res.error) || 'No se pudo guardar.'; return; }
+      comCerrarRegistro();
+      comCargarMisEntries().then(() => { if (activeView !== 'agenda') renderAll(); });
+      showToast('✓ Servicios registrados');
+    }).catch(() => { err.textContent = 'Error de conexión.'; });
+}
+function comBorrarRegistro() {
+  const entryId = document.getElementById('comRegModal').dataset.entryId || '';
+  if (!entryId || !comSesion) return;
+  if (!confirm('¿Borrar este registro de servicios?')) return;
+  comPost({ action: 'comBorrar', rol: comSesion.rol, doctorId: comSesion.doctorId, token: comSesion.token, id: entryId })
+    .then(res => {
+      if (res && res.ok) {
+        comCerrarRegistro();
+        comCargarMisEntries().then(() => { if (activeView !== 'agenda') renderAll(); });
+        showToast('Registro borrado');
+      } else { showToast((res && res.error) || 'No se pudo borrar.'); }
+    });
+}
+
+// ── Panel privado del médico (resumen de sus registros) ──
+function comAbrirPanel() {
+  if (!comSesion) return;
+  comActividad();
+  comCargarMisEntries().then(() => {
+    let tv = 0, tc = 0;
+    comMisEntries.forEach(e => { tv += e.totalVal || 0; tc += e.totalCom || 0; });
+    let html = '<div class="com-panel-tot"><div><span>Registros</span><b>' + comMisEntries.length + '</b></div>' +
+      '<div><span>Valor</span><b>' + comFmt(tv) + '</b></div>' +
+      '<div class="com-hl"><span>Mi comisión</span><b>' + comFmt(tc) + '</b></div></div>';
+    html += '<button class="com-chg-btn" onclick="comAbrirCambio()">🔑 Cambiar mi clave</button>';
+    if (!comMisEntries.length) {
+      html += '<div class="com-empty">Todavía no registraste servicios.<br>Andá a <b>Finalizados</b> y usá el botón 💰 en cada tarjeta.</div>';
+    } else {
+      html += comMisEntries.map(e =>
+        '<div class="com-entry">' +
+          '<div class="com-entry-h"><b>' + esc(e.patient || '—') + '</b>' + (e.turno ? ' <span class="com-badge">' + esc(e.turno) + '</span>' : '') + '<span class="com-entry-com">' + comFmt(e.totalCom) + '</span></div>' +
+          '<div class="com-entry-m">' + esc(e.date || '') + (e.fact ? ' · Factura ' + esc(e.fact) : '') + (e.owner ? ' · ' + esc(e.owner) : '') + '</div>' +
+          '<div class="com-entry-items">' + (e.items || []).map(it => esc(it.desc || it.cat) + ' (' + comFmt(it.val) + ')').join(' · ') + '</div>' +
+        '</div>').join('');
+    }
+    document.getElementById('comPanelBody').innerHTML = html;
+    document.getElementById('comPanelName').textContent = (comSesion.doctorName || '').replace(/^Dra?\.\s*/, '');
+    document.getElementById('comPanelModal').style.display = 'flex';
+  });
+}
+function comCerrarPanel() { document.getElementById('comPanelModal').style.display = 'none'; }
+function comSalir() {
+  comSetSesion(null); comMisEntries = [];
+  comCerrarPanel();
+  // Al bloquear, salimos de la vista protegida (si no, quedaría visible sin clave).
+  if (activeView === 'reviewed') setView('sala');
+  else if (activeView !== 'agenda') renderAll();
+  showToast('Comisiones bloqueadas');
+}
+
+// ── Cambiar mi clave (desde el panel privado) ──
+let comChgBusy = false;
+function comAbrirCambio() {
+  if (!comSesion) return;
+  comActividad();
+  ['comChgActual','comChgNueva','comChgConfirm'].forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('comChgErr').textContent = '';
+  document.getElementById('comChangeModal').style.display = 'flex';
+  setTimeout(function(){ try { document.getElementById('comChgActual').focus(); } catch (e) {} }, 60);
+}
+function comCerrarCambio() { document.getElementById('comChangeModal').style.display = 'none'; }
+function comEnviarCambio() {
+  if (comChgBusy || !comSesion) return;
+  const actual = (document.getElementById('comChgActual').value || '').replace(/\D/g, '');
+  const nueva  = (document.getElementById('comChgNueva').value  || '').replace(/\D/g, '');
+  const conf   = (document.getElementById('comChgConfirm').value || '').replace(/\D/g, '');
+  const err = document.getElementById('comChgErr');
+  if (actual.length < 4 || nueva.length < 4) { err.textContent = 'Las claves son de 4 dígitos.'; return; }
+  if (nueva !== conf) { err.textContent = 'La clave nueva no coincide.'; return; }
+  if (nueva === actual) { err.textContent = 'La nueva tiene que ser distinta a la actual.'; return; }
+  comChgBusy = true; err.textContent = 'Cambiando…';
+  comActividad();
+  comPost({ action: 'comCambiarClave', rol: comSesion.rol, doctorId: comSesion.doctorId, token: comSesion.token, claveActual: actual, claveNueva: nueva })
+    .then(res => {
+      comChgBusy = false;
+      if (res && res.needLogin) { err.textContent = 'Sesión vencida, volvé a entrar con tu clave.'; comSetSesion(null); return; }
+      if (!res || !res.ok) { err.textContent = (res && res.error) || 'No se pudo.'; return; }
+      // El backend rota el token al cambiar la clave (invalida sesiones robadas):
+      // actualizamos el nuestro para no caernos.
+      if (res.token) comSetSesion({ rol: comSesion.rol, doctorId: comSesion.doctorId, doctorName: comSesion.doctorName, token: res.token, ts: Date.now() });
+      comCerrarCambio();
+      showToast('✓ Clave cambiada');
+    }).catch(() => { comChgBusy = false; err.textContent = 'Error de conexión.'; });
+}
+
 // ── Turno ────────────────────────────────────────────────────
 // Quién cubre consulta general en esta jornada. YA NO lo marca el médico:
 // lo define recepción desde su pantalla (pop-up de médicos de turno). Acá
@@ -1037,6 +1501,7 @@ function cargarMedicos() {
       pintarMedicoChip();   // el color depende del turno, que llega acá
       aplicarTabAgenda();   // ya con la lista, ocultamos agenda a los auxiliares
       aplicarMedicoDesdeURL(); // si llegó por el link de su agenda (?medico=), la abrimos ya
+      comCargarConfig();       // config de comisiones (para el candado en el selector)
     })
     .catch(function(){});
 }
@@ -1760,13 +2225,19 @@ function renderAll() {
     }
   });
 
+  // Barra de comisiones: solo cuando un médico de comisión ya desbloqueó su
+  // Finalizados. Le da acceso a su panel privado y a bloquear de nuevo.
+  const comHead = (activeView === 'reviewed' && comDesbloqueado(miMedico))
+    ? '<div class="com-topbar"><button class="com-mis-btn" onclick="comAbrirPanel()">💰 Mis comisiones</button><button class="com-lock-btn" onclick="comSalir()" title="Bloquear de nuevo">🔒 Bloquear</button></div>'
+    : '';
+
   if (!records.length) {
     const msg = activeView === 'atendiendo'
       ? 'Nadie en consulta ahora mismo'
       : (dfVal ? 'No hay atendidos en la fecha elegida'
                : 'Nadie atendido hoy todavía · usá la fecha para ver otros días');
     document.getElementById('mainCnt').innerHTML =
-      '<div class="empty"><div class="empty-icon">🐾</div><div class="empty-title">Todo al día</div><div class="empty-sub">' + msg + '</div></div>';
+      comHead + '<div class="empty"><div class="empty-icon">🐾</div><div class="empty-title">Todo al día</div><div class="empty-sub">' + msg + '</div></div>';
     return;
   }
 
@@ -1785,7 +2256,7 @@ function renderAll() {
     html += '</div>';
   });
 
-  document.getElementById('mainCnt').innerHTML = html;
+  document.getElementById('mainCnt').innerHTML = comHead + html;
 }
 
 function formatDateKey(dt) {
@@ -2026,8 +2497,17 @@ function buildCard(r) {
   const svcShort = svc.replace('Consulta ','').replace('Control de ','').replace('Control','Control');
   const color = serviceColor(svc);
 
+  // Comisiones: barra para registrar servicios. Solo aparece si el médico de
+  // comisión desbloqueó su perfil (candado) y es SU tarjeta ya finalizada.
+  const comPuede = reviewed && r.calledBy === miMedico && comDesbloqueado(miMedico);
+  const comYa = comPuede && comEntryDeRow(rowIdx);
+  const comBar = comPuede
+    ? '<div class="com-cardbar"><button class="com-reg-btn'+(comYa?' done':'')+'" onclick="event.stopPropagation();comAbrirRegistro('+rowIdx+')">'+(comYa?'✓ Servicios registrados · editar':'💰 Registrar servicios')+'</button></div>'
+    : '';
+
   return `
 <div class="rec${reviewed?' reviewed':''}" id="rec-${rowIdx}" style="border-left:5px solid ${color}">
+  ${comBar}
   <div class="rec-head" onclick="toggleRec(${rowIdx})">
     <div class="rec-info">
       <div class="rec-top">
@@ -2282,6 +2762,9 @@ window.addEventListener('focus', refrescarAhora);
 window.addEventListener('pageshow', refrescarAhora);   // volver desde el historial/PWA
 // El cronómetro de "En consulta" avanza solo, cada 30s, sin re-renderizar todo.
 setInterval(function(){ if (!pausado) tickConsultas(); }, 30000);
+// Auto-bloqueo de comisiones por inactividad (corre aunque la página esté en
+// pausa: justamente queremos bloquear si el médico se fue).
+setInterval(comChequeoIdle, 30000);
 
 // ── Jalar para recargar (pull-to-refresh) ──
 // Desde arriba de todo (scrollY 0), jalás hacia abajo; si pasás el umbral y
@@ -2326,6 +2809,10 @@ medicosDelCache();          // carga la lista cacheada, sin esperar
 pintarMedicoChip();         // muestra el nombre guardado de una
 recordsDelCache();          // pinta la última cola guardada AL INSTANTE
 cargarMedicos();
+comCargarConfig();          // config de comisiones lista cuanto antes
+// Si quedó una sesión de comisiones abierta (mismo día), traé sus registros;
+// si el pase ya venció, comCargarMisEntries la cierra sola.
+if (comSesion) comCargarMisEntries();
 loadRecords();              // refresca con el backend por detrás
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js, para que un refresco
