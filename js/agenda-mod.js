@@ -849,6 +849,13 @@
         '<input type="hidden" id="fSvc" value="Consulta general">'+
         '<div id="fDurWrap" style="margin-top:12px"><label>Duración</label><select id="fDur"></select></div>'+
         '<div style="margin-top:12px"><label>Nota del caso <span style="font-weight:400">(motivo · obligatoria)</span></label><textarea id="fNot" rows="2" placeholder="Motivo, indicaciones…"></textarea></div>'+
+        // Comprobante de PAGO: obligatorio para Marisol especializado. Se muestra
+        // u oculta según el servicio elegido (ver _syncCompPago).
+        '<div id="fCompPagoWrap" style="margin-top:12px;display:none">'+
+          '<label>💳 Comprobante de pago <span style="font-weight:400">(obligatorio)</span></label>'+
+          '<input type="file" id="fCompPago" accept="image/*" capture="environment">'+
+          '<div class="agm-hint" style="text-align:left;padding:4px 0;color:#b45309">Con la Dra. Marisol, consulta/control especializado NO se agenda sin comprobante de pago.</div>'+
+        '</div>'+
         // Solo al forzar sobre un bloqueo: comprobante (foto de aprobación del Dr.).
         (S.crear.forzar
           ? '<div style="margin-top:12px"><label>📎 Comprobante <span style="font-weight:400">(foto de la aprobación del Dr.)</span></label>'+
@@ -863,11 +870,16 @@
       // marca, guarda el valor en #fSvc y recalcula la duración.
       if(S._ov) S._ov.querySelectorAll('.agm-svc').forEach(function(b){ b.onclick=function(){
         S._ov.querySelectorAll('.agm-svc').forEach(function(x){ x.classList.remove('on'); });
-        b.classList.add('on'); $ov('fSvc').value=b.getAttribute('data-v'); syncDur();
+        b.classList.add('on'); $ov('fSvc').value=b.getAttribute('data-v'); syncDur(); _syncCompPago();
       }; });
-      syncDur();
+      syncDur(); _syncCompPago();
       $ov('fGuardar').onclick=function(){ guardarCita(manual); };
     }
+    // ¿La cita en curso exige comprobante de pago? Marisol + especializado.
+    function _exigeComprobante(){
+      return /marisol/i.test(String(S.crear.medico||'')) && /especializ/i.test(String(($ov('fSvc')||{}).value||''));
+    }
+    function _syncCompPago(){ var w=$ov('fCompPagoWrap'); if(w) w.style.display=_exigeComprobante()?'block':'none'; }
     // Duración: TODOS los servicios ofrecen 30 / 60 / 90 min. Arranca en el
     // default del servicio, pero recepción elige el que necesite.
     function syncDur(){
@@ -891,8 +903,11 @@
       // Si por un fallo al cargar la lista quedó vacío, avisamos claro en vez de
       // mandar una cita sin médico que el backend rechaza sin forma de corregir acá.
       if(!String(data.medico||'').trim()){ err.textContent='No hay médico seleccionado. Elegí un médico en el calendario y volvé a tocar el horario.'; return; }
+      // Gate de comprobante de pago (Marisol especializado): sin comprobante no se agenda.
+      var fcp=$ov('fCompPago'), fileP=fcp&&fcp.files&&fcp.files[0];
+      if(_exigeComprobante() && !fileP){ err.textContent='Subí el comprobante de pago — con la Dra. Marisol, consulta/control especializado no se agenda sin él.'; return; }
       $ov('fGuardar').textContent='Guardando…'; $ov('fGuardar').disabled=true;
-      // Si hay comprobante (foto), lo comprimimos y lo mandamos con la cita.
+      // Comprobantes (foto): el de PAGO (Marisol especializado) y el de bloqueo (forzar).
       var fc=$ov('fComp'), file=fc&&fc.files&&fc.files[0];
       function enviar(){
         fetch(api,{method:'POST',body:JSON.stringify({action:'crearCita',data:data})}).then(function(r){return r.json();}).then(function(res){
@@ -906,8 +921,10 @@
           var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent=(res&&res.error)||'No se pudo agendar.';
         }).catch(function(){ var g=$ov('fGuardar'); if(g){g.textContent='Agendar →';g.disabled=false;} var e=$ov('fErr'); if(e) e.textContent='Error de conexión.'; });
       }
-      if(S.crear.forzar && file){ comprimirImagen(file, function(du){ data.comprobante=du; enviar(); }); }
-      else enviar();
+      function _conBloqueo(){ if(S.crear.forzar && file){ comprimirImagen(file, function(du){ data.comprobante=du; enviar(); }); } else enviar(); }
+      // Primero el comprobante de PAGO (si hay), después el de bloqueo, después enviar.
+      if(fileP){ comprimirImagen(fileP, function(du){ data.comprobantePago=du; _conBloqueo(); }); }
+      else _conBloqueo();
     }
     // Achica y comprime la imagen en el CELULAR antes de subir (máx 1200px, JPEG
     // 0.7): la foto queda liviana y la plataforma no se pone pesada.
