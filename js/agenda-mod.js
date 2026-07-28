@@ -100,6 +100,7 @@
     '.agm-navlbl-pick{cursor:pointer;text-decoration:none;border:1.5px solid var(--abd);background:#fff;border-radius:8px;padding:6px 10px}',
     // input date transparente que cubre la etiqueta (tap = calendario nativo).
     '.agm-datewrap input[type=date]{position:absolute;top:-4px;left:-6px;right:-6px;bottom:-4px;opacity:0;cursor:pointer;border:0;padding:0;margin:0;background:transparent}',
+    '.agm-retry{margin-top:10px;cursor:pointer;border:1.5px solid var(--abd);background:#fff;border-radius:8px;padding:7px 14px;font-weight:800;color:var(--atx)}',
     '.agm-seg{display:flex;border:1.5px solid var(--abd);border-radius:8px;overflow:hidden;flex-shrink:0}',
     '.agm-seg button{border:none;background:#fff;padding:5px 9px;font-size:.72rem;font-weight:700;color:var(--atm);cursor:pointer;font-family:inherit}',
     '.agm-seg button.on{background:var(--apl);color:var(--apd)}',
@@ -407,10 +408,33 @@
         pk.value=isoDe(S.ancla);
         pk.onfocus=function(){ if(!pk.value) pk.value=isoDe(S.ancla); };
         pk.onchange=function(){ if(pk.value){ S.ancla=mkFecha(pk.value); refrescarLbl(); cargarCal(); } };
+        // El input es transparente y cubre toda la etiqueta, pero en Android el
+        // calendario nativo solo abría al tocar el iconito (había que apuntarle a
+        // un punto exacto). showPicker() lo abre al tocar CUALQUIER parte del botón.
+        pk.onclick=function(){ try{ if(pk.showPicker) pk.showPicker(); }catch(e){} };
       }
       cargarCal();
     }
     function refrescarLbl(){ var l=$('cLbl'); if(l) l.textContent=etiquetaRango(); }
+
+    // Lectura con timeout y UN reintento. Antes un solo bache de red dejaba la
+    // agenda pegada en "Error al cargar la agenda" sin recuperarse: el Promise.all
+    // era todo-o-nada y no reintentaba. Ahora cada fetch se corta a los 10s y se
+    // reintenta una vez antes de rendirse.
+    function fetchJSON(url, tries){
+      tries = tries || 1;
+      return new Promise(function(resolve, reject){
+        var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+        var to = setTimeout(function(){ if(ctrl){ try{ctrl.abort();}catch(e){} } reject(new Error('timeout')); }, 10000);
+        fetch(url, ctrl?{signal:ctrl.signal}:{})
+          .then(function(x){ return x.json(); })
+          .then(function(j){ clearTimeout(to); resolve(j); })
+          .catch(function(e){ clearTimeout(to); reject(e); });
+      }).catch(function(e){
+        if(tries>1) return fetchJSON(url, tries-1);
+        throw e;
+      });
+    }
 
     function cargarCal(){
       var med = medicoFijo || S.med;
@@ -418,15 +442,28 @@
       if(!med){ W.innerHTML='<div class="agm-empty">Elige un médico para ver su agenda.</div>'; return; }
       W.innerHTML='<div class="agm-sp"></div>';
       var r=rangoVista();
-      Promise.all([
-        fetch(api+'?action=citas&fecha='+r.desde+'&hasta='+r.hasta+'&medico='+encodeURIComponent(med)).then(function(x){return x.json();}),
-        fetch(api+'?action=bloqueos&fecha='+r.desde+'&hasta='+r.hasta+'&medico='+encodeURIComponent(med)).then(function(x){return x.json();}),
-        fetch(api+'?action=horarios&cb='+Date.now()).then(function(x){return x.json();})
-      ]).then(function(rr){
-        var citas=(rr[0]&&rr[0].citas)||[], bloqs=(rr[1]&&rr[1].bloqueos)||[];
-        S.horarios=(rr[2]&&rr[2].horarios)||{};
-        pintarGrid(W, med, citas, bloqs);
-      }).catch(function(){ W.innerHTML='<div class="agm-empty">Error al cargar la agenda.</div>'; });
+      var token=(cargarCal._t=(cargarCal._t||0)+1);   // si se cambió de fecha, ignora la respuesta vieja
+      // Los horarios casi nunca cambian → se cachean por sesión (un fetch menos por salto de fecha).
+      // Solo 'citas' es obligatoria: si bloqueos u horarios fallan momentáneamente, igual pintamos
+      // la grilla (el servidor revalida el bloqueo al guardar, así que no se agenda sobre uno real).
+      var pHor = S.horarios ? Promise.resolve({horarios:S.horarios})
+                            : fetchJSON(api+'?action=horarios&cb='+Date.now(),2).catch(function(){ return {horarios:{}}; });
+      var pBloqs = fetchJSON(api+'?action=bloqueos&fecha='+r.desde+'&hasta='+r.hasta+'&medico='+encodeURIComponent(med),2).catch(function(){ return {bloqueos:[]}; });
+      fetchJSON(api+'?action=citas&fecha='+r.desde+'&hasta='+r.hasta+'&medico='+encodeURIComponent(med),2)
+        .then(function(cj){
+          if(token!==cargarCal._t) return;
+          return Promise.all([pBloqs,pHor]).then(function(rest){
+            if(token!==cargarCal._t) return;
+            var citas=(cj&&cj.citas)||[], bloqs=(rest[0]&&rest[0].bloqueos)||[];
+            S.horarios=(rest[1]&&rest[1].horarios)||S.horarios||{};
+            pintarGrid(W, med, citas, bloqs);
+          });
+        })
+        .catch(function(){
+          if(token!==cargarCal._t) return;
+          W.innerHTML='<div class="agm-empty">No se pudo cargar la agenda.<br><button type="button" class="agm-retry">↻ Reintentar</button></div>';
+          var b=W.querySelector('.agm-retry'); if(b) b.onclick=function(){ cargarCal(); };
+        });
     }
 
     // Guarda una cita movida/estirada (editarCita revalida choque y bloqueo).
@@ -1001,8 +1038,8 @@
           function done(){ el.classList.add('copiado'); if(cp)cp.textContent='✓ copiado'; setTimeout(function(){ el.classList.remove('copiado'); if(cp)cp.textContent='copiar'; },1200); }
           try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done,function(){_copiaFallback(t);done();}); } else { _copiaFallback(t); done(); } }catch(e){ _copiaFallback(t); done(); } };
       });
-      $ov('dCancel').onclick=function(){ agmConfirm({title:'Cancelar cita', msg:'¿Cancelar esta cita? El cliente pierde este horario.', yes:'Sí, cancelar', no:'No', danger:true}).then(function(ok){ if(ok) accionCita('cancelarCita',{id:c.id}); }); };
-      var lb=$ov('dLlego'); if(lb) lb.onclick=function(){ accionCita('llegoCita',{id:c.id}); };
+      $ov('dCancel').onclick=function(){ var cb=this; agmConfirm({title:'Cancelar cita', msg:'¿Cancelar esta cita? El cliente pierde este horario.', yes:'Sí, cancelar', no:'No', danger:true}).then(function(ok){ if(ok) accionCita('cancelarCita',{id:c.id}, cb); }); };
+      var lb=$ov('dLlego'); if(lb) lb.onclick=function(){ accionCita('llegoCita',{id:c.id}, lb); };
       var rb=$ov('dReprog'); if(rb) rb.onclick=function(){ S.reprog={ id:c.id, pet:(c.petName||c.owner||'la cita') }; cerrarOv(); pintarCal(); };
       var pc=$ov('dPago'); if(pc) pc.onchange=function(){ var b=$ov('dPagoBox'); if(b) b.style.display=this.checked?'':'none'; marcarCambio(); };
       // Botón Actualizar: morado si cambió algo.
@@ -1032,13 +1069,18 @@
         });
       };
     }
-    function accionCita(action, payload){
+    function accionCita(action, payload, btn){
       var e=$ov('dErr'); if(e)e.textContent='';
+      // Feedback inmediato: el backend puede tardar 1-2s y el botón parecía
+      // "quedarse pensando". Ahora se deshabilita y dice "Guardando…".
+      var txt0=btn?btn.textContent:'';
+      if(btn){ btn.disabled=true; btn.textContent='Guardando…'; }
+      function rehab(){ if(btn){ btn.disabled=false; btn.textContent=txt0; } }
       payload.action=action;
       fetch(api,{method:'POST',body:JSON.stringify(payload)}).then(function(r){return r.json();}).then(function(res){
         if(res&&res.ok){ cerrarOv(); cargarCal(); }
-        else { if(e) e.textContent=(res&&res.error)||'No se pudo.'; }
-      }).catch(function(){ if(e) e.textContent='Error de conexión.'; });
+        else { rehab(); if(e) e.textContent=(res&&res.error)||'No se pudo.'; }
+      }).catch(function(){ rehab(); if(e) e.textContent='Error de conexión.'; });
     }
     // Reprograma la cita en modo S.reprog al slot tocado.
     function reprogramarA(iso, hm, med, forzar){

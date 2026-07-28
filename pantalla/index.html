@@ -306,17 +306,25 @@ function hablarTurno(r, onDone){
 // arrancar la tanda y vuelve a subir recién cuando la cola queda vacía.
 var colaAnuncios = [];
 var anunciando = false;
-function encolarAnuncio(r){ colaAnuncios.push(r); procesarCola(); }
+var claveActual = null;                                   // clave del anuncio que suena AHORA
+function claveAnuncio(r){ return (r.turno || '') + '|' + (r.calledAt || ''); }
+function encolarAnuncio(r){
+  var k = claveAnuncio(r);
+  if (k === claveActual) return;                          // ya está sonando: no lo repitas
+  for (var i=0;i<colaAnuncios.length;i++){ if (claveAnuncio(colaAnuncios[i]) === k) return; }  // ya en cola
+  colaAnuncios.push(r); procesarCola();
+}
 function procesarCola(){
   if (anunciando) return;
-  if (!colaAnuncios.length) { duck(false); return; }   // tanda terminada → sube la música
+  if (!colaAnuncios.length) { claveActual = null; duck(false); return; }   // tanda terminada → sube la música
   anunciando = true;
   duck(true);                                            // baja la música mientras suena
   var r = colaAnuncios.shift();
+  claveActual = claveAnuncio(r);
   ding();                                                 // ding() ya despierta el AudioContext
   // Medio segundo después del beep arranca el nombre (antes 850ms, se sentía largo).
   setTimeout(function(){
-    hablarTurno(r, function(){ anunciando = false; procesarCola(); });   // al terminar, el próximo
+    hablarTurno(r, function(){ anunciando = false; claveActual = null; procesarCola(); });   // al terminar, el próximo
   }, 500);
 }
 
@@ -451,7 +459,11 @@ function pintar(llamando, esperando){
     llamando.slice().sort(function(a,b){ return new Date(a.calledAt||0) - new Date(b.calledAt||0); })
       .forEach(function(r){
         var clave = r.turno + '|' + (r.calledAt || '');
-        if (!vistos[clave]) { encolarAnuncio(r); confirmarAnuncio(r); }
+        // Doble candado: la memoria local (vistos) Y el registro DURABLE del
+        // backend (anunciadoEn, por turno|calledAt). Con anunciadoEn, si OTRA
+        // pantalla o pestaña ya lo anunció y lo confirmó, esta se queda callada:
+        // se acabó el "sonó 4 veces". Un re-llamado trae otro calledAt → suena.
+        if (!vistos[clave] && !r.anunciadoEn) { encolarAnuncio(r); confirmarAnuncio(r); }
       });
   }
 

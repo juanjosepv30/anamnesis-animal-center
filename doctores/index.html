@@ -2167,28 +2167,34 @@ function markAtendido(rowIndex) {
   conMedico(function(med){
   // Manda el médico: así, si el turno no tenía registrado quién lo atendió,
   // queda firmado con el que lo finaliza.
-  // Con REINTENTO: si el backend estaba ocupado (lock) el cierre se perdía con un
-  // toast fugaz y el paciente quedaba "en consulta" para siempre. Ahora reintenta.
-  showToast('Finalizando…', 8000);
+  // UI OPTIMISTA: la tarjeta sale al INSTANTE y el guardado ocurre en segundo
+  // plano. Antes el médico esperaba TODO el viaje al servidor (incluido el
+  // WhatsApp de gracias, 1-2s) y lo sentía "lento". Si tras reintentar el
+  // guardado falla de verdad, se REVIERTE la tarjeta a su estado previo.
+  const rec = allRecords.find(x => x.rowIndex === rowIndex);
+  var prevEstado = rec ? rec.estadoTurno : null;
+  var prevStatus = rec ? rec.status : null;
+  // Atendido cierra el caso: sale de la sala y de anamnesis, y aparece en Finalizados.
+  if (rec) { rec.estadoTurno = 'atendido'; rec.status = 'revisado'; }
+  renderAll();   // sirve para la sala Y para la lista de anamnesis
+  updateCounts();
+  showToast('✓ Finalizado · pasó a Finalizados');
   (function intentar(intento){
     intento = intento || 1; var MAX = 5;
     fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido', medico: med }) })
       .then(function(r){ return r.json(); })
       .then(function(res){
-        if (res && res.ok) {
-          const rec = allRecords.find(x => x.rowIndex === rowIndex);
-          // Atendido cierra el caso: sale de la sala y de anamnesis, y aparece en Revisadas.
-          if (rec) { rec.estadoTurno = 'atendido'; rec.status = 'revisado'; }
-          renderAll();   // sirve para la sala Y para la lista de anamnesis
-          updateCounts();
-          showToast('✓ Finalizado · pasó a Finalizados');
-          return;
-        }
+        if (res && res.ok) return;   // ya quedó reflejado en pantalla
         if (intento < MAX) { setTimeout(function(){ intentar(intento+1); }, 600*intento); return; }
+        // Falló de verdad tras reintentar: revierte la tarjeta a como estaba y avisa.
+        if (rec) { rec.estadoTurno = prevEstado; rec.status = prevStatus; }
+        renderAll(); updateCounts();
         showToast('❌ No se pudo finalizar (' + (res && res.error ? res.error : 'reintente') + '). Toque Finalizar de nuevo.', 6500);
       })
       .catch(function(){
         if (intento < MAX) { setTimeout(function(){ intentar(intento+1); }, 600*intento); return; }
+        if (rec) { rec.estadoTurno = prevEstado; rec.status = prevStatus; }
+        renderAll(); updateCounts();
         showToast('❌ No se pudo finalizar (conexión). Toque Finalizar de nuevo.', 6500);
       });
   })(1);
@@ -2817,6 +2823,6 @@ loadRecords();              // refresca con el backend por detrás
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js, para que un refresco
      traiga el JS nuevo y no la versión cacheada por el navegador. -->
-<script src="/js/agenda-mod.js?v=20260728g"></script>
+<script src="/js/agenda-mod.js?v=20260728h"></script>
 </body>
 </html>
