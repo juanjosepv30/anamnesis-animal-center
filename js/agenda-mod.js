@@ -858,7 +858,7 @@
           // bloque que estaba display:none — este patrón siempre se ve.
           '<label for="fCompPago" id="fCompPagoBtn" style="display:block;border:1.5px dashed #d9a441;border-radius:10px;padding:13px;text-align:center;background:#fff8ec;color:#b45309;font-weight:700;cursor:pointer">📎 Tomar o elegir foto del comprobante</label>'+
           '<input type="file" id="fCompPago" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden">'+
-          '<div class="agm-hint" style="text-align:left;padding:4px 0;color:#b45309">Con la Dra. Marisol, consulta/control especializado NO se agenda sin comprobante de pago.</div>'+
+          '<div class="agm-hint" style="text-align:left;padding:4px 0;color:#b45309">Con la Dra. Marisol, la consulta/control especializado no se agenda sin comprobante de pago.</div>'+
         '</div>'+
         // Solo al forzar sobre un bloqueo: comprobante (foto de aprobación del Dr.).
         (S.crear.forzar
@@ -877,7 +877,7 @@
         b.classList.add('on'); $ov('fSvc').value=b.getAttribute('data-v'); syncDur(); _syncCompPago();
       }; });
       syncDur(); _syncCompPago();
-      var _cp=$ov('fCompPago'); if(_cp) _cp.onchange=function(){ var b=$ov('fCompPagoBtn'); if(b) b.textContent=(_cp.files&&_cp.files[0])?'✅ Comprobante cargado — tocá para cambiar':'📎 Tomar o elegir foto del comprobante'; };
+      var _cp=$ov('fCompPago'); if(_cp) _cp.onchange=function(){ var b=$ov('fCompPagoBtn'); if(b) b.textContent=(_cp.files&&_cp.files[0])?'✅ Comprobante cargado — toque para cambiar':'📎 Tomar o elegir foto del comprobante'; };
       $ov('fGuardar').onclick=function(){ guardarCita(manual); };
     }
     // ¿La cita en curso exige comprobante de pago? Marisol + especializado.
@@ -912,7 +912,7 @@
       // fileP solo cuenta si el servicio ACTUAL lo exige: así, si el usuario adjuntó
       // foto y después cambió a un servicio general, no se manda un pago que no aplica.
       var fcp=$ov('fCompPago'), fileP=_exigeComprobante()&&fcp&&fcp.files&&fcp.files[0];
-      if(_exigeComprobante() && !fileP){ err.textContent='Subí el comprobante de pago — con la Dra. Marisol, consulta/control especializado no se agenda sin él.'; return; }
+      if(_exigeComprobante() && !fileP){ err.textContent='Suba el comprobante de pago — con la Dra. Marisol, la consulta/control especializado no se agenda sin él.'; return; }
       $ov('fGuardar').textContent='Guardando…'; $ov('fGuardar').disabled=true;
       // Comprobantes (foto): el de PAGO (Marisol especializado) y el de bloqueo (forzar).
       var fc=$ov('fComp'), file=fc&&fc.files&&fc.files[0];
