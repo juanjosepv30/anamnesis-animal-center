@@ -283,7 +283,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
   <div class="modal-bg" id="turnosModal" style="display:none">
     <div class="modal">
       <div class="modal-t" id="turnosTitulo">Médicos de turno</div>
-      <div class="modal-sub" id="turnosSub">Marca quién atiende consulta general en este turno. Les empiezan a llegar las notificaciones al instante.</div>
+      <div class="modal-sub" id="turnosSub">Marque quién atiende consulta general en este turno. Les empiezan a llegar las notificaciones al instante.</div>
       <div class="turnos-lista" id="turnosLista"></div>
       <div class="modal-acts">
         <button class="modal-cancel" onclick="cerrarTurnos()">Cancelar</button>
@@ -335,7 +335,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div id="recVista">
     <div class="card">
       <div class="card-t">Registrar llegada</div>
-      <div class="card-sub">Busca al paciente en Vetesoft, valida contra el calendar y regístralo en la sala. Sirve para los que tienen cita y para los que no.</div>
+      <div class="card-sub">Busque al paciente en Vetesoft, valide contra el calendar y regístrelo en la sala. Sirve para los que tienen cita y para los que no.</div>
       <div id="editBanner"></div>
       <div class="search-row">
         <!-- Una sola caja: el índice busca en TODO a la vez (nombre, dueño, HC,
@@ -371,7 +371,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <div class="modal-bg" id="interesModal" style="display:none" onclick="if(event.target===this)cerrarInteresados()">
   <div class="modal modal-ancho">
     <div class="modal-t">📋 Lista de interesados</div>
-    <div class="modal-sub">Personas que llamaron por un horario y no había cupo. Busca su historia en Vetesoft por cédula (o cárgalo a mano); cuando se abra un hueco lo contactas desde acá.</div>
+    <div class="modal-sub">Personas que llamaron por un horario y no había cupo. Busque su historia en Vetesoft por cédula (o cárguelo a mano); cuando se abra un hueco lo contacta desde acá.</div>
     <div class="search-row">
       <input type="number" id="iCedula" placeholder="Cédula" oninput="buscarInteresVivo()" onkeydown="if(event.key==='Enter')buscarInteres()">
       <input type="text" id="iPet" placeholder="Nombre de la mascota (opcional)" oninput="buscarInteresVivo()" onkeydown="if(event.key==='Enter')buscarInteres()">
@@ -390,7 +390,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <div class="modal-bg" id="horariosModal" style="display:none" onclick="if(event.target===this)cerrarHorarios()">
   <div class="modal modal-ancho">
     <div class="modal-t">🗓️ Horarios de atención</div>
-    <div class="modal-sub">Elegí la <b>semana</b> y cargá el turno de cada médico por día: <b>Mañana</b> 6–14, <b>Tarde</b> 14–22, <b>Noche</b> 22–6, <b>12h</b> 8–20, <b>Todo el día</b> 6–22 o <b>No atiende</b>. Fuera de su turno no se puede agendar. Sin horario cargado esa semana = sin restricción.</div>
+    <div class="modal-sub">Elija la <b>semana</b> y cargue el turno de cada médico por día: <b>Mañana</b> 6–14, <b>Tarde</b> 14–22, <b>Noche</b> 22–6, <b>12h</b> 8–20, <b>Todo el día</b> 6–22 o <b>No atiende</b>. Fuera de su turno no se puede agendar. Sin horario cargado esa semana = sin restricción.</div>
     <div class="hor-weekbar">
       <button class="hor-nav" onclick="horSemana(-1)">‹</button>
       <span id="horSemLbl" class="hor-sem-lbl">—</span>
@@ -501,7 +501,7 @@ function horCopiarDe(weekIso){
     sels.forEach(function(s){ s.value=src[+s.getAttribute('data-dia')]||''; });
   });
   document.getElementById('horCopiarSel').value='';
-  showToast('Copiado de '+_hSemLbl(weekIso)+' — revisá y Guardá');
+  showToast('Copiado de '+_hSemLbl(weekIso)+' — revise y Guarde');
 }
 function _cacheSet(med,sem,dias){ if(!_horData[med])_horData[med]={}; if(dias.some(Boolean))_horData[med][sem]=dias.slice(); else if(_horData[med])delete _horData[med][sem]; }
 function _guardarBulk(items,okMsg,cb){
@@ -619,7 +619,7 @@ function abrirFormInteres(d){
 function agregarInteres(){
   var nombre = (document.getElementById('iNombre')||{}).value ? document.getElementById('iNombre').value.trim() : '';
   var tel    = (document.getElementById('iTel')||{}).value ? document.getElementById('iTel').value.trim() : '';
-  if (!nombre && !tel) { showToast('Poné al menos un nombre o un teléfono'); return; }
+  if (!nombre && !tel) { showToast('Ponga al menos un nombre o un teléfono'); return; }
   var data = {
     nombre: nombre, tel: tel,
     servicio: (document.getElementById('iServicio')||{}).value || '',
@@ -700,7 +700,7 @@ function pintarEditBanner() {
   if (!_editando) { el.innerHTML = ''; return; }
   el.innerHTML =
     '<div class="edit-banner">✏️ <b>Editando el turno '+esc(_editando.turno||'')+'</b> — '+
-    'buscá el paciente correcto y guardá. El turno y su posición NO se pierden; '+
+    'busque el paciente correcto y guarde. El turno y su posición NO se pierden; '+
     'la anamnesis anterior se borra.'+
     '<button class="edit-cancel" onclick="cancelarEdicion()">Cancelar edición</button></div>';
 }
@@ -723,7 +723,7 @@ function pedirEditar(rowIndex) {
   if (qb) { qb.value = (r.petName || r.ownerName || '').trim(); if (qb.value) doSearchVivo(); }
   pintarEditBanner();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  showToast('Buscá el paciente correcto para el turno ' + (r.turno || ''));
+  showToast('Busque el paciente correcto para el turno ' + (r.turno || ''));
 }
 
 // Las 13 especialidades con su médico.
@@ -744,7 +744,7 @@ const SPECIALTIES = [
 ];
 
 function buildSpecOptions() {
-  var h = '<option value="">— Elige la especialidad —</option>';
+  var h = '<option value="">— Elija la especialidad —</option>';
   SPECIALTIES.forEach(function(s){
     h += '<option value="'+s.name+'">'+s.name+' — '+s.doctor+'</option>';
   });
@@ -962,7 +962,7 @@ function pintarServicio() {
   if (cfg.doctor === 'eligeDoc') {
     document.getElementById('regRayosDoc').innerHTML = buildRayosDocOptions(cfg.fijo);
     var lblRD = document.getElementById('lblRayosDoc');
-    if (lblRD) lblRD.innerHTML = 'Médico que lo hace <span class="lbl-tip">(normalmente '+esc(cfg.fijo||'')+', elegí otro o un general de turno si no está)</span>';
+    if (lblRD) lblRD.innerHTML = 'Médico que lo hace <span class="lbl-tip">(normalmente '+esc(cfg.fijo||'')+', elija otro o un general de turno si no está)</span>';
   }
   if (cfg.doctor !== 'elige') document.getElementById('regSpec').value = '';
 
@@ -1311,7 +1311,7 @@ function abrirRegistro(r, esNuevo) {
   document.getElementById('regArea').innerHTML =
     '<div class="reg-form">'+
       cabecera+
-      '<div class="svc-block"><div class="svc-block-lbl">¿Qué servicio es? — toca el color</div>'+buildServicePicker()+'</div>'+
+      '<div class="svc-block"><div class="svc-block-lbl">¿Qué servicio es? — toque el color</div>'+buildServicePicker()+'</div>'+
       '<div class="reg-grid">'+
         // El selector de especialista solo aparece para los servicios que lo
         // eligen (ver SERVICIOS). pintarServicio() lo muestra o lo esconde.
@@ -1330,7 +1330,7 @@ function abrirRegistro(r, esNuevo) {
         // #10 — Varias mascotas en el mismo turno (ej. vacunación de 2-3
         // juntas). No cambia la anamnesis; solo se muestran los nombres en la
         // tarjeta. Se escriben separados por coma.
-        '<div><label>Otras mascotas <span class="lbl-tip">(opcional — mismo turno, separá con coma)</span></label>'+
+        '<div><label>Otras mascotas <span class="lbl-tip">(opcional — mismo turno, separe con coma)</span></label>'+
           '<input id="regPetsExtra" type="text" placeholder="Ej: Toby, Luna" value="'+esc(r.petsExtra||'')+'"></div>'+
         '<div style="grid-column:1/-1"><label>Observaciones para el médico <span class="lbl-tip">(opcional — ej: es inquieto, viene recomendado)</span></label>'+
           '<textarea id="regObs" rows="2" placeholder="Algo importante que el médico deba saber…" style="width:100%;border:1.5px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:.87rem;font-family:inherit;outline:none;background:var(--bg);color:var(--tx);resize:vertical">'+esc(r.observaciones||'')+'</textarea></div>'+
@@ -1361,7 +1361,7 @@ function doRegister() {
   // sería una consulta especializada sin doctor, que no rutea a nadie.
   var specialty = cfg.doctor === 'elige' ? document.getElementById('regSpec').value.trim() : '';
   if (cfg.doctor === 'elige' && !specialty) {
-    showToast('Elige la especialidad / doctor');
+    showToast('Elija la especialidad / doctor');
     return;
   }
 
@@ -1441,7 +1441,7 @@ function doRegister() {
                   'La anamnesis anterior se borró. El turno y su posición se mantienen.';
           } else if (res.telIntentado) {
             em = '⚠️';
-            msg = 'Turno corregido, pero NO se pudo mandar el WhatsApp — revisá el número. ' +
+            msg = 'Turno corregido, pero NO se pudo mandar el WhatsApp — revise el número. ' +
                   'La anamnesis anterior se borró; el turno se mantiene.';
           } else {
             msg = 'Turno corregido ✓ La anamnesis anterior se borró. El turno y su posición se mantienen.';
@@ -1453,7 +1453,7 @@ function doRegister() {
           // El WhatsApp falló pero el paciente entró a la fila igual: sin
           // este aviso todo "se ve bien" y el número malo sigue ahí.
           em  = '⚠️';
-          msg = 'NO se pudo mandar el WhatsApp — revisa el número. ' +
+          msg = 'NO se pudo mandar el WhatsApp — revise el número. ' +
                 'Igual quedó en la sala de espera y el médico ya lo ve, como siempre.';
         } else {
           msg = 'Registrado en la sala de espera' +
@@ -1470,7 +1470,7 @@ function doRegister() {
         loadWaitingRoom(true);
         setTimeout(function(){ document.getElementById('regArea').innerHTML=''; }, 6000);
       } else {
-        document.getElementById('regArea').innerHTML = '<div class="res-note">Error al registrar. Intentá de nuevo.</div>';
+        document.getElementById('regArea').innerHTML = '<div class="res-note">Error al registrar. Intente de nuevo.</div>';
       }
     }).catch(function(){
       document.getElementById('regArea').innerHTML = '<div class="res-note">Error de conexión.</div>';
@@ -1564,7 +1564,7 @@ function wrAusenteTel(r) {
   var t = String(r.ownerPhone||'').replace(/[^0-9]/g,'');
   if (!t) return '<div class="wr-aus-tel wr-aus-sin">Sin teléfono — no dejó número</div>';
   var wa = (t.length===10 && t.charAt(0)==='3') ? '57'+t : t;
-  var msg = encodeURIComponent('Hola, te esperábamos en Animal Center para tu turno y no alcanzaste a pasar. ¿Todo bien? ¿Querés que te reprogramemos?');
+  var msg = encodeURIComponent('Hola, lo esperábamos en Animal Center para su turno y no alcanzó a pasar. ¿Todo bien? ¿Quiere que le reprogramemos?');
   return '<div class="wr-aus-tel">'+
     '<a class="wr-aus-btn" href="tel:'+esc(t)+'">📞 '+esc(r.ownerPhone)+'</a>'+
     '<a class="wr-aus-btn wr-aus-wa" href="https://wa.me/'+esc(wa)+'?text='+msg+'" target="_blank" rel="noopener">💬 WhatsApp</a>'+
@@ -1724,7 +1724,7 @@ function pedirAsignar(rowIndex, modo) {
     docs = (_turnosMedicos || []).filter(function(m){
       return (m.especialidades || []).some(function(e){ return String(e).toLowerCase() === 'apoyo'; });
     }).map(function(m){ return m.medico; });
-    placeholder = '— Elige quién lo hace —';
+    placeholder = '— Elija quién lo hace —';
   } else {
     // Todos los médicos: especialista del servicio primero, luego los de turno,
     // luego el resto. Recepción puede mandar a cualquiera, incluido un especialista.
@@ -1767,10 +1767,10 @@ function pedirAtender(rowIndex) {
   var docs = medicosPasoPrimeroTurno(r.medicoAsignado, r.service);
 
   document.getElementById('atenderMedico').innerHTML =
-    '<option value="">— Elige el médico —</option>' +
+    '<option value="">— Elija el médico —</option>' +
     docs.map(function(n){ return '<option value="'+esc(n)+'"'+(n===r.medicoAsignado?' selected':'')+'>'+esc(n)+'</option>'; }).join('');
   document.getElementById('atenderCons').innerHTML =
-    '<option value="">— Elige el consultorio —</option>' +
+    '<option value="">— Elija el consultorio —</option>' +
     ROOMS.map(function(rm){ return '<option value="'+esc(rm)+'"'+(rm===r.consultorio?' selected':'')+'>'+esc(rm)+'</option>'; }).join('');
 
   document.getElementById('atenderModal').style.display = 'flex';
@@ -1785,7 +1785,7 @@ function confirmarAtender() {
   if (_atenderRow == null) return;
   var medico = document.getElementById('atenderMedico').value;
   var cons   = document.getElementById('atenderCons').value;
-  if (!medico || !cons) { showToast('Elige el médico y el consultorio'); return; }
+  if (!medico || !cons) { showToast('Elija el médico y el consultorio'); return; }
   var btn = document.getElementById('atenderOk'); btn.disabled = true;
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: _atenderRow, estado: 'atendiendo', medico: medico, consultorio: cons }) })
     .then(r=>r.json()).then(function(res){
@@ -1845,7 +1845,7 @@ function markAusente(rowIndex, estado) {
     var r = null;
     for (var i = 0; i < wrRecords.length; i++) if (wrRecords[i].rowIndex === rowIndex) { r = wrRecords[i]; break; }
     var quien = r ? ((r.turno||'') + ' · ' + (r.petName||'')) : 'este paciente';
-    if (!confirm('¿' + quien + ' de verdad se fue o no se presentó?\n\nMárcalo ausente SOLO si realmente no está — no por error.')) return;
+    if (!confirm('¿' + quien + ' de verdad se fue o no se presentó?\n\nMárquelo ausente SOLO si realmente no está — no por error.')) return;
   }
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: estado }) })
     .then(r=>r.json()).then(function(res){
@@ -1887,7 +1887,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js (igual que en doctores). -->
-<script src="/js/agenda-mod.js?v=20260728f"></script>
+<script src="/js/agenda-mod.js?v=20260728g"></script>
 <script>
 // Precarga el índice de Vetesoft ACÁ (no en iniciar), porque agenda-mod.js —que
 // define window.VetIndex— recién se carga en la línea de arriba. Con el índice

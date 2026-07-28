@@ -356,7 +356,7 @@
             // cubre: tocarla abre el calendario nativo directo (funciona en
             // celular; showPicker() no es confiable ahí). Ver handler abajo.
             '<span class="agm-datewrap">'+
-              '<span class="agm-navlbl agm-navlbl-pick" id="cLbl" title="Toca para saltar a otra fecha">'+esc(etiquetaRango())+'</span>'+
+              '<span class="agm-navlbl agm-navlbl-pick" id="cLbl" title="Toque para saltar a otra fecha">'+esc(etiquetaRango())+'</span>'+
               '<input type="date" id="cPick" aria-label="Ir a una fecha">'+
             '</span>'+
             '<button class="agm-navb" id="cNext">›</button>'+
@@ -387,7 +387,7 @@
           '<span><i class="agm-dot" style="background:#fff;box-shadow:inset 0 0 0 2px #16a34a"></i>Llegó</span>'+
           '<span><i class="agm-dot" style="background:#F7C1C1;border:1px solid #A32D2D"></i>No disp.</span>'+
         '</div>'+
-        (S.reprog?'<div class="agm-reprog">🔁 Moviendo a <b>'+esc(S.reprog.pet)+'</b> — bajá o cambiá de día y tocá el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
+        (S.reprog?'<div class="agm-reprog">🔁 Moviendo a <b>'+esc(S.reprog.pet)+'</b> — baje o cambie de día y toque el nuevo horario. <button class="agm-lnk" id="cReprogX" style="color:var(--apd)">Cancelar</button></div>':'')+
         ((S.vista==='3dias'||S.vista==='dia')?'<div class="agm-shint"><i>↔</i>Desliza para ver los próximos 15 días</div>':'')+
         '<div id="cWrap" class="agm-scroll'+(S.vista==='3dias'?' agm-hscroll':'')+'"><div class="agm-sp"></div></div>';
       var sel=$('cMed'); if(sel) sel.onchange=function(){ S.med=sel.value; cargarCal(); };
@@ -700,7 +700,7 @@
           var col=bk.closest('.agm-body2[data-iso]');
           var iso=col?col.getAttribute('data-iso'):b.desdeF;
           var hm=col?min2hm(slotY(col,ev.clientY)):(b.desdeH||'08:00');
-          agmConfirm({title:'Horario bloqueado', msg:'Este horario tiene un BLOQUEO'+(b.motivo?' ('+b.motivo+')':'')+'. ¿Seguro que querés agendar una cita a las '+hm+'?', yes:'Sí, agendar', danger:true})
+          agmConfirm({title:'Horario bloqueado', msg:'Este horario tiene un BLOQUEO'+(b.motivo?' ('+b.motivo+')':'')+'. ¿Seguro que quiere agendar una cita a las '+hm+'?', yes:'Sí, agendar', danger:true})
             .then(function(ok){ if(ok) abrirCrear(iso, hm, med, true); });
         });
       });
@@ -731,7 +731,7 @@
       o=o||{};
       return new Promise(function(resolve){
         var ov=_capa(
-          '<div class="agm-mh"><div class="agm-mt">'+esc(o.title||'¿Confirmás?')+'</div></div>'+
+          '<div class="agm-mh"><div class="agm-mt">'+esc(o.title||'¿Confirma?')+'</div></div>'+
           '<div style="font-size:.92rem;color:var(--atx);line-height:1.45;margin-bottom:18px">'+esc(o.msg||'')+'</div>'+
           '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">'+
             '<button class="agm-btn" id="cfNo" style="background:#fff;color:var(--atm);border:1.5px solid var(--abd)">'+esc(o.no||'Cancelar')+'</button>'+
@@ -769,7 +769,7 @@
           '<label class="agm-wsel">📅 <input type="date" id="wFecha" value="'+esc(iso)+'"></label>'+
           '<label class="agm-wsel">🕐 <select id="wHora">'+horaOpts2(hora)+'</select></label>'+
         '</div>'+
-        (forzar?'<div class="agm-warn">⚠️ Este horario está bloqueado. Vas a agendar una cita igual, encima del bloqueo.</div>':'')+
+        (forzar?'<div class="agm-warn">⚠️ Este horario está bloqueado. Va a agendar una cita igual, encima del bloqueo.</div>':'')+
         '<div class="agm-mlbl">Buscar paciente</div>'+
         '<input type="text" id="mQ" placeholder="Escribe cédula, mascota o dueño…" autocomplete="off">'+
         '<div class="agm-res" id="mRes"></div><div id="mForm"></div>'
@@ -794,7 +794,7 @@
         html+='<div class="agm-r" data-i="'+i+'"><div class="agm-rn">'+esc(r.petName||'(sin nombre)')+' — '+esc(r.owner||'')+(r.registro?' · HC '+esc(r.registro):'')+'</div>'+
           '<div class="agm-rm">'+esc(r.species||'')+(r.breed?' · '+esc(r.breed):'')+(r.documento?' · CC '+esc(r.documento):'')+(r.phone?' · 📞 '+esc(r.phone):'')+'</div></div>';
       });
-      if(!rows.length) html='<div class="agm-hint">Sin resultados. Probá con la cédula, o cargá cliente nuevo.</div>';
+      if(!rows.length) html='<div class="agm-hint">Sin resultados. Intente con la cédula, o cargue cliente nuevo.</div>';
       html+='<button class="agm-nuevo" id="mNuevo">+ Cliente nuevo (cargar a mano)</button>';
       R.innerHTML=html;
       R.querySelectorAll('.agm-r').forEach(function(dv){ dv.onclick=function(){ pickModal(+dv.getAttribute('data-i')); }; });
@@ -824,7 +824,7 @@
         }
       }
       if(VetIndex.listo()){ mostrar(); }
-      else { R.innerHTML='<div class="agm-hint">Cargando buscador…</div>'; VetIndex.load(api).then(function(x){ if(x) mostrar(); else { R.innerHTML='<div class="agm-hint">No se pudo cargar el buscador. Probá por cédula.</div>'; } }); }
+      else { R.innerHTML='<div class="agm-hint">Cargando buscador…</div>'; VetIndex.load(api).then(function(x){ if(x) mostrar(); else { R.innerHTML='<div class="agm-hint">No se pudo cargar el buscador. Intente por cédula.</div>'; } }); }
     }
     function pickModal(i){ var r=S['_m'+i];
       var cedTerm=/^\d+$/.test(S._term||'')?S._term:'';
@@ -841,7 +841,7 @@
           '<div style="margin-top:10px"><label>WhatsApp <span style="font-weight:400">(obligatorio)</span></label><input id="fTel" inputmode="numeric" value="'+esc(S.selCliente.phone||'')+'" placeholder="3001234567"></div>';
       $ov('mForm').innerHTML=
         cab+
-        '<div class="agm-mlbl">Servicio — toca el color</div>'+
+        '<div class="agm-mlbl">Servicio — toque el color</div>'+
         '<div class="agm-svcpick" id="fSvcPick">'+
           SERVICIOS.map(function(s){ var sel=/consulta general/i.test(s);
             return '<button type="button" class="agm-svc'+(sel?' on':'')+'" data-v="'+esc(s)+'" style="--sc:'+svcColor(s)+'">'+esc(s)+'</button>'; }).join('')+
@@ -902,12 +902,12 @@
       if(!String(data.petName||'').trim()){ err.textContent='Falta el nombre de la mascota.'; return; }
       var _tel=String(data.phone||'').replace(/\D/g,'');
       if(_tel.length<10){ err.textContent='Falta el WhatsApp del cliente (número válido de 10 dígitos).'; return; }
-      if(!String(data.servicio||'').trim()){ err.textContent='Elegí el servicio.'; return; }
-      if(!String(data.notas||'').trim()){ err.textContent='Agregá una nota (motivo o indicaciones).'; return; }
+      if(!String(data.servicio||'').trim()){ err.textContent='Elija el servicio.'; return; }
+      if(!String(data.notas||'').trim()){ err.textContent='Agregue una nota (motivo o indicaciones).'; return; }
       // El médico viene de la agenda que estás viendo (no hay selector en el modal).
       // Si por un fallo al cargar la lista quedó vacío, avisamos claro en vez de
       // mandar una cita sin médico que el backend rechaza sin forma de corregir acá.
-      if(!String(data.medico||'').trim()){ err.textContent='No hay médico seleccionado. Elegí un médico en el calendario y volvé a tocar el horario.'; return; }
+      if(!String(data.medico||'').trim()){ err.textContent='No hay médico seleccionado. Elija un médico en el calendario y vuelva a tocar el horario.'; return; }
       // Gate de comprobante de pago (Marisol especializado): sin comprobante no se agenda.
       // fileP solo cuenta si el servicio ACTUAL lo exige: así, si el usuario adjuntó
       // foto y después cambió a un servicio general, no se manda un pago que no aplica.
@@ -1018,7 +1018,7 @@
         if(!hayCambio()){ cerrarOv(); return; }
         var nota=($ov('dNota')||{}).value||''; var pagado=!!($ov('dPago')||{}).checked;
         var dur=parseInt(($ov('dDur')||{}).value,10)||dur0; var file=($ov('dCompPago')&&$ov('dCompPago').files&&$ov('dCompPago').files[0])||null;
-        if(pagado && !file && !c.compPago){ if(e)e.textContent='Adjuntá el comprobante de pago.'; return; }
+        if(pagado && !file && !c.compPago){ if(e)e.textContent='Adjunte el comprobante de pago.'; return; }
         ac.textContent='Guardando…'; ac.disabled=true;
         function falla(msg){ ac.textContent='Actualizar'; ac.disabled=false; if(e)e.textContent=msg||'No se pudo guardar.'; }
         function guardarPagoNota(cb){
@@ -1130,7 +1130,7 @@
           '<div><label>Desde (hora)</label><select id="bDesH">'+horaOpts()+'</select></div>'+
           '<div><label>Hasta (hora)</label><select id="bHasH">'+horaOpts()+'</select></div>'+
         '</div>'+
-        '<div class="agm-sub" id="bDiarioTip" style="display:none;margin-top:2px">Con "todos los días", dejá "Hasta (día)" vacío para que sea indefinido, o poné una fecha de fin.</div>'+
+        '<div class="agm-sub" id="bDiarioTip" style="display:none;margin-top:2px">Con "todos los días", deje "Hasta (día)" vacío para que sea indefinido, o ponga una fecha de fin.</div>'+
         '<div style="margin-top:12px"><label>Motivo <span style="font-weight:400">(opcional)</span></label><input id="bMot" placeholder="Vacaciones, tema familiar…"></div>'+
         '<button class="agm-btn agm-block" style="margin-top:14px" id="bGuardar">🚫 Guardar bloqueo</button>'+
         '<div class="agm-err" id="bErr"></div>'+
@@ -1205,12 +1205,12 @@
       body.innerHTML=
         '<button class="agm-lnk" id="iVolver" style="margin-bottom:12px;color:var(--apd)">‹ Volver a la agenda</button>'+
         '<div class="agm-card"><div class="agm-t">📋 Interesados</div>'+
-        '<div class="agm-sub">Gente que quería una cita y no había cupo. Cuando se libere un hueco, los contactás desde acá. La lista es <b>de cada médico</b>.</div>'+
+        '<div class="agm-sub">Gente que quería una cita y no había cupo. Cuando se libere un hueco, los contacta desde acá. La lista es <b>de cada médico</b>.</div>'+
         (medicoFijo?'':'<div style="margin-bottom:10px"><label>Médico</label><select id="iMed">'+medOpts(S.med)+'</select></div>')+
         // Buscador de Vetesoft: si el cliente ya tiene historia, lo encontrás acá y
         // se autocompleta el dueño y el teléfono. Si no aparece, se carga a mano abajo.
         '<div style="margin-bottom:6px"><label>Buscar en Vetesoft <span style="font-weight:400">(cédula, nombre o dueño)</span></label>'+
-          '<input id="iBusca" type="text" autocomplete="off" placeholder="Escribí para buscar el cliente…"></div>'+
+          '<input id="iBusca" type="text" autocomplete="off" placeholder="Escriba para buscar el cliente…"></div>'+
         '<div id="iBuscRes" style="margin-bottom:8px"></div>'+
         '<div class="agm-row">'+
           '<div><label>Nombre del dueño</label><input id="iNom" type="text" placeholder="Nombre"></div>'+
@@ -1251,7 +1251,7 @@
       }
     }
     function _pintarVetInteres(R, rows){
-      if(!rows.length){ R.innerHTML='<div style="font-size:.75rem;color:var(--atm);padding:2px 1px">Sin coincidencias — cargalo a mano abajo.</div>'; return; }
+      if(!rows.length){ R.innerHTML='<div style="font-size:.75rem;color:var(--atm);padding:2px 1px">Sin coincidencias — cárguelo a mano abajo.</div>'; return; }
       R.innerHTML=rows.map(function(r){
         return '<div class="agm-vres" style="border:1px solid var(--abd);border-radius:8px;padding:6px 9px;margin-bottom:4px;cursor:pointer;font-size:.78rem">'+
           '<b>'+esc(r.owner||r.petName||'—')+'</b>'+(r.registro?' · HC '+esc(r.registro):'')+(r.documento?' · CC '+esc(r.documento):'')+(r.phone?' · 📞 '+esc(r.phone):'')+'</div>';
@@ -1268,10 +1268,10 @@
     function guardarInteres(){
       var err=$('iErr'); if(err) err.textContent='';
       var med=_intMedActual();
-      if(!med){ if(err) err.textContent='Elegí el médico.'; return; }
+      if(!med){ if(err) err.textContent='Elija el médico.'; return; }
       var nom=(($('iNom')||{}).value||'').trim();
       var tel=(($('iTel')||{}).value||'').trim();
-      if(!nom && !tel){ if(err) err.textContent='Poné al menos un nombre o un teléfono.'; return; }
+      if(!nom && !tel){ if(err) err.textContent='Ponga al menos un nombre o un teléfono.'; return; }
       var fec=(($('iFec')||{}).value||''); var per=(($('iPer')||{}).value||'');
       var deseada=[fec?_fechaCortaISO(fec):'', per].filter(Boolean).join(' · ');
       var data={ nombre:nom, tel:tel, medico:med, servicio:(($('iSvc')||{}).value||''),
@@ -1287,7 +1287,7 @@
       var L=$('iList'); if(!L) return; L.innerHTML='<div class="agm-sp"></div>';
       var med=_intMedActual();
       var lbl=$('iMedLbl'); if(lbl) lbl.textContent=med?('· '+med):'';
-      if(!med){ L.innerHTML='<div class="agm-empty">Elegí un médico para ver sus interesados.</div>'; return; }
+      if(!med){ L.innerHTML='<div class="agm-empty">Elija un médico para ver sus interesados.</div>'; return; }
       fetch(api+'?action=interesados&medico='+encodeURIComponent(med)+'&cb='+Date.now()).then(function(r){return r.json();}).then(function(res){
         var xs=(res&&res.interesados)||[];
         if(!xs.length){ L.innerHTML='<div class="agm-empty">Sin interesados en espera para este médico.</div>'; return; }

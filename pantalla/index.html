@@ -72,7 +72,7 @@ body{display:flex;flex-direction:column}
   <div class="sound-box">
     <div class="em">📺</div>
     <h2>Pantalla de sala de espera</h2>
-    <p>Toca para activar. Cada turno se anuncia con un sonido y una <b>voz</b> que lo lee por los parlantes. Ábrela en el computador conectado al sonido de la clínica.</p>
+    <p>Toque para activar. Cada turno se anuncia con un sonido y una <b>voz</b> que lo lee por los parlantes. Ábrala en el computador conectado al sonido de la clínica.</p>
     <button class="btn">Activar</button>
   </div>
 </div>
@@ -423,7 +423,7 @@ function pintar(llamando, esperando){
   var cont = document.getElementById('cards');
   if (!actual) {
     cont.innerHTML = '<div class="empty"><div class="empty-em">🐾</div>'+
-      '<div class="empty-t">Espera a ser llamado</div></div>';
+      '<div class="empty-t">Espere a ser llamado</div></div>';
   } else {
     var html = '';
     [actual, anterior].forEach(function(r, i){
