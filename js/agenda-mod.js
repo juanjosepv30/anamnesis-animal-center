@@ -904,7 +904,9 @@
       // mandar una cita sin médico que el backend rechaza sin forma de corregir acá.
       if(!String(data.medico||'').trim()){ err.textContent='No hay médico seleccionado. Elegí un médico en el calendario y volvé a tocar el horario.'; return; }
       // Gate de comprobante de pago (Marisol especializado): sin comprobante no se agenda.
-      var fcp=$ov('fCompPago'), fileP=fcp&&fcp.files&&fcp.files[0];
+      // fileP solo cuenta si el servicio ACTUAL lo exige: así, si el usuario adjuntó
+      // foto y después cambió a un servicio general, no se manda un pago que no aplica.
+      var fcp=$ov('fCompPago'), fileP=_exigeComprobante()&&fcp&&fcp.files&&fcp.files[0];
       if(_exigeComprobante() && !fileP){ err.textContent='Subí el comprobante de pago — con la Dra. Marisol, consulta/control especializado no se agenda sin él.'; return; }
       $ov('fGuardar').textContent='Guardando…'; $ov('fGuardar').disabled=true;
       // Comprobantes (foto): el de PAGO (Marisol especializado) y el de bloqueo (forzar).
