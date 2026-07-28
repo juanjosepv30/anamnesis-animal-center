@@ -204,10 +204,17 @@ function nombreMascotas(r){
   if (!ex) return base;
   return base ? (base + ', ' + ex) : ex;
 }
+// Pasa un nombre a Mayúscula-inicial-por-palabra para DECIRLO. Google TTS DELETREA
+// las palabras EN MAYÚSCULAS (las toma como siglas): "LULU" → "L-U-L-U". Con
+// inicial-por-palabra las lee como se escriben: "Lulu". Solo afecta la VOZ, no lo
+// que se muestra en pantalla.
+function titulizar(s){
+  return String(s||'').toLowerCase().split(' ').map(function(w){ return w ? (w.charAt(0).toUpperCase()+w.slice(1)) : w; }).join(' ');
+}
 // Igual pero para DECIR en voz alta: la última se une con "y" para que suene
-// natural ("Mila, Toby y Luna").
+// natural ("Mila, Toby y Luna"). Cada nombre se tituliza para que no se deletree.
 function mascotasHabladas(r){
-  var todas = nombreMascotas(r).split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  var todas = nombreMascotas(r).split(',').map(function(s){ return titulizar(s.trim()); }).filter(Boolean);
   if (todas.length <= 1) return todas[0] || '';
   return todas.slice(0, -1).join(', ') + ' y ' + todas[todas.length - 1];
 }
@@ -228,7 +235,7 @@ function tratamiento(nombre){
 // Arma la frase del anuncio (se usa igual para la voz IA y para la del navegador).
 // Ej: "Señora Sandra, por favor pase con Maxi al consultorio Boom Boom."
 function fraseTurno(r){
-  var nombre  = primerNombre(r.ownerName);
+  var nombre  = titulizar(primerNombre(r.ownerName));
   var trato   = tratamiento(r.ownerName);
   var mascota = mascotasHabladas(r);
   var conMasc = mascota ? ('pase con ' + mascota) : 'pase adelante';
@@ -307,9 +314,10 @@ function procesarCola(){
   duck(true);                                            // baja la música mientras suena
   var r = colaAnuncios.shift();
   ding();                                                 // ding() ya despierta el AudioContext
+  // Medio segundo después del beep arranca el nombre (antes 850ms, se sentía largo).
   setTimeout(function(){
     hablarTurno(r, function(){ anunciando = false; procesarCola(); });   // al terminar, el próximo
-  }, 850);
+  }, 500);
 }
 
 function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
