@@ -539,13 +539,23 @@
           var m=slotY(bodyEl,ev.clientY); hov.style.top=yOf(m)+'px'; hov.textContent=min2hm(m); hov.style.display='flex';
         });
         bodyEl.addEventListener('mouseleave', function(){ hov.style.display='none'; });
-        // Tap en hueco vacío → agendar / reprogramar. Usamos pointerdown+pointerup
-        // (NO 'click') porque en móvil, dentro de un contenedor con scroll táctil
-        // (-webkit-overflow-scrolling:touch), el 'click' sintetizado tras el toque
-        // a veces NO se dispara y el tap "no hacía nada" (bug clásico de iOS). Con
-        // pointer events el toque es confiable; el umbral de movimiento distingue
-        // el tap del scroll, y funciona igual con mouse en computador.
-        var _tap=null;
+        // Tap en hueco vacío → agendar / reprogramar. Escuchamos pointerup Y
+        // 'click', con dedupe, porque CADA plataforma rompe uno distinto:
+        //  · iOS (scroll táctil -webkit-overflow-scrolling): el 'click' sintetizado
+        //    a veces NO se dispara → lo cubre pointerup.
+        //  · Android/ColorOS (ej. Oppo): el compositor reclasifica el tap como
+        //    scroll y manda 'pointercancel', que se traga el pointerup → pero el
+        //    'click' SÍ llega, así que lo cubre el respaldo de abajo.
+        // (Antes era solo pointer events y en Android el toque "no abría nada".)
+        var _tap=null, _tapHecho=0;
+        function _hacerTap(cy){
+          var m=slotY(bodyEl,cy); var hm=min2hm(m);
+          var b=bloqueoDe(bloqs,iso,hm);
+          if(b){ agmConfirm({title:'Horario bloqueado', msg:'Acá hay un bloqueo'+(b.motivo?' ('+b.motivo+')':'')+'. ¿'+(S.reprog?'Reprogramar':'Agendar una cita')+' igual en este horario?', yes:'Sí, igual', danger:true})
+            .then(function(ok){ if(!ok) return; if(S.reprog) reprogramarA(iso,hm,med,true); else abrirCrear(iso,hm,med,true); }); return; }
+          if(S.reprog) reprogramarA(iso,hm,med,false);
+          else abrirCrear(iso,hm,med,false);
+        }
         bodyEl.addEventListener('pointerdown', function(ev){
           if(ev.target.closest('.agm-ev')||ev.target.closest('.agm-blk')){ _tap=null; return; }
           _tap={ x:ev.clientX, y:ev.clientY, t:Date.now() };
@@ -557,12 +567,18 @@
           if(ev.target.closest('.agm-ev')||ev.target.closest('.agm-blk')) return;
           if(Math.abs(ev.clientX-s.x)+Math.abs(ev.clientY-s.y)>12) return;  // se movió → fue scroll, no tap
           if(Date.now()-s.t>700) return;                                    // pulsación larga → no es tap
-          var m=slotY(bodyEl,ev.clientY); var hm=min2hm(m);
-          var b=bloqueoDe(bloqs,iso,hm);
-          if(b){ agmConfirm({title:'Horario bloqueado', msg:'Acá hay un bloqueo'+(b.motivo?' ('+b.motivo+')':'')+'. ¿'+(S.reprog?'Reprogramar':'Agendar una cita')+' igual en este horario?', yes:'Sí, igual', danger:true})
-            .then(function(ok){ if(!ok) return; if(S.reprog) reprogramarA(iso,hm,med,true); else abrirCrear(iso,hm,med,true); }); return; }
-          if(S.reprog) reprogramarA(iso,hm,med,false);
-          else abrirCrear(iso,hm,med,false);
+          _tapHecho=Date.now();   // marca para que el 'click' de respaldo no dispare doble
+          _hacerTap(ev.clientY);
+        });
+        // Respaldo Android/ColorOS: el 'click' sintetizado (que SÍ llega aunque el
+        // pointerup se lo trague el pointercancel). Dedupe: si pointerup ya lo tomó
+        // recién, no repetir. El 'click' no se dispara al scrollear, así que
+        // distingue solo el tap del scroll sin necesitar el umbral de movimiento.
+        bodyEl.addEventListener('click', function(ev){
+          if(S._noClick) return;
+          if(Date.now()-_tapHecho<700) return;   // pointerup ya lo tomó
+          if(ev.target.closest('.agm-ev')||ev.target.closest('.agm-blk')) return;
+          _hacerTap(ev.clientY);
         });
       });
       // Columnas (para saber sobre qué DÍA se suelta al arrastrar entre días).

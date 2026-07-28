@@ -1211,7 +1211,8 @@ function comCargarConfig() {
 // ¿El médico con este nombre canónico gana comisión? → {id,name} o null
 function comDoctorDe(nombre) {
   if (!COM_CFG || !nombre) return null;
-  return (COM_CFG.doctores || []).find(d => d.name === nombre) || null;
+  // normEsp: match sin depender de tildes ("Milena López" == "Milena Lopez").
+  return (COM_CFG.doctores || []).find(d => normEsp(d.name) === normEsp(nombre)) || null;
 }
 // ¿La sesión actual está desbloqueada para ese médico?
 function comDesbloqueado(nombre) {
@@ -2817,6 +2818,6 @@ loadRecords();              // refresca con el backend por detrás
 </script>
 <!-- OJO: subir el ?v= cada vez que cambie agenda-mod.js, para que un refresco
      traiga el JS nuevo y no la versión cacheada por el navegador. -->
-<script src="/js/agenda-mod.js?v=20260727e"></script>
+<script src="/js/agenda-mod.js?v=20260728a"></script>
 </body>
 </html>
