@@ -139,7 +139,11 @@
     '.agm-gh.hoy{color:#fff;background:var(--ap)}',
     '.agm-gh.hoy small{color:#f3e7f7}',
     '.agm-guth{border-bottom:1.5px solid var(--abd);background:#fff;position:sticky;top:0;left:0;z-index:5}',
-    '.agm-body2{position:relative}',
+    // touch-action explícito: sin esto, en Android/ColorOS el compositor
+    // reclasifica el tap como scroll ante el mínimo jitter y dispara
+    // pointercancel en vez de pointerup → el tap para agendar "no hacía nada".
+    // pan-x pan-y deja hacer scroll en ambos ejes PERO el tap estacionario dispara.
+    '.agm-body2{position:relative;touch-action:pan-x pan-y}',
     '.agm-hl{position:absolute;left:0;right:0;border-top:1px dashed #efe6f5}',
     '.agm-hl.hr{border-top:1px solid #d9c9e6}',
     '.agm-hlbl{position:absolute;left:0;right:0;text-align:right;padding-right:6px;font-size:.66rem;font-weight:700;color:#9c8bb0;transform:translateY(-6px)}',
@@ -749,7 +753,10 @@
       var wh=$ov('wHora');  if(wh) wh.onchange=function(){ S.crear.hora=wh.value; };
       var q=$ov('mQ');
       q.oninput=function(){ clearTimeout(S._deb); var v=q.value; S._deb=setTimeout(function(){ buscarModal(v); }, 350); };
-      q.focus();
+      // En celular NO auto-enfocamos: el teclado de Android, al abrirse, redimensiona
+      // el viewport y puede tapar/desplazar el modal (position:fixed) — se veía como
+      // "no pasa nada". El usuario toca el campo cuando quiere buscar. En escritorio sí.
+      if(!_agmMovil) q.focus();
     }
     function $ov(id){ return S._ov ? S._ov.querySelector('#'+id) : null; }
 
