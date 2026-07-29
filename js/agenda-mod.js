@@ -425,7 +425,7 @@
       tries = tries || 1;
       return new Promise(function(resolve, reject){
         var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
-        var to = setTimeout(function(){ if(ctrl){ try{ctrl.abort();}catch(e){} } reject(new Error('timeout')); }, 10000);
+        var to = setTimeout(function(){ if(ctrl){ try{ctrl.abort();}catch(e){} } reject(new Error('timeout')); }, 20000);
         fetch(url, ctrl?{signal:ctrl.signal}:{})
           .then(function(x){ return x.json(); })
           .then(function(j){ clearTimeout(to); resolve(j); })
