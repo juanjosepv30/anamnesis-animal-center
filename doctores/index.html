@@ -400,6 +400,13 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .q-click{cursor:pointer;flex:1;min-width:0;border-radius:8px;transition:opacity .15s}
 .q-click:hover{opacity:.72}
 .q-item.q-click{display:flex;align-items:center;gap:9px}
+/* Cita que ya llegó y es llamable desde la cola (sin ser el "siguiente"). */
+.q-wrap-cita{background:var(--bg);border-radius:8px;margin-bottom:5px}
+.q-wrap-cita .q-item{margin-bottom:0;background:transparent}
+.q-call{display:flex;gap:6px;padding:0 9px 8px 9px;align-items:center}
+.q-call select{flex:1;border:1.5px solid var(--bd);border-radius:8px;padding:6px 8px;font-size:.74rem;font-family:'DM Sans',sans-serif;background:var(--wh);outline:none;min-width:0}
+.q-call select:disabled{opacity:.5;cursor:not-allowed}
+.btn-call.chico{padding:6px 11px;font-size:.74rem}
 .next-motivo{font-size:.72rem;color:var(--tm);font-style:italic;margin-top:6px;line-height:1.35}
 .mini{font-size:.66rem;font-weight:800;border-radius:99px;padding:2px 8px;white-space:nowrap}
 .mini-ag{background:#ede9fe;color:#6d28d9}
@@ -781,6 +788,26 @@ function consultorioPreferido(r) {
   if (s.indexOf('viaje') !== -1) return 'Viajero';
   if (s.indexOf('rayos') !== -1 || s.indexOf('ecograf') !== -1) return 'Rayos X';
   return '';
+}
+
+// Control "✓ Atender" para una CITA que YA llegó pero todavía no es el
+// "siguiente" sugerido (llegó temprano). NO cambia pickNext ni la sugerencia:
+// solo le da al médico la OPCIÓN de atenderla si está libre. El espontáneo no
+// lo lleva (sigue la fila). Reusa el mismo callNext/toggleLlamar que el next-box.
+function ctrlAtenderCita(r, bloqueado){
+  var key = 'cita' + r.rowIndex;
+  var pref = consultorioPreferido(r);
+  var rc = serviceColor(r.service);
+  var opts = '<option value=""' + (pref ? '' : ' selected') + '>— Consultorio —</option>';
+  roomsFor(key).forEach(function(rm){ opts += '<option value="' + rm + '"' + (rm === pref ? ' selected' : '') + '>' + rm + '</option>'; });
+  return '<div class="q-call" onclick="event.stopPropagation()">' +
+    '<select id="room-' + key + '"' + (bloqueado ? ' disabled' : ' onchange="toggleLlamar(\'' + key + '\')"') + '>' + opts + '</select>' +
+    '<button id="call-' + key + '" class="btn-call chico' + ((bloqueado || !pref) ? ' apagado' : '') + '"' +
+      (bloqueado
+        ? ' disabled title="Cierre primero al que está llamando"'
+        : ' style="background:' + rc + '"' + (pref ? '' : ' disabled') + ' onclick="callNext(' + r.rowIndex + ',\'' + key + '\')"') +
+    '>✓ Atender</button>' +
+  '</div>';
 }
 
 // Solo DOS filas: el médico general atiende consulta general, controles
@@ -1921,7 +1948,7 @@ function renderSala() {
       // ve a alguien esperando y no entiende por qué no puede llamarlo.
       const frio = estaCongelado(r)
         ? '<span class="mini mini-frio">⏸ hasta '+esc(fmtHora(r.esperarHasta))+'</span>' : '';
-      body += '<div class="q-item q-click'+(estaCongelado(r)?' q-frio':'')+'" onclick="goToAnamnesis('+r.rowIndex+')">'+
+      const item = '<div class="q-item q-click'+(estaCongelado(r)?' q-frio':'')+'" onclick="goToAnamnesis('+r.rowIndex+')">'+
         '<div class="q-turno" style="color:'+rc+'">'+esc(r.turno||'—')+'</div>'+
         '<div class="q-info">'+
           '<div class="q-pet">'+esc(nombreConMascotas(r))+' '+ag+frio+'</div>'+
@@ -1931,6 +1958,14 @@ function renderSala() {
           '<div class="q-reg">'+etiquetaRegistro(r)+'</div>'+
           '<div class="espera'+claseEspera(r.timestamp)+'">'+fmtEspera(r.timestamp)+'</div>'+
         '</div></div>';
+      // Si es una CITA que ya llegó (agendada, en la sala = presente) y no está
+      // congelada, le sumamos el botón para atenderla YA, aunque no sea el
+      // "siguiente" sugerido. El espontáneo NO lo lleva: respeta la fila.
+      if (r.agendado === 'si' && !estaCongelado(r)) {
+        body += '<div class="q-wrap-cita">'+item+ctrlAtenderCita(r, !!miPacienteAbierto)+'</div>';
+      } else {
+        body += item;
+      }
     });
 
     // Si la fila está plegada, no mostramos el cuerpo (solo el encabezado).
