@@ -1,0 +1,45 @@
+schema: spec-driven
+
+context: |
+  Project: animalcenter (Animal Center veterinary clinic system)
+  Current stack: Google Apps Script backend (apps-script/Code.js, single-file
+  action-router via doGet/doPost, ~5470 lines), Google Sheets as datastore,
+  static HTML/CSS/vanilla-JS frontend on GitHub Pages, WhatsApp Business API
+  integration, PIN-based dashboard auth, HTTP-polling for live updates.
+  Target stack (greenfield, planned via SDD): FastAPI (Python) backend,
+  Next.js (React) frontend, PostgreSQL, Docker Compose on Hostinger VPS
+  behind nginx, WebSockets/SSE replacing polling, real staff authentication.
+  Legacy GAS system stays untouched as rollback fallback during migration.
+  No test tooling exists yet for the new stack; Strict TDD Mode is enabled
+  globally for this user and must be set up (pytest backend, Vitest/
+  Playwright or Jest frontend) as part of design/tasks for the new codebase.
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Legacy GAS system (apps-script/Code.js) must remain untouched and
+      operable as a fallback until the new stack is verified in production
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Cover auth model, WebSocket/SSE transport, and Docker Compose topology
+      explicitly since these are new to the project
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Early tasks must scaffold pytest (backend) and Vitest/Playwright or
+      Jest (frontend) before feature implementation tasks, since Strict TDD
+      Mode is active and there is no existing test tooling to build on
+  apply:
+    - Follow existing code patterns once established by scaffolding tasks
+    tdd: true
+    test_command: "" # to be set once pytest/Vitest are scaffolded
+  verify:
+    test_command: ""
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
