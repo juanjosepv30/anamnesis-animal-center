@@ -807,7 +807,7 @@
           '<label class="agm-wsel">🕐 <select id="wHora">'+horaOpts2(hora)+'</select></label>'+
         '</div>'+
         (forzar?'<div class="agm-warn">⚠️ Este horario está bloqueado. Va a agendar una cita igual, encima del bloqueo.</div>':'')+
-        '<div class="agm-mlbl">Buscar paciente</div>'+
+        '<div class="agm-mlbl" id="mQLbl">Buscar paciente</div>'+
         '<input type="text" id="mQ" placeholder="Escribe cédula, mascota o dueño…" autocomplete="off">'+
         '<div class="agm-res" id="mRes"></div><div id="mForm"></div>'
       );
@@ -865,13 +865,27 @@
     }
     function pickModal(i){ var r=S['_m'+i];
       var cedTerm=/^\d+$/.test(S._term||'')?S._term:'';
-      S.selCliente={ petName:r.petName||'', owner:r.owner||'', cedula:r.documento||cedTerm, phone:r.phone||'', vetesoftId:r.id?String(r.id):'', vetesoftHc:r.registro||'' };
+      S.selCliente={ petName:r.petName||'', owner:r.owner||'', cedula:r.documento||cedTerm, phone:r.phone||'', vetesoftId:r.id?String(r.id):'', vetesoftHc:r.registro||'',
+                     species:r.species||'', breed:r.breed||'', age:r.age||'' };
       $ov('mRes').innerHTML=''; formModal(false);
     }
-    function nuevoModal(){ S.selCliente=null; $ov('mRes').innerHTML=''; formModal(true); }
+    // Cliente nuevo (crear de cero): se OCULTA el buscador —ya se buscó y no
+    // está— y el formulario pide TODOS los datos del paciente (obligatorios),
+    // para que la cita y la tarjeta del médico nazcan completas.
+    function nuevoModal(){
+      S.selCliente=null; $ov('mRes').innerHTML='';
+      var l=$ov('mQLbl'); if(l) l.style.display='none';
+      var qq=$ov('mQ'); if(qq) qq.style.display='none';
+      formModal(true);
+    }
     function formModal(manual){
       var cab = manual
-        ? '<div class="agm-row"><div><label>Mascota</label><input id="fPet"></div><div><label>Dueño</label><input id="fOwn"></div>'+
+        ? '<div class="agm-sel">🆕 Cliente nuevo — complete los datos<button id="fVolver">← Buscar</button></div>'+
+          '<div class="agm-row" style="margin-top:10px"><div><label>Mascota</label><input id="fPet"></div><div><label>Dueño</label><input id="fOwn"></div>'+
+          '<div><label>Especie</label><input id="fEsp" list="fEspList" placeholder="Canino, Felino…">'+
+            '<datalist id="fEspList"><option>Canino</option><option>Felino</option><option>Ave</option><option>Conejo</option><option>Hámster</option><option>Reptil</option></datalist></div>'+
+          '<div><label>Raza</label><input id="fRaza" placeholder="Criollo, Labrador…"></div>'+
+          '<div><label>Edad</label><input id="fEdad" placeholder="Ej: 3 años"></div>'+
           '<div><label>Cédula <span style="font-weight:400">(opcional)</span></label><input id="fCed" inputmode="numeric"></div>'+
           '<div><label>WhatsApp <span style="font-weight:400">(obligatorio)</span></label><input id="fTel" inputmode="numeric" placeholder="3001234567"></div></div>'
         : '<div class="agm-sel">✅ '+esc(S.selCliente.petName||'')+' — '+esc(S.selCliente.owner||'')+(S.selCliente.vetesoftHc?' · HC '+esc(S.selCliente.vetesoftHc):'')+'<button id="fReset">Cambiar</button></div>'+
@@ -906,6 +920,8 @@
         '<button class="agm-btn agm-block" id="fGuardar">Agendar →</button></div>'+
         '<div class="agm-err" id="fErr"></div>';
       var rs=$ov('fReset'); if(rs) rs.onclick=function(){ S.selCliente=null; abrirCrear(S.crear.fecha,S.crear.hora,S.crear.medico,S.crear.forzar); };
+      // "← Buscar" del modo cliente nuevo: reabre el modal con el buscador visible.
+      var vb=$ov('fVolver'); if(vb) vb.onclick=function(){ S.selCliente=null; abrirCrear(S.crear.fecha,S.crear.hora,S.crear.medico,S.crear.forzar); };
       $ov('fCancel').onclick=cerrarOv;
       // Picker de servicios con color (como recepción): tocar una tarjeta la
       // marca, guarda el valor en #fSvc y recalcula la duración.
@@ -932,11 +948,20 @@
       var data={ fecha:S.crear.fecha, hora:S.crear.hora, medico:S.crear.medico,
         servicio:$ov('fSvc').value, duracion:+($ov('fDur').value||0), forzar:!!S.crear.forzar,
         notas:($ov('fNot')||{}).value?$ov('fNot').value.trim():'', phone:($ov('fTel')||{}).value||'' };
-      if(S.selCliente){ data.petName=S.selCliente.petName; data.owner=S.selCliente.owner; data.cedula=S.selCliente.cedula; data.vetesoftId=S.selCliente.vetesoftId; data.vetesoftHc=S.selCliente.vetesoftHc; }
-      else { data.petName=($ov('fPet')||{}).value||''; data.owner=($ov('fOwn')||{}).value||''; data.cedula=($ov('fCed')||{}).value||''; }
+      if(S.selCliente){ data.petName=S.selCliente.petName; data.owner=S.selCliente.owner; data.cedula=S.selCliente.cedula; data.vetesoftId=S.selCliente.vetesoftId; data.vetesoftHc=S.selCliente.vetesoftHc;
+        data.species=S.selCliente.species||''; data.breed=S.selCliente.breed||''; data.age=S.selCliente.age||''; }
+      else { data.petName=($ov('fPet')||{}).value||''; data.owner=($ov('fOwn')||{}).value||''; data.cedula=($ov('fCed')||{}).value||'';
+        data.species=(($ov('fEsp')||{}).value||'').trim(); data.breed=(($ov('fRaza')||{}).value||'').trim(); data.age=(($ov('fEdad')||{}).value||'').trim(); }
       // Política de la clínica: la cita debe estar COMPLETA. Sin datos a medias
       // no se agenda (esto evita, entre otras, la tarjeta "Sin nombre" en sala).
       if(!String(data.petName||'').trim()){ err.textContent='Falta el nombre de la mascota.'; return; }
+      // Cliente nuevo (a mano): TODOS los datos del paciente son obligatorios.
+      if(!S.selCliente){
+        if(!String(data.owner||'').trim()){ err.textContent='Falta el nombre del dueño.'; return; }
+        if(!data.species){ err.textContent='Falta la especie.'; return; }
+        if(!data.breed){ err.textContent='Falta la raza.'; return; }
+        if(!data.age){ err.textContent='Falta la edad.'; return; }
+      }
       var _tel=String(data.phone||'').replace(/\D/g,'');
       if(_tel.length<10){ err.textContent='Falta el WhatsApp del cliente (número válido de 10 dígitos).'; return; }
       if(!String(data.servicio||'').trim()){ err.textContent='Elija el servicio.'; return; }
