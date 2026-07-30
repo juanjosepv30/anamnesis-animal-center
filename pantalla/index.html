@@ -233,15 +233,20 @@ function tratamiento(nombre){
   return (n.charAt(n.length-1)==='a') ? 'Señora' : 'Señor';
 }
 // Arma la frase del anuncio (se usa igual para la voz IA y para la del navegador).
-// Ej: "Señora Sandra, por favor pase con Maxi al consultorio Boom Boom."
+// Regla: con AMBOS nombres, llamado normal ("Señora Sandra, por favor pase con
+// Maxi..."); con SOLO cliente, se lo llama por su nombre; con SOLO mascota, se
+// llama a su acompañante por el nombre de la mascota. NUNCA por especie ni por
+// ningún otro dato: si no hay nombres, sale un llamado genérico.
 function fraseTurno(r){
   var nombre  = titulizar(primerNombre(r.ownerName));
   var trato   = tratamiento(r.ownerName);
   var mascota = mascotasHabladas(r);
-  var conMasc = mascota ? ('pase con ' + mascota) : 'pase adelante';
   var room    = r.consultorio ? (' al consultorio ' + r.consultorio) : '';
-  var saludo  = nombre ? ((trato ? trato + ' ' : '') + nombre + ', por favor ') : 'Por favor, ';
-  return saludo + conMasc + room + '.';
+  var saludoN = (trato ? trato + ' ' : '') + nombre + ', por favor ';
+  if (nombre && mascota) return saludoN + 'pase con ' + mascota + room + '.';
+  if (nombre)            return saludoN + 'pase adelante' + room + '.';
+  if (mascota)           return 'Acompañante de ' + mascota + ', por favor pase adelante' + room + '.';
+  return 'Por favor, pase adelante' + room + '.';
 }
 
 // Garantiza que un callback se ejecute UNA sola vez (aunque lleguen 'end' y el
