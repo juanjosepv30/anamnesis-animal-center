@@ -9,3 +9,13 @@ img/logo animal center*.jpg
 # vivirian los tokens. El codigo sigue en la carpeta local y clasp lo
 # sube directo a Apps Script.
 apps-script/
+
+# Exportaciones de datos de produccion (datos reales de pacientes).
+# Este repositorio es PUBLICO: ninguna exportacion puede subirse.
+*.xlsx
+*.xls
+*.csv
+_private/
+
+# Estado local de herramientas (rutas absolutas de cada maquina).
+.atl/
