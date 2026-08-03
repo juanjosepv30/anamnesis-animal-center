@@ -752,6 +752,16 @@
       var ov=document.createElement('div'); ov.className='agm agm-ov';
       ov.innerHTML='<div class="agm-modal">'+html+'</div>';
       ov.addEventListener('click', function(e){ if(e.target===ov) cerrarOv(); });
+      // ESCUDO ANTI-CLIC-FANTASMA (incidente 3-ago: citas marcadas "llegó" solas).
+      // En Android, el clic fantasma del toque que ABRIÓ el modal llega ~300ms
+      // tarde y cae sobre el botón que quedó bajo el dedo (p. ej. "Llegó").
+      // Cualquier clic en el primer medio segundo del modal se ignora: ningún
+      // humano real toca un botón a los 500ms de abrirse. En CAPTURA, para
+      // frenarlo antes de que llegue a los onclick de los botones.
+      var _nace=Date.now();
+      ov.addEventListener('click', function(e){
+        if(Date.now()-_nace<500){ e.stopPropagation(); e.preventDefault(); }
+      }, true);
       document.body.appendChild(ov); S._ov=ov; return ov;
     }
     function cerrarOv(){ if(S._ov){ S._ov.remove(); S._ov=null; } S.selCliente=null; }
