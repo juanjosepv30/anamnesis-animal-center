@@ -2241,6 +2241,11 @@ function markAtendido(rowIndex) {
 // El paciente sale de consulta a esperar resultados (~1 hora). El médico lo
 // libera de la sala y el sistema le recuerda cada 15 min revisar si salieron.
 function pasarAExamenes(rowIndex) {
+  // Confirmación: el botón vive al lado de "Finalizar" y un toque en falso
+  // arranca recordatorios cada 15 min y cambia el flujo del paciente.
+  var _r0 = allRecords.find(x => x.rowIndex === rowIndex);
+  var _q = _r0 ? ((_r0.turno||'') + ' · ' + (_r0.petName||'')) : 'este paciente';
+  if (!confirm('¿Pasar a ' + _q + ' a EXÁMENES?\n\nSale de consulta a esperar resultados (~1 hora) y le llegarán recordatorios cada 15 min para revisar si ya salieron.')) return;
   conMedico(function(med){
     const rec = allRecords.find(x => x.rowIndex === rowIndex);
     var prev = rec ? rec.estadoTurno : null;
@@ -2269,6 +2274,9 @@ function examListo(rowIndex) {
         if (res && res.ok) {
           const rec = allRecords.find(x => x.rowIndex === rowIndex);
           if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; rec.calledBy = med; rec.calledAt = new Date().toISOString(); }
+          // El re-llamado desde exámenes debe poder promoverse a 'atendiendo'
+          // de nuevo: se limpia la marca de la promoción anterior.
+          delete _promovidos[rowIndex];
           var wa = res.avisoEnviado === true ? ' · 📱 aviso enviado al cliente'
                  : res.avisoEnviado === false ? ' · ⚠️ no se pudo avisar al cliente' : '';
           showToast('✓ Llamado · suena en la sala' + wa);
@@ -2294,6 +2302,23 @@ function notaVozCerrar(rowIndex) {
         if (!(res && res.ok)) { if (rec) { rec.estadoTurno = pe; rec.status = ps; rec.notaVoz = false; } renderAll(); showToast('❌ No se pudo cerrar. Intente de nuevo.', 6000); }
       })
       .catch(function(){ if (rec) { rec.estadoTurno = pe; rec.status = ps; rec.notaVoz = false; } renderAll(); showToast('❌ Error de conexión. Intente de nuevo.', 6000); });
+  });
+}
+// Deshacer un "A exámenes" tocado por error: vuelve a consulta ('atendiendo')
+// sin ningún aviso al cliente.
+function volverDeExamen(rowIndex) {
+  conMedico(function(med){
+    const rec = allRecords.find(x => x.rowIndex === rowIndex);
+    var prev = rec ? rec.estadoTurno : null;
+    if (rec) rec.estadoTurno = 'atendiendo';
+    renderAll(); updateCounts();
+    showToast('↩ De vuelta en consulta');
+    fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendiendo', medico: med }) })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!(res && res.ok)) { if (rec) rec.estadoTurno = prev; renderAll(); showToast('❌ No se pudo volver. Intente de nuevo.', 6000); }
+      })
+      .catch(function(){ if (rec) rec.estadoTurno = prev; renderAll(); showToast('❌ Error de conexión. Intente de nuevo.', 6000); });
   });
 }
 
@@ -2649,8 +2674,8 @@ function buildCard(r) {
     </div>
     ${enConsulta ? '<div class="rec-acts rec-acts-atender"><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button><button class="rec-aus" onclick="event.stopPropagation();pasarAExamenes('+rowIdx+')" title="Sale de consulta a esperar resultados (~1 hora)">🧪 A exámenes</button>'+(vinoDeExamen?'<button class="rec-aus" onclick="event.stopPropagation();notaVozCerrar('+rowIdx+')" title="El cliente ya se retiró: cierra a Finalizados y los resultados van por nota de voz">📱 Pendiente nota de voz</button>':'')+'<button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente (no llegó)</button></div>' : ''}
     ${grace ? '<div class="rec-acts rec-acts-atender"><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button><button class="rec-aus" onclick="event.stopPropagation();llamarDeNuevo('+rowIdx+')" title="Volver a sonar en la sala">🔔 Llamar otra vez</button>'+(vinoDeExamen?'<button class="rec-aus" onclick="event.stopPropagation();notaVozCerrar('+rowIdx+')" title="El cliente ya se retiró: cierra a Finalizados y los resultados van por nota de voz">📱 Pendiente nota de voz</button>':'')+'<button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button></div>' : ''}
-    ${enExamen ? '<div class="rec-acts rec-acts-atender"><select id="exroom-'+rowIdx+'" onclick="event.stopPropagation()" style="border:1.5px solid var(--bd);border-radius:8px;padding:7px 8px;font-size:.76rem;font-family:\'DM Sans\',sans-serif;background:var(--wh)">'+(function(){var pref=consultorioPreferido(r);var o='<option value=""'+(pref?'':' selected')+'>— Consultorio —</option>';roomsFor('examenes').forEach(function(rm){o+='<option value="'+rm+'"'+(rm===pref?' selected':'')+'>'+rm+'</option>';});return o;})()+'</select><button class="rec-fin" onclick="event.stopPropagation();examListo('+rowIdx+')" title="Avisa al cliente por WhatsApp y lo llama en la sala">✅ Exámenes listos — llamar</button><button class="rec-aus" onclick="event.stopPropagation();notaVozCerrar('+rowIdx+')" title="El cliente ya se retiró: cierra a Finalizados y los resultados van por nota de voz">📱 Pendiente nota de voz</button></div>' : ''}
-    <div class="rec-arrow">▼</div>
+    ${enExamen ? '<div class="rec-acts rec-acts-atender"><select id="exroom-'+rowIdx+'" onclick="event.stopPropagation()" style="border:1.5px solid var(--bd);border-radius:8px;padding:7px 8px;font-size:.76rem;font-family:\'DM Sans\',sans-serif;background:var(--wh)">'+(function(){var pref=consultorioPreferido(r);var o='<option value=""'+(pref?'':' selected')+'>— Consultorio —</option>';roomsFor('examenes').forEach(function(rm){o+='<option value="'+rm+'"'+(rm===pref?' selected':'')+'>'+rm+'</option>';});return o;})()+'</select><button class="rec-fin" onclick="event.stopPropagation();examListo('+rowIdx+')" title="Avisa al cliente por WhatsApp y lo llama en la sala">✅ Exámenes listos — llamar</button><button class="rec-aus" onclick="event.stopPropagation();notaVozCerrar('+rowIdx+')" title="El cliente ya se retiró: cierra a Finalizados y los resultados van por nota de voz">📱 Pendiente nota de voz</button><button class="rec-aus" onclick="event.stopPropagation();volverDeExamen('+rowIdx+')" title="Se pasó por error: vuelve a consulta sin avisos al cliente">↩ Volver a consulta</button></div>' : ''}
+  <div class="rec-arrow">▼</div>
   </div>
   <div class="rec-body">
     ${r.vetesoftHc ? `<div class="section"><div class="hc-block"><div><div class="hc-block-label">Historia Clínica · Vetesoft</div><div class="hc-block-val">${esc(r.vetesoftHc)}</div></div></div></div>` : ''}
