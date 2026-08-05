@@ -921,6 +921,19 @@
           '<input type="file" id="fCompPago" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden">'+
           '<div class="agm-hint" style="text-align:left;padding:4px 0;color:#b45309">Con la Dra. Marisol, la consulta/control especializado no se agenda sin comprobante de pago.</div>'+
         '</div>'+
+        // Rayos X / Ecografía: la orden necesita detalle clínico. Obligatorio
+        // elegir al menos un estudio, la zona, las vistas y la edad (numérica).
+        // Se muestra u oculta según el servicio elegido (ver _syncRx).
+        '<div id="fRxWrap" style="margin-top:12px;display:none">'+
+          '<div class="agm-mlbl">Estudio — marque al menos uno</div>'+
+          '<label class="agm-chk"><input type="checkbox" id="fRxChk"> Rayos X</label>'+
+          '<label class="agm-chk"><input type="checkbox" id="fEcoChk"> Ecografía</label>'+
+          '<div class="agm-row" style="margin-top:8px">'+
+            '<div><label>Zona del cuerpo</label><input id="fRxZona" placeholder="Ej: abdomen, tórax, pata delantera…"></div>'+
+            '<div><label>Vistas requeridas</label><input id="fRxVistas" placeholder="Ej: laterolateral, ventrodorsal…"></div>'+
+            '<div><label>Edad del paciente</label><input id="fRxEdad" inputmode="numeric" placeholder="Edad en años"></div>'+
+          '</div>'+
+        '</div>'+
         // Solo al forzar sobre un bloqueo: comprobante (foto de aprobación del Dr.).
         (S.crear.forzar
           ? '<div style="margin-top:12px"><label>📎 Comprobante <span style="font-weight:400">(foto de la aprobación del Dr.)</span></label>'+
@@ -937,9 +950,12 @@
       // marca, guarda el valor en #fSvc y recalcula la duración.
       if(S._ov) S._ov.querySelectorAll('.agm-svc').forEach(function(b){ b.onclick=function(){
         S._ov.querySelectorAll('.agm-svc').forEach(function(x){ x.classList.remove('on'); });
-        b.classList.add('on'); $ov('fSvc').value=b.getAttribute('data-v'); syncDur(); _syncCompPago();
+        b.classList.add('on'); $ov('fSvc').value=b.getAttribute('data-v'); syncDur(); _syncCompPago(); _syncRx();
       }; });
-      syncDur(); _syncCompPago();
+      syncDur(); _syncCompPago(); _syncRx();
+      // Si el paciente vino de Vetesoft y trae edad, se precarga (solo dígitos).
+      var _re=$ov('fRxEdad');
+      if(_re && S.selCliente && S.selCliente.age){ var _d=String(S.selCliente.age).match(/\d+/); if(_d) _re.value=_d[0]; }
       var _cp=$ov('fCompPago'); if(_cp) _cp.onchange=function(){ var b=$ov('fCompPagoBtn'); if(b) b.textContent=(_cp.files&&_cp.files[0])?'✅ Comprobante cargado — toque para cambiar':'📎 Tomar o elegir foto del comprobante'; };
       $ov('fGuardar').onclick=function(){ guardarCita(manual); };
     }
@@ -948,6 +964,10 @@
       return /marisol/i.test(String(S.crear.medico||'')) && /especializ/i.test(String(($ov('fSvc')||{}).value||''));
     }
     function _syncCompPago(){ var w=$ov('fCompPagoWrap'); if(w) w.style.display=_exigeComprobante()?'block':'none'; }
+    // ¿El servicio es Rayos X / Ecografía? (la agenda de la Dra. Angie; aplica a
+    // cualquier médico que atienda ese servicio). Pide el detalle del estudio.
+    function _esRxEco(){ return /rayos|ecograf/i.test(String(($ov('fSvc')||{}).value||'')); }
+    function _syncRx(){ var w=$ov('fRxWrap'); if(w) w.style.display=_esRxEco()?'block':'none'; }
     // Duración: TODOS los servicios ofrecen 30 / 60 / 90 min. Arranca en el
     // default del servicio, pero recepción elige el que necesite.
     function syncDur(){
@@ -975,6 +995,22 @@
       var _tel=String(data.phone||'').replace(/\D/g,'');
       if(_tel.length<10){ err.textContent='Falta el WhatsApp del cliente (número válido de 10 dígitos).'; return; }
       if(!String(data.servicio||'').trim()){ err.textContent='Elija el servicio.'; return; }
+      // Rayos X / Ecografía: el detalle del estudio es OBLIGATORIO. Se arma como
+      // encabezado de la nota (viaja en la cita y se ve en la ficha) y la edad
+      // exacta pisa la que hubiera (va a la columna EDAD de la cita).
+      if(_esRxEco()){
+        var _rx=!!($ov('fRxChk')||{}).checked, _eco=!!($ov('fEcoChk')||{}).checked;
+        if(!_rx&&!_eco){ err.textContent='Marque el estudio: Rayos X, Ecografía o ambos.'; return; }
+        var _zona=(($ov('fRxZona')||{}).value||'').trim();
+        if(!_zona){ err.textContent='Indique la zona del cuerpo.'; return; }
+        var _vistas=(($ov('fRxVistas')||{}).value||'').trim();
+        if(!_vistas){ err.textContent='Indique las vistas requeridas.'; return; }
+        var _edadRx=(($ov('fRxEdad')||{}).value||'').replace(/\D/g,'');
+        if(!_edadRx){ err.textContent='Indique la edad del paciente.'; return; }
+        var _tipo=(_rx&&_eco)?'Rayos X + Ecografía':(_rx?'Rayos X':'Ecografía');
+        data.age=_edadRx+' años';
+        data.notas='📷 '+_tipo+' · Zona: '+_zona+' · Vistas: '+_vistas+' · Edad: '+_edadRx+' años'+(data.notas?'\n'+data.notas:'');
+      }
       if(!String(data.notas||'').trim()){ err.textContent='Agregue una nota (motivo o indicaciones).'; return; }
       // El médico viene de la agenda que estás viendo (no hay selector en el modal).
       // Si por un fallo al cargar la lista quedó vacío, avisamos claro en vez de
