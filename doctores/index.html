@@ -631,6 +631,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
     <div class="filter-btns">
       <button class="fbtn active" id="f-sala" onclick="setView('sala')">Sala de espera</button>
       <button class="fbtn" id="f-atendiendo" onclick="setView('atendiendo')">Atendiendo</button>
+      <button class="fbtn" id="f-examenes" onclick="setView('examenes')">🧪 Exámenes</button>
       <button class="fbtn" id="f-reviewed" onclick="setView('reviewed')">Finalizados</button>
       <button class="fbtn" id="f-agenda" onclick="setView('agenda')">Agenda</button>
     </div>
@@ -952,7 +953,7 @@ function pickNext(list, filaKey, yaLlamados) {
 
 function setView(v) {
   activeView = v;
-  ['sala','atendiendo','reviewed','agenda'].forEach(id =>
+  ['sala','atendiendo','examenes','reviewed','agenda'].forEach(id =>
     document.getElementById('f-'+id).classList.toggle('active', id === v));
   document.getElementById('dateFilterWrap').style.display = (v === 'reviewed') ? 'flex' : 'none';
   // Antes de decidir el gate necesitamos saber quién gana comisión. Si la
@@ -2236,6 +2237,66 @@ function markAtendido(rowIndex) {
   });
 }
 
+// ══════════ MÓDULO EXÁMENES ══════════
+// El paciente sale de consulta a esperar resultados (~1 hora). El médico lo
+// libera de la sala y el sistema le recuerda cada 15 min revisar si salieron.
+function pasarAExamenes(rowIndex) {
+  conMedico(function(med){
+    const rec = allRecords.find(x => x.rowIndex === rowIndex);
+    var prev = rec ? rec.estadoTurno : null;
+    if (rec) { rec.estadoTurno = 'examenes'; rec.examDesde = new Date().toISOString(); }
+    renderAll(); updateCounts();
+    showToast('🧪 A exámenes · esperando resultados');
+    fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'examenes', medico: med }) })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!(res && res.ok)) { if (rec) rec.estadoTurno = prev; renderAll(); showToast('❌ No se pudo pasar a exámenes. Intente de nuevo.', 6000); }
+      })
+      .catch(function(){ if (rec) rec.estadoTurno = prev; renderAll(); showToast('❌ Error de conexión. Intente de nuevo.', 6000); });
+  });
+}
+// Exámenes LISTOS: le avisa al cliente por WhatsApp (mensaje especial con qué
+// hacer si ya se retiró) y lo llama en la sala (suena normal, gracia de 2 min).
+function examListo(rowIndex) {
+  const sel = document.getElementById('exroom-' + rowIndex);
+  const room = sel ? sel.value : '';
+  if (!room) { showToast('Elija el consultorio primero'); return; }
+  conMedico(function(med){
+    showToast('🧪 Avisando al cliente y llamando…', 8000);
+    fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'atenderDirecto', rowIndex: rowIndex, medico: med, consultorio: room, examenes: true }) })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (res && res.ok) {
+          const rec = allRecords.find(x => x.rowIndex === rowIndex);
+          if (rec) { rec.estadoTurno = 'llamando'; rec.consultorio = room; rec.calledBy = med; rec.calledAt = new Date().toISOString(); }
+          var wa = res.avisoEnviado === true ? ' · 📱 aviso enviado al cliente'
+                 : res.avisoEnviado === false ? ' · ⚠️ no se pudo avisar al cliente' : '';
+          showToast('✓ Llamado · suena en la sala' + wa);
+          setView('atendiendo'); updateCounts();
+        } else showToast('❌ ' + ((res && res.error) || 'No se pudo llamar'), 6000);
+      })
+      .catch(function(){ showToast('❌ Error de conexión', 6000); });
+  });
+}
+// Cierre "Pendiente nota de voz": el cliente ya se retiró. El turno va a
+// FINALIZADOS (no a Ausentes) con su etiqueta, y el médico le envía la
+// explicación de los resultados por nota de voz cuando el cliente escriba.
+function notaVozCerrar(rowIndex) {
+  conMedico(function(med){
+    const rec = allRecords.find(x => x.rowIndex === rowIndex);
+    var pe = rec ? rec.estadoTurno : null, ps = rec ? rec.status : null;
+    if (rec) { rec.estadoTurno = 'atendido'; rec.status = 'revisado'; rec.notaVoz = true; }
+    renderAll(); updateCounts();
+    showToast('📱 Cerrado · Pendiente nota de voz');
+    fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTurno', rowIndex: rowIndex, estado: 'atendido', medico: med, notaVoz: true }) })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!(res && res.ok)) { if (rec) { rec.estadoTurno = pe; rec.status = ps; rec.notaVoz = false; } renderAll(); showToast('❌ No se pudo cerrar. Intente de nuevo.', 6000); }
+      })
+      .catch(function(){ if (rec) { rec.estadoTurno = pe; rec.status = ps; rec.notaVoz = false; } renderAll(); showToast('❌ Error de conexión. Intente de nuevo.', 6000); });
+  });
+}
+
 function renderAll() {
   renderConsultaBar();   // barra persistente (en todas las pestañas)
   if (activeView === 'agenda') return;   // la agenda se monta aparte; no la pisamos
@@ -2250,6 +2311,11 @@ function renderAll() {
     // Cada médico ve SOLO lo suyo (lo que él atiende / atendió). El perfil
     // "ver todo" (sin identificarse, miMedico vacío) ve el de todos.
     const mio = !miMedico || r.calledBy === miMedico;
+    if (activeView === 'examenes') {
+      // Esperando resultados de exámenes (~1 hora). Cuando el médico los llama
+      // ("Exámenes listos"), la tarjeta pasa a Atendiendo con su flujo normal.
+      return r.estadoTurno === 'examenes' && mio && isSameDay(r.timestamp, today);
+    }
     if (activeView === 'atendiendo') {
       // En consulta ahora (atendiendo) + los recién llamados en su ventana de
       // gracia ('llamando') — solo los míos (o todos en ver-todo).
@@ -2273,7 +2339,9 @@ function renderAll() {
     : '';
 
   if (!records.length) {
-    const msg = activeView === 'atendiendo'
+    const msg = activeView === 'examenes'
+      ? 'Nadie esperando resultados de exámenes'
+      : activeView === 'atendiendo'
       ? 'Nadie en consulta ahora mismo'
       : (dfVal ? 'No hay atendidos en la fecha elegida'
                : 'Nadie atendido hoy todavía · use la fecha para ver otros días');
@@ -2532,6 +2600,11 @@ function buildCard(r) {
   const graceRaw = r.estadoTurno === 'llamando';
   const grace = graceRaw && minsDesde(r.calledAt||r.timestamp) < GRACIA_MIN;
   const enConsulta = r.estadoTurno === 'atendiendo' || (graceRaw && !grace);
+  // Módulo Exámenes: esperando resultados (~1h). Y si esta tarjeta volvió de
+  // exámenes (examDesde sellado), el cierre "Pendiente nota de voz" queda a
+  // mano por si el cliente ya se retiró.
+  const enExamen = r.estadoTurno === 'examenes';
+  const vinoDeExamen = !!r.examDesde && !reviewed;
   const em = r.species === 'Felino' ? '🐈' : '🐕';
   const rowIdx = r.rowIndex;
   const svc = r.service || '';
@@ -2568,12 +2641,15 @@ function buildCard(r) {
         ${reviewed ? '<span>· 🕐 Llegó '+esc(fmtHoraLlegada(r.timestamp))+'</span>' : ''}
         ${enConsulta ? '<span class="ta-t" data-inicio="'+esc(r.calledAt||r.timestamp)+'">🕐 '+fmtConsulta(r.calledAt||r.timestamp)+'</span>'+((minsDesde(r.calledAt||r.timestamp)>=umbralRecordatorio(r.service)) ? '<span class="ta-t" style="color:#b45309">🔔 ¿Ya terminó? Ciérrelo</span>' : '') : ''}
         ${grace ? '<span class="ta-t" style="color:#b45309">⏳ Confirmando llegada — pasa a consulta en ~2 min</span>'+(r.anunciadoEn ? '<span class="ta-t" style="color:#3B6D11">📢 Sonó en la sala ✓</span>' : '<span class="ta-t" style="color:#9c6a12">⏳ Esperando que suene…</span>') : ''}
+        ${enExamen ? '<span class="ta-t" style="color:#7c3aed">🧪 Esperando resultados hace '+minsDesde(r.examDesde||r.timestamp)+' min</span>' : ''}
+        ${reviewed && r.notaVoz ? '<span class="ta-t" style="color:#b45309">📱 Pendiente nota de voz</span>' : ''}
         ${reviewed ? tiemposAtendida(r) : ''}
       </div>
       ${r.observaciones ? '<div class="rec-obs">📌 '+esc(r.observaciones)+'</div>' : ''}
     </div>
-    ${enConsulta ? '<div class="rec-acts rec-acts-atender"><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente (no llegó)</button></div>' : ''}
-    ${grace ? '<div class="rec-acts rec-acts-atender"><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button><button class="rec-aus" onclick="event.stopPropagation();llamarDeNuevo('+rowIdx+')" title="Volver a sonar en la sala">🔔 Llamar otra vez</button><button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button></div>' : ''}
+    ${enConsulta ? '<div class="rec-acts rec-acts-atender"><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button><button class="rec-aus" onclick="event.stopPropagation();pasarAExamenes('+rowIdx+')" title="Sale de consulta a esperar resultados (~1 hora)">🧪 A exámenes</button>'+(vinoDeExamen?'<button class="rec-aus" onclick="event.stopPropagation();notaVozCerrar('+rowIdx+')" title="El cliente ya se retiró: cierra a Finalizados y los resultados van por nota de voz">📱 Pendiente nota de voz</button>':'')+'<button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente (no llegó)</button></div>' : ''}
+    ${grace ? '<div class="rec-acts rec-acts-atender"><button class="rec-fin" onclick="event.stopPropagation();markAtendido('+rowIdx+')">✓ Finalizar</button><button class="rec-aus" onclick="event.stopPropagation();llamarDeNuevo('+rowIdx+')" title="Volver a sonar en la sala">🔔 Llamar otra vez</button>'+(vinoDeExamen?'<button class="rec-aus" onclick="event.stopPropagation();notaVozCerrar('+rowIdx+')" title="El cliente ya se retiró: cierra a Finalizados y los resultados van por nota de voz">📱 Pendiente nota de voz</button>':'')+'<button class="rec-aus" onclick="event.stopPropagation();markAusente('+rowIdx+')" title="El cliente no llegó / se fue">Ausente</button></div>' : ''}
+    ${enExamen ? '<div class="rec-acts rec-acts-atender"><select id="exroom-'+rowIdx+'" onclick="event.stopPropagation()" style="border:1.5px solid var(--bd);border-radius:8px;padding:7px 8px;font-size:.76rem;font-family:\'DM Sans\',sans-serif;background:var(--wh)">'+(function(){var pref=consultorioPreferido(r);var o='<option value=""'+(pref?'':' selected')+'>— Consultorio —</option>';roomsFor('examenes').forEach(function(rm){o+='<option value="'+rm+'"'+(rm===pref?' selected':'')+'>'+rm+'</option>';});return o;})()+'</select><button class="rec-fin" onclick="event.stopPropagation();examListo('+rowIdx+')" title="Avisa al cliente por WhatsApp y lo llama en la sala">✅ Exámenes listos — llamar</button><button class="rec-aus" onclick="event.stopPropagation();notaVozCerrar('+rowIdx+')" title="El cliente ya se retiró: cierra a Finalizados y los resultados van por nota de voz">📱 Pendiente nota de voz</button></div>' : ''}
     <div class="rec-arrow">▼</div>
   </div>
   <div class="rec-body">
