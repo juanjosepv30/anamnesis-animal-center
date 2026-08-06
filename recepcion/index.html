@@ -354,7 +354,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
         <div class="wr-tabs">
           <button class="wr-tab active" data-tab="espera"    onclick="verTab('espera')">En espera <span class="wr-tabn" id="cEspera">0</span></button>
           <button class="wr-tab"        data-tab="atendiendo" onclick="verTab('atendiendo')">Atendiendo <span class="wr-tabn" id="cAtendiendo">0</span></button>
-          <button class="wr-tab"        data-tab="examenes"  onclick="verTab('examenes')">🧪 Exámenes <span class="wr-tabn" id="cExamenes">0</span></button>
           <button class="wr-tab"        data-tab="atendidos" onclick="verTab('atendidos')">Finalizados <span class="wr-tabn" id="cAtendidos">0</span></button>
           <button class="wr-tab wr-tab-der" data-tab="ausentes"  onclick="verTab('ausentes')">Ausentes <span class="wr-tabn" id="cAusentes">0</span></button>
         </div>
@@ -1807,8 +1806,7 @@ function renderTab() {
   var atendidos  = wrRecords.filter(function(r){ return r.estadoTurno==='atendido'; });
 
   document.getElementById('cEspera').textContent     = espera.length;
-  document.getElementById('cAtendiendo').textContent = atendiendo.length;
-  document.getElementById('cExamenes').textContent   = examenes.length;
+  document.getElementById('cAtendiendo').textContent = atendiendo.length + examenes.length;
   document.getElementById('cAusentes').textContent   = ausentes.length;
   document.getElementById('cAtendidos').textContent  = atendidos.length;
 
@@ -1821,16 +1819,16 @@ function renderTab() {
     html += wrGrupo('🐾 Generales',      espera.filter(function(r){ return !esEspecializado(r); }));
 
   } else if (wrTab === 'atendiendo') {
-    if (!atendiendo.length) { el.innerHTML = '<div class="empty">Nadie con el médico ahora.</div>'; return; }
+    if (!atendiendo.length && !examenes.length) { el.innerHTML = '<div class="empty">Nadie con el médico ahora.</div>'; return; }
     atendiendo.sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
     atendiendo.forEach(function(r){ html += wrItemAtendiendo(r); });
-
-  } else if (wrTab === 'examenes') {
-    // Esperando resultados de exámenes (~1 hora). Solo lectura: el llamado y el
-    // cierre los maneja el médico desde su página.
-    if (!examenes.length) { el.innerHTML = '<div class="empty">Nadie esperando resultados de exámenes.</div>'; return; }
-    examenes.sort(function(a,b){ return new Date(a.examDesde||a.timestamp) - new Date(b.examDesde||b.timestamp); });
-    examenes.forEach(function(r){ html += wrItem(r, ''); });
+    // Los que esperan resultados de exámenes viven en esta misma pestaña, en un
+    // grupo aparte al final (solo lectura: el llamado lo hace el médico).
+    if (examenes.length) {
+      examenes.sort(function(a,b){ return new Date(a.examDesde||a.timestamp) - new Date(b.examDesde||b.timestamp); });
+      html += '<div class="wr-grp" style="color:#7c3aed">🧪 Esperando resultados de exámenes</div>';
+      examenes.forEach(function(r){ html += wrItem(r, ''); });
+    }
 
   } else if (wrTab === 'ausentes') {
     if (!ausentes.length) { el.innerHTML = '<div class="empty">Ningún ausente hoy.</div>'; return; }

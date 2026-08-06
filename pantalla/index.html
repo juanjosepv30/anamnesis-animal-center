@@ -243,6 +243,13 @@ function fraseTurno(r){
   var mascota = mascotasHabladas(r);
   var room    = r.consultorio ? (' al consultorio ' + r.consultorio) : '';
   var saludoN = (trato ? trato + ' ' : '') + nombre + ', por favor ';
+  // Llamado desde EXÁMENES (el turno ya pasó por la espera de resultados): se
+  // anuncia el motivo, para que el cliente sepa que lo llaman a revisarlos.
+  if (r.examDesde) {
+    var quien = mascota ? ('el paciente ' + mascota) : (nombre ? (trato + ' ' + nombre) : 'el paciente');
+    var pre   = nombre ? saludoN : 'Acompañante de ' + (mascota || 'su mascota') + ', por favor ';
+    return pre + 'pase' + room + ' para revisar los resultados de los exámenes de ' + (mascota || 'su mascota') + '.';
+  }
   if (nombre && mascota) return saludoN + 'pase con ' + mascota + room + '.';
   if (nombre)            return saludoN + 'pase adelante' + room + '.';
   if (mascota)           return 'Acompañante de ' + mascota + ', por favor pase adelante' + room + '.';
