@@ -74,6 +74,7 @@
     '.agm-rn{font-weight:700;font-size:.9rem}',
     '.agm-rm{font-size:.75rem;color:var(--atm);margin-top:2px}',
     '.agm-sel{background:var(--apl);border:1.5px solid var(--ap);border-radius:10px;padding:10px 12px;font-size:.87rem;font-weight:700;color:var(--apd);margin-top:10px;display:flex;justify-content:space-between;gap:8px}',
+    '.agm-falton{background:#fee2e2;border:1.5px solid #dc2626;border-radius:10px;padding:9px 12px;font-size:.85rem;font-weight:700;color:#b91c1c;margin-top:8px}',
     '.agm-sel button{background:none;border:none;color:var(--apd);font-weight:800;cursor:pointer;font-family:inherit}',
     '.agm-nuevo{border:1.5px dashed var(--ap);background:var(--apl);color:var(--apd);border-radius:9px;padding:9px 14px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;width:100%;margin-top:8px}',
     '.agm-hint{font-size:.78rem;color:var(--atm);text-align:center;padding:8px}',
@@ -290,6 +291,41 @@
     // oculta el toggle Día/Semana; además Bloqueos sube al renglón de la fecha.
     var vistaFija = opts.vistaFija || '';
     var S = { medicos:[], sub:'cal', vista: vistaFija || (esMovil?'3dias':'semana'), ancla:new Date(), med:medicoFijo, selCliente:null, crear:null };
+
+    // Faltones (dos faltazos seguidos): se baja al abrir el modal de crear y
+    // la advertencia se pinta al seleccionar el paciente. Se refresca si la
+    // copia tiene más de un minuto (la lista cambia de noche y con llegadas);
+    // si la red falla, la próxima apertura reintenta (best-effort).
+    var faltones = null, faltonesAt = 0, faltonesCargando = false;
+    function cargarFaltones(){
+      if (faltonesCargando) return;
+      if (faltones !== null && (Date.now() - faltonesAt) < 60000) return;
+      faltonesCargando = true;
+      fetch(api+'?action=faltones&cb='+Date.now()).then(function(r){return r.json();}).then(function(j){
+        faltonesCargando = false;
+        if (j && j.ok){ faltones = j.faltones || []; faltonesAt = Date.now(); pintarFalton(); }
+      }).catch(function(){ faltonesCargando = false; });
+    }
+    function _fnorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim(); }
+    function faltonDe(sel){
+      if (!sel || !faltones || !faltones.length) return null;
+      var vid = String(sel.vetesoftId||'').trim(), ced = String(sel.cedula||'').replace(/\D/g,'');
+      var pn = _fnorm(sel.petName), on = _fnorm(sel.owner);
+      for (var i=0;i<faltones.length;i++){
+        var f = faltones[i];
+        if (vid && String(f.vid||'').trim() === vid) return f;
+        if (ced && String(f.doc||'').replace(/\D/g,'') === ced) return f;
+        // Cliente cargado a mano (sin id ni cédula): mascota+dueño.
+        if (pn && on && _fnorm(f.pac) === pn && _fnorm(f.prop) === on) return f;
+      }
+      return null;
+    }
+    function pintarFalton(){
+      var w = $ov('fFaltonWarn'); if (!w) return;
+      var f = faltonDe(S.selCliente);
+      w.innerHTML = f ? '⚠️ Ojo: faltó a sus últimas 2 citas sin avisar ('+esc(f.citas||'')+'). Confirme bien antes de reservar el cupo.' : '';
+      w.className = f ? 'agm-falton' : '';
+    }
 
     // Sin tabs: el calendario ES la vista. "Bloqueos" queda como un botón chico
     // arriba (se usa poco), y desde ahí se vuelve. Así no repetimos "Agenda".
@@ -806,6 +842,7 @@
     function abrirCrear(iso, hora, med, forzar){
       S.crear={ fecha:iso, hora:hora, medico:med, forzar:!!forzar }; S.selCliente=null;
       try{ if(window.VetIndex) VetIndex.load(api); }catch(e){}   // precarga el índice
+      try{ cargarFaltones(); }catch(e){}                          // lista de faltones (advertencia)
 
       overlay(
         '<div class="agm-mh"><div class="agm-mt">Agendar cita</div><button class="agm-mx" id="mX">×</button></div>'+
@@ -899,6 +936,7 @@
           '<div><label>Cédula <span style="font-weight:400">(opcional)</span></label><input id="fCed" inputmode="numeric"></div>'+
           '<div><label>WhatsApp <span style="font-weight:400">(obligatorio)</span></label><input id="fTel" inputmode="numeric" placeholder="3001234567"></div></div>'
         : '<div class="agm-sel">✅ '+esc(S.selCliente.petName||'')+' — '+esc(S.selCliente.owner||'')+(S.selCliente.vetesoftHc?' · HC '+esc(S.selCliente.vetesoftHc):'')+'<button id="fReset">Cambiar</button></div>'+
+          '<div id="fFaltonWarn"></div>'+
           '<div style="margin-top:10px"><label>WhatsApp <span style="font-weight:400">(obligatorio)</span></label><input id="fTel" inputmode="numeric" value="'+esc(S.selCliente.phone||'')+'" placeholder="3001234567"></div>';
       $ov('mForm').innerHTML=
         cab+
@@ -942,6 +980,7 @@
         '<div class="agm-mact"><button class="agm-btn agm-btn-g" id="fCancel" style="flex:0 0 auto">Cancelar</button>'+
         '<button class="agm-btn agm-block" id="fGuardar">Agendar →</button></div>'+
         '<div class="agm-err" id="fErr"></div>';
+      pintarFalton();
       var rs=$ov('fReset'); if(rs) rs.onclick=function(){ S.selCliente=null; abrirCrear(S.crear.fecha,S.crear.hora,S.crear.medico,S.crear.forzar); };
       // "← Buscar" del modo cliente nuevo: reabre el modal con el buscador visible.
       var vb=$ov('fVolver'); if(vb) vb.onclick=function(){ S.selCliente=null; abrirCrear(S.crear.fecha,S.crear.hora,S.crear.medico,S.crear.forzar); };
