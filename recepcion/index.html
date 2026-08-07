@@ -1519,9 +1519,10 @@ function cargarFaltantes(cb) {
 function flMensaje(x) {
   var quien = String(x.ownerName || '').trim().split(/\s+/)[0] || '';
   return '🐾 ¡Hola' + (quien ? ' ' + quien : '') + '! Le escribimos de Animal Center.\n\n' +
-         'Hoy teníamos la cita de *' + (x.petName || 'su mascota') + '* a las ' + x.hora +
+         'Teníamos la cita de *' + (x.petName || 'su mascota') + '* a las ' + x.hora +
          ' y no pudimos verlos. ¿Pasó algo? Esperamos que todo esté bien. 💙\n\n' +
-         'Si quiere, le reagendamos cuando le quede cómodo. Quedamos atentos.';
+         'Si quiere, le reagendamos cuando le quede cómodo.\n\n' +
+         'ℹ️ Este WhatsApp es solo informativo. Para responder o reagendar, escríbanos al 310 343 8639.';
 }
 function flEscribir(id) {
   var x = (flLista || []).filter(function(f){ return f.id === id; })[0];
