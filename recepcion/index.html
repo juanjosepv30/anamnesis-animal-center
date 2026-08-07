@@ -170,6 +170,18 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .wr-tabs{display:flex;gap:6px;margin:2px 0 12px;border-bottom:1.5px solid var(--bd)}
 .wr-tab{border:none;background:none;padding:8px 12px;font-size:.82rem;font-weight:700;color:var(--tm);cursor:pointer;font-family:'DM Sans',sans-serif;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;display:flex;align-items:center;gap:6px}
 .wr-tab-der{margin-left:auto}
+.wr-tab-falt.active{color:#b91c1c;border-bottom-color:#b91c1c}
+.wr-tab-falt.active .wr-tabn{background:#fee2e2;color:#b91c1c}
+.fl-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.fl-item.hecho{opacity:.5}
+.fl-h{font-weight:800;color:#b91c1c;min-width:52px}
+.fl-d{flex:1;min-width:160px}
+.fl-p{font-weight:800}
+.fl-s{font-size:.78rem;color:var(--tm)}
+.fl-btn{border:none;border-radius:9px;padding:8px 13px;font-size:.8rem;font-weight:800;font-family:'DM Sans',sans-serif;cursor:pointer}
+.fl-esc{background:#25d366;color:#fff}
+.fl-ok{background:var(--bg);color:var(--tm);border:1.5px solid var(--bd)}
+.fl-ok.on{background:#dcfce7;color:#15803d;border-color:#86efac}
 .wr-tab.active{color:var(--p);border-bottom-color:var(--p)}
 .wr-tabn{font-size:.7rem;background:var(--bg);color:var(--tm);border-radius:10px;padding:1px 7px;font-weight:700}
 .wr-tab.active .wr-tabn{background:var(--pl);color:var(--p)}
@@ -356,6 +368,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
           <button class="wr-tab"        data-tab="atendiendo" onclick="verTab('atendiendo')">Atendiendo <span class="wr-tabn" id="cAtendiendo">0</span></button>
           <button class="wr-tab"        data-tab="atendidos" onclick="verTab('atendidos')">Finalizados <span class="wr-tabn" id="cAtendidos">0</span></button>
           <button class="wr-tab wr-tab-der" data-tab="ausentes"  onclick="verTab('ausentes')">Ausentes <span class="wr-tabn" id="cAusentes">0</span></button>
+          <button class="wr-tab wr-tab-falt" data-tab="faltantes" onclick="verTab('faltantes')">No vinieron <span class="wr-tabn" id="cFaltantes">0</span></button>
         </div>
       </div>
       <div id="wrList"><div class="spinner"></div></div>
@@ -683,9 +696,9 @@ function marcarInteres(id, estado){
       !confirm(estado==='agendo'?'¿Marcar como agendó? Sale de la lista.':'¿Descartar? Sale de la lista.')) return;
   fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'actualizarInteresado', id:id, estado:estado }) })
     .then(r=>r.json()).then(function(res){
-      if (!res || res.ok===false) { toast('No se pudo actualizar'); return; }
+      if (!res || res.ok===false) { showToast('No se pudo actualizar'); return; }
       cargarInteresados();
-    }).catch(function(){ toast('Error de conexión'); });
+    }).catch(function(){ showToast('Error de conexión'); });
 }
 let selected = null;
 // #1 — Editar turno: cuando recepción corrige el paciente de un turno ya
@@ -1487,6 +1500,68 @@ function doRegister() {
 var wrRecords = [];
 var wrTab = 'espera';
 
+// ── "No vinieron": reporte del día para reconquistar al cliente ─────────
+// Se baja aparte de la sala de espera (vive en la hoja de Citas, no en los
+// turnos). Cada uno trae un botón que abre WhatsApp con el mensaje listo.
+var flLista = null, flCargando = false;
+function cargarFaltantes(cb) {
+  if (flCargando) return;
+  flCargando = true;
+  fetch(API_URL + '?action=faltantes&cb=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      flCargando = false;
+      if (j && j.ok) { flLista = j.faltantes || []; document.getElementById('cFaltantes').textContent = flLista.filter(function(x){return !x.contactado;}).length; }
+      if (cb) cb();
+    })
+    .catch(function(){ flCargando = false; if (cb) cb(); });
+}
+function flMensaje(x) {
+  var quien = String(x.ownerName || '').trim().split(/\s+/)[0] || '';
+  return '🐾 ¡Hola' + (quien ? ' ' + quien : '') + '! Le escribimos de Animal Center.\n\n' +
+         'Hoy teníamos la cita de *' + (x.petName || 'su mascota') + '* a las ' + x.hora +
+         ' y no pudimos verlos. ¿Pasó algo? Esperamos que todo esté bien. 💙\n\n' +
+         'Si quiere, le reagendamos cuando le quede cómodo. Quedamos atentos.';
+}
+function flEscribir(id) {
+  var x = (flLista || []).filter(function(f){ return f.id === id; })[0];
+  if (!x) return;
+  if (!x.tel) { showToast('Ese cliente no tiene WhatsApp registrado'); return; }
+  try { window.open('https://wa.me/' + x.tel + '?text=' + encodeURIComponent(flMensaje(x)), '_blank'); } catch(e){}
+  if (!x.contactado) flMarcar(id, true);
+}
+function flMarcar(id, valor) {
+  var x = (flLista || []).filter(function(f){ return f.id === id; })[0];
+  if (!x) return;
+  x.contactado = !!valor;                       // optimista: la lista es del día
+  document.getElementById('cFaltantes').textContent = flLista.filter(function(f){return !f.contactado;}).length;
+  renderFaltantes();
+  fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+                   body: JSON.stringify({ action:'marcarContactado', id:id, valor:!!valor }) })
+    .catch(function(){});
+}
+function renderFaltantes() {
+  var el = document.getElementById('wrList');
+  if (flLista === null) {
+    el.innerHTML = '<div class="spinner"></div>';
+    cargarFaltantes(function(){ if (wrTab === 'faltantes') renderFaltantes(); });
+    return;
+  }
+  if (!flLista.length) { el.innerHTML = '<div class="empty">Nadie faltó a su cita hoy. 🎉</div>'; return; }
+  var html = '';
+  flLista.forEach(function(x){
+    html += '<div class="fl-item' + (x.contactado ? ' hecho' : '') + '">' +
+      '<div class="fl-h">' + esc(x.hora) + '</div>' +
+      '<div class="fl-d"><div class="fl-p">' + esc(x.petName || '(sin mascota)') + ' · ' + esc(x.ownerName || '') + '</div>' +
+        '<div class="fl-s">' + esc(x.servicio || '') + (x.medico ? ' · ' + esc(x.medico) : '') + (x.tel ? '' : ' · ⚠️ sin WhatsApp') + '</div></div>' +
+      (x.tel ? '<button class="fl-btn fl-esc" onclick="flEscribir(\'' + esc(x.id) + '\')">💬 Escribir</button>' : '') +
+      '<button class="fl-btn fl-ok' + (x.contactado ? ' on' : '') + '" onclick="flMarcar(\'' + esc(x.id) + '\',' + (x.contactado ? 'false' : 'true') + ')">' +
+        (x.contactado ? '✓ Contactado' : 'Marcar') + '</button>' +
+    '</div>';
+  });
+  el.innerHTML = html;
+}
+
 function verTab(t) {
   wrTab = t;
   var tabs = document.querySelectorAll('.wr-tab');
@@ -1829,6 +1904,10 @@ function renderTab() {
       html += '<div class="wr-grp" style="color:#7c3aed">🧪 Esperando resultados de exámenes</div>';
       examenes.forEach(function(r){ html += wrItem(r, ''); });
     }
+
+  } else if (wrTab === 'faltantes') {
+    renderFaltantes();
+    return;
 
   } else if (wrTab === 'ausentes') {
     if (!ausentes.length) { el.innerHTML = '<div class="empty">Ningún ausente hoy.</div>'; return; }
