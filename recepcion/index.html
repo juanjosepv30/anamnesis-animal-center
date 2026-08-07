@@ -180,6 +180,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .fl-s{font-size:.78rem;color:var(--tm)}
 .fl-btn{border:none;border-radius:9px;padding:8px 13px;font-size:.8rem;font-weight:800;font-family:'DM Sans',sans-serif;cursor:pointer}
 .fl-esc{background:#25d366;color:#fff}
+.fl-vino{background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd}
 .fl-ok{background:var(--bg);color:var(--tm);border:1.5px solid var(--bd)}
 .fl-ok.on{background:#dcfce7;color:#15803d;border-color:#86efac}
 .wr-tab.active{color:var(--p);border-bottom-color:var(--p)}
@@ -1528,8 +1529,31 @@ function flEscribir(id) {
   var x = (flLista || []).filter(function(f){ return f.id === id; })[0];
   if (!x) return;
   if (!x.tel) { showToast('Ese cliente no tiene WhatsApp registrado'); return; }
-  try { window.open('https://wa.me/' + x.tel + '?text=' + encodeURIComponent(flMensaje(x)), '_blank'); } catch(e){}
+  // El mensaje sale del WhatsApp que esté abierto en ESTE equipo: si recepción
+  // tiene la sesión de la clínica (310 343 8639), sale de ahí. En computador
+  // se fuerza WhatsApp Web para caer siempre en esa sesión y no en la app del
+  // celular de quien esté atendiendo.
+  var esMovil = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+  var url = esMovil
+    ? 'https://wa.me/' + x.tel + '?text=' + encodeURIComponent(flMensaje(x))
+    : 'https://web.whatsapp.com/send?phone=' + x.tel + '&text=' + encodeURIComponent(flMensaje(x));
+  try { window.open(url, '_blank'); } catch(e){}
   if (!x.contactado) flMarcar(id, true);
+}
+// "Sí vino": corrige un faltazo que en realidad fue una llegada sin marcar.
+// Sale de la lista y deja de contar para la racha de dos faltas seguidas.
+function flVino(id) {
+  var x = (flLista || []).filter(function(f){ return f.id === id; })[0];
+  if (!x) return;
+  flLista = flLista.filter(function(f){ return f.id !== id; });
+  document.getElementById('cFaltantes').textContent = flLista.filter(function(f){return !f.contactado;}).length;
+  renderFaltantes();
+  showToast('✅ Corregido: ' + (x.petName || 'el paciente') + ' sí vino');
+  fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+                   body: JSON.stringify({ action:'marcarVino', id:id }) })
+    .then(function(r){ return r.json(); })
+    .then(function(res){ if (!res || res.ok === false) { showToast('No se pudo corregir'); flLista = null; renderFaltantes(); } })
+    .catch(function(){ showToast('Error de conexión'); flLista = null; renderFaltantes(); });
 }
 function flMarcar(id, valor) {
   var x = (flLista || []).filter(function(f){ return f.id === id; })[0];
@@ -1555,6 +1579,7 @@ function renderFaltantes() {
       '<div class="fl-h">' + esc(x.hora) + '</div>' +
       '<div class="fl-d"><div class="fl-p">' + esc(x.petName || '(sin mascota)') + ' · ' + esc(x.ownerName || '') + '</div>' +
         '<div class="fl-s">' + esc(x.servicio || '') + (x.medico ? ' · ' + esc(x.medico) : '') + (x.tel ? '' : ' · ⚠️ sin WhatsApp') + '</div></div>' +
+      '<button class="fl-btn fl-vino" onclick="flVino(\'' + esc(x.id) + '\')">✅ Sí vino</button>' +
       (x.tel ? '<button class="fl-btn fl-esc" onclick="flEscribir(\'' + esc(x.id) + '\')">💬 Escribir</button>' : '') +
       '<button class="fl-btn fl-ok' + (x.contactado ? ' on' : '') + '" onclick="flMarcar(\'' + esc(x.id) + '\',' + (x.contactado ? 'false' : 'true') + ')">' +
         (x.contactado ? '✓ Contactado' : 'Marcar') + '</button>' +
